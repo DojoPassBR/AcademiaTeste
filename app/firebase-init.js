@@ -1,12 +1,11 @@
-// TODO: substituir pela config do NOVO projeto Firebase deste teste (não usar o do app em produção).
-// Console: https://console.firebase.google.com > Configurações do projeto > Seus apps > Web
+// Configuração pública do Firebase (não é segredo — a segurança é feita pelas Firestore Rules)
 const firebaseConfig = {
-  apiKey: "SUBSTITUA_AQUI",
-  authDomain: "SUBSTITUA_AQUI.firebaseapp.com",
-  projectId: "SUBSTITUA_AQUI",
-  storageBucket: "SUBSTITUA_AQUI.firebasestorage.app",
-  messagingSenderId: "SUBSTITUA_AQUI",
-  appId: "SUBSTITUA_AQUI"
+  apiKey: "AIzaSyB2CfAlsM7RkDd1xE0em6FlRMDjpmxODH0",
+  authDomain: "academiateste-56922.firebaseapp.com",
+  projectId: "academiateste-56922",
+  storageBucket: "academiateste-56922.firebasestorage.app",
+  messagingSenderId: "558847205725",
+  appId: "1:558847205725:web:138a38a4c8f51b6ed508b4"
 };
 
 firebase.initializeApp(firebaseConfig);
