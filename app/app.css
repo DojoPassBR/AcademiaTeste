@@ -329,4 +329,5 @@ table.admin-table tr:hover td {
     text-align: left;
   }
   .only-print th { background: #eee; }
+  .only-print .relatorio-pendente { color: #b10f0f; font-weight: 700; }
 }

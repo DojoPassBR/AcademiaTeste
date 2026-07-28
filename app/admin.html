@@ -141,7 +141,11 @@ function gerarRelatorio() {
     .filter((tr) => tr.querySelectorAll("td").length >= 6)
     .map((tr) => {
       const celulas = tr.querySelectorAll("td");
-      return "<tr><td>" + celulas[0].textContent + "</td><td>" + celulas[4].textContent + "</td></tr>";
+      const tagMensalidade = celulas[5].querySelector(".mensalidade-tag");
+      const statusTexto = tagMensalidade ? tagMensalidade.textContent : "-";
+      const statusClasse = tagMensalidade && tagMensalidade.classList.contains("pendente") ? "relatorio-pendente" : "";
+      return "<tr><td>" + celulas[0].textContent + "</td><td>" + celulas[4].textContent + "</td>" +
+        "<td class='" + statusClasse + "'>" + statusTexto + "</td></tr>";
     })
     .join("");
 
@@ -152,7 +156,7 @@ function gerarRelatorio() {
     relatorioImpressao.innerHTML =
       "<h1>Relatório de Presenças</h1>" +
       "<p>Gerado em " + hoje + "</p>" +
-      "<table><thead><tr><th>Aluno</th><th>Check-ins</th></tr></thead><tbody>" + linhas + "</tbody></table>";
+      "<table><thead><tr><th>Aluno</th><th>Check-ins</th><th>Mensalidade</th></tr></thead><tbody>" + linhas + "</tbody></table>";
   }
 
   window.print();
