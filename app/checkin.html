@@ -64,7 +64,7 @@ const avisoMensalidade = document.getElementById("aviso-mensalidade");
 
 let alunoNome = "";
 let mensalidadeEmDia = false;
-let jaCheckouHoje = false;
+let bloqueadoPorIntervalo = false;
 
 function showMsg(text, type) {
   msg.textContent = text;
@@ -88,7 +88,7 @@ auth.onAuthStateChanged(async (user) => {
   }
 
   atualizarMensalidadeBox();
-  carregarStatusHoje(user.uid);
+  carregarUltimoCheckin(user.uid);
   carregarHistorico(user.uid);
 });
 
@@ -112,35 +112,39 @@ function atualizarBotaoCheckin() {
   if (!mensalidadeEmDia) {
     btnCheckin.disabled = true;
     btnCheckin.textContent = "Check-in bloqueado";
-  } else if (jaCheckouHoje) {
+  } else if (bloqueadoPorIntervalo) {
     btnCheckin.disabled = true;
-    btnCheckin.textContent = "Check-in já feito hoje";
+    btnCheckin.textContent = "Aguarde para novo check-in";
   } else {
     btnCheckin.disabled = false;
     btnCheckin.textContent = "Fazer Check-in";
   }
 }
 
-async function carregarStatusHoje(uid) {
-  const inicioHoje = new Date();
-  inicioHoje.setHours(0, 0, 0, 0);
-
+async function carregarUltimoCheckin(uid) {
   const snap = await db.collection("checkins")
     .where("alunoId", "==", uid)
-    .where("timestamp", ">=", inicioHoje)
     .orderBy("timestamp", "desc")
     .limit(1)
     .get();
 
-  if (!snap.empty) {
-    const data = snap.docs[0].data();
-    statusHoje.textContent = "Presença já registrada hoje";
-    statusSub.textContent = "às " + formatDateTime(data.timestamp);
-    jaCheckouHoje = true;
+  if (!snap.empty && snap.docs[0].data().timestamp) {
+    const ultimoTimestamp = snap.docs[0].data().timestamp;
+    const liberadoEm = new Date(ultimoTimestamp.toMillis() + CHECKIN_INTERVALO_MINUTOS * 60 * 1000);
+
+    statusHoje.textContent = "Última presença: " + formatDateTime(ultimoTimestamp);
+
+    if (new Date() < liberadoEm) {
+      bloqueadoPorIntervalo = true;
+      statusSub.textContent = "Próximo check-in liberado às " + liberadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    } else {
+      bloqueadoPorIntervalo = false;
+      statusSub.textContent = "Toque no botão abaixo quando chegar na escola";
+    }
   } else {
-    statusHoje.textContent = "Sem check-in hoje";
+    statusHoje.textContent = "Nenhum check-in ainda";
     statusSub.textContent = "Toque no botão abaixo quando chegar na escola";
-    jaCheckouHoje = false;
+    bloqueadoPorIntervalo = false;
   }
   atualizarBotaoCheckin();
 }
@@ -195,7 +199,12 @@ btnCheckin.addEventListener("click", () => {
 
     try {
       const user = auth.currentUser;
-      await db.collection("checkins").add({
+      // ID determinístico por janela de tempo: uma segunda tentativa na mesma janela
+      // vira "update" de um doc que já existe, e a rule já bloqueia update em checkins.
+      const janela = Math.floor(Date.now() / (CHECKIN_INTERVALO_MINUTOS * 60 * 1000));
+      const checkinId = user.uid + "_" + janela;
+
+      await db.collection("checkins").doc(checkinId).set({
         alunoId: user.uid,
         nome: alunoNome,
         lat,
@@ -203,11 +212,10 @@ btnCheckin.addEventListener("click", () => {
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
       showMsg("Check-in realizado com sucesso!", "success");
-      btnCheckin.textContent = "Check-in já feito hoje";
-      carregarStatusHoje(user.uid);
+      carregarUltimoCheckin(user.uid);
       carregarHistorico(user.uid);
     } catch (err) {
-      showMsg("Não foi possível confirmar sua localização. Tente novamente mais perto da escola.", "error");
+      showMsg("Não foi possível registrar o check-in. Você pode estar fora do raio da escola ou ter feito check-in há menos de " + CHECKIN_INTERVALO_MINUTOS + " minutos.", "error");
       btnCheckin.disabled = false;
       btnCheckin.textContent = "Fazer Check-in";
     }

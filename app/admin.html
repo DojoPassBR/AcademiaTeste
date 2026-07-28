@@ -25,7 +25,10 @@
 
   <div id="conteudo" style="display:none;">
     <div class="card">
-      <h2>Alunos cadastrados</h2>
+      <div class="card-header-row">
+        <h2>Alunos cadastrados</h2>
+        <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
+      </div>
       <div style="overflow-x:auto;">
         <table class="admin-table" id="tabela-alunos">
           <thead>
@@ -48,6 +51,8 @@
   </div>
 </div>
 
+<div class="only-print" id="relatorio-impressao"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -61,6 +66,8 @@ const modalBackdrop = document.getElementById("modal-backdrop");
 const modalTitulo = document.getElementById("modal-titulo");
 const modalLista = document.getElementById("modal-lista");
 const modalClose = document.getElementById("modal-close");
+const btnRelatorio = document.getElementById("btn-relatorio");
+const relatorioImpressao = document.getElementById("relatorio-impressao");
 
 const BELT_COLORS = {
   "Branca": "#999999", "Cinza": "#888888", "Amarela": "#e0b400", "Laranja": "#e07a00",
@@ -69,6 +76,7 @@ const BELT_COLORS = {
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
+btnRelatorio.addEventListener("click", gerarRelatorio);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -126,6 +134,28 @@ async function carregarAlunos() {
 
     tabelaAlunos.appendChild(tr);
   }
+}
+
+function gerarRelatorio() {
+  const linhas = Array.from(tabelaAlunos.querySelectorAll("tr"))
+    .filter((tr) => tr.querySelectorAll("td").length >= 6)
+    .map((tr) => {
+      const celulas = tr.querySelectorAll("td");
+      return "<tr><td>" + celulas[0].textContent + "</td><td>" + celulas[4].textContent + "</td></tr>";
+    })
+    .join("");
+
+  if (!linhas) {
+    relatorioImpressao.innerHTML = "<h1>Relatório de Presenças</h1><p>Nenhum aluno cadastrado.</p>";
+  } else {
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    relatorioImpressao.innerHTML =
+      "<h1>Relatório de Presenças</h1>" +
+      "<p>Gerado em " + hoje + "</p>" +
+      "<table><thead><tr><th>Aluno</th><th>Check-ins</th></tr></thead><tbody>" + linhas + "</tbody></table>";
+  }
+
+  window.print();
 }
 
 async function alterarMensalidade(alunoId, novoStatus) {
