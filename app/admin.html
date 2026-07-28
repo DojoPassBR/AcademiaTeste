@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Professor - Jairo Vieira</title>
+<link rel="icon" type="image/jpeg" href="../assets/logo.jpeg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.jpeg" alt="Logo">
+    <h1>Painel do Professor</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main wide">
+  <div class="card" id="card-negado" style="display:none;">
+    <h2>Acesso restrito</h2>
+    <p>Esta área é exclusiva para professores. Se você é professor e está vendo esta mensagem, peça para o administrador liberar seu acesso.</p>
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="card">
+      <h2>Alunos cadastrados</h2>
+      <div style="overflow-x:auto;">
+        <table class="admin-table" id="tabela-alunos">
+          <thead>
+            <tr><th>Nome</th><th>Telefone</th><th>Faixa</th><th>Nascimento</th><th>Presenças</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <span class="close" id="modal-close">&times;</span>
+    <h2 id="modal-titulo">Histórico</h2>
+    <ul class="checkin-list" id="modal-lista"></ul>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const cardNegado = document.getElementById("card-negado");
+const conteudo = document.getElementById("conteudo");
+const tabelaAlunos = document.querySelector("#tabela-alunos tbody");
+const modalBackdrop = document.getElementById("modal-backdrop");
+const modalTitulo = document.getElementById("modal-titulo");
+const modalLista = document.getElementById("modal-lista");
+const modalClose = document.getElementById("modal-close");
+
+const BELT_COLORS = {
+  "Branca": "#999999", "Cinza": "#888888", "Amarela": "#e0b400", "Laranja": "#e07a00",
+  "Verde": "#2e9e3e", "Azul": "#1a5fd0", "Roxa": "#6a1ab0", "Marrom": "#7a4a1a", "Preta": "#111111"
+};
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const adminDoc = await db.collection("admins").doc(user.uid).get();
+  if (!adminDoc.exists) {
+    cardNegado.style.display = "block";
+    return;
+  }
+
+  conteudo.style.display = "block";
+  carregarAlunos();
+});
+
+async function carregarAlunos() {
+  const snap = await db.collection("alunos").orderBy("nome").get();
+
+  if (snap.empty) {
+    tabelaAlunos.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado.</td></tr>";
+    return;
+  }
+
+  tabelaAlunos.innerHTML = "";
+
+  for (const doc of snap.docs) {
+    const aluno = doc.data();
+    const checkinsSnap = await db.collection("checkins").where("alunoId", "==", doc.id).get();
+
+    const tr = document.createElement("tr");
+    const cor = BELT_COLORS[aluno.faixa] || "#666";
+    tr.innerHTML =
+      "<td>" + aluno.nome + "</td>" +
+      "<td>" + (aluno.telefone || "-") + "</td>" +
+      "<td><span class='belt-tag' style='background:" + cor + "'>" + aluno.faixa + "</span></td>" +
+      "<td>" + (aluno.nascimento ? new Date(aluno.nascimento + "T00:00:00").toLocaleDateString("pt-BR") : "-") + "</td>" +
+      "<td>" + checkinsSnap.size + "</td>";
+
+    tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
+    tabelaAlunos.appendChild(tr);
+  }
+}
+
+function abrirHistorico(nome, checkinsSnap) {
+  modalTitulo.textContent = "Histórico - " + nome;
+  modalLista.innerHTML = "";
+
+  const docs = checkinsSnap.docs.slice().sort((a, b) => {
+    const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
+    const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
+    return tb - ta;
+  });
+
+  if (docs.length === 0) {
+    modalLista.innerHTML = "<li>Nenhuma presença registrada.</li>";
+  } else {
+    docs.forEach((doc) => {
+      const li = document.createElement("li");
+      li.innerHTML = "<span>Treino</span><span>" + formatDateTime(doc.data().timestamp) + "</span>";
+      modalLista.appendChild(li);
+    });
+  }
+
+  modalBackdrop.classList.add("show");
+}
+</script>
+</body>
+</html>

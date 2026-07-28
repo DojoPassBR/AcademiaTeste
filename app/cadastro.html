@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Aluno - Jairo Vieira</title>
+<link rel="icon" type="image/jpeg" href="../assets/logo.jpeg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.jpeg" alt="Logo">
+    <h1>Área do Aluno</h1>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="card">
+    <h2>Criar Cadastro</h2>
+    <form id="form-cadastro">
+      <label for="nome">Nome completo</label>
+      <input type="text" id="nome" required>
+
+      <label for="telefone">Telefone</label>
+      <input type="tel" id="telefone" placeholder="(15) 99999-9999" required>
+
+      <label for="nascimento">Data de nascimento</label>
+      <input type="date" id="nascimento" required>
+
+      <label for="faixa">Faixa atual</label>
+      <select id="faixa" required>
+        <option value="">Selecione...</option>
+        <option value="Branca">Branca</option>
+        <option value="Cinza">Cinza (infantil)</option>
+        <option value="Amarela">Amarela (infantil)</option>
+        <option value="Laranja">Laranja (infantil)</option>
+        <option value="Verde">Verde (infantil)</option>
+        <option value="Azul">Azul</option>
+        <option value="Roxa">Roxa</option>
+        <option value="Marrom">Marrom</option>
+        <option value="Preta">Preta</option>
+      </select>
+
+      <label for="email">E-mail</label>
+      <input type="email" id="email" required>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" minlength="6" required>
+
+      <label for="senha2">Confirmar senha</label>
+      <input type="password" id="senha2" minlength="6" required>
+
+      <button type="submit" class="btn" id="btn-cadastrar">Criar cadastro</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <p class="switch-link">Já tem cadastro? <a href="login.html">Fazer login</a></p>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const form = document.getElementById("form-cadastro");
+const msg = document.getElementById("msg");
+const btn = document.getElementById("btn-cadastrar");
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nome = document.getElementById("nome").value.trim();
+  const telefone = document.getElementById("telefone").value.trim();
+  const nascimento = document.getElementById("nascimento").value;
+  const faixa = document.getElementById("faixa").value;
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+  const senha2 = document.getElementById("senha2").value;
+
+  if (senha !== senha2) {
+    showMsg("As senhas não coincidem.", "error");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Criando...";
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, senha);
+    await db.collection("alunos").doc(cred.user.uid).set({
+      nome,
+      telefone,
+      nascimento,
+      faixa,
+      email,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    window.location.href = "checkin.html";
+  } catch (err) {
+    let text = "Erro ao criar cadastro. Tente novamente.";
+    if (err.code === "auth/email-already-in-use") text = "Este e-mail já está cadastrado.";
+    if (err.code === "auth/weak-password") text = "A senha precisa ter pelo menos 6 caracteres.";
+    if (err.code === "auth/invalid-email") text = "E-mail inválido.";
+    showMsg(text, "error");
+    btn.disabled = false;
+    btn.textContent = "Criar cadastro";
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-in - Jairo Vieira</title>
+<link rel="icon" type="image/jpeg" href="../assets/logo.jpeg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.jpeg" alt="Logo">
+    <h1 id="saudacao">Área do Aluno</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main">
+  <div class="status-box">
+    <div class="big" id="status-hoje">Carregando...</div>
+    <div id="status-sub"></div>
+  </div>
+
+  <div class="card">
+    <h2>Check-in</h2>
+    <p>O check-in só funciona quando você estiver na escola (dentro de ~150m do endereço).</p>
+    <button class="btn" id="btn-checkin">Fazer Check-in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Últimas presenças</h2>
+    <ul class="checkin-list" id="lista-checkins">
+      <li>Carregando...</li>
+    </ul>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const msg = document.getElementById("msg");
+const btnCheckin = document.getElementById("btn-checkin");
+const btnSair = document.getElementById("btn-sair");
+const saudacao = document.getElementById("saudacao");
+const statusHoje = document.getElementById("status-hoje");
+const statusSub = document.getElementById("status-sub");
+const listaCheckins = document.getElementById("lista-checkins");
+
+let alunoNome = "";
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const alunoDoc = await db.collection("alunos").doc(user.uid).get();
+  if (alunoDoc.exists) {
+    alunoNome = alunoDoc.data().nome;
+    saudacao.textContent = "Olá, " + alunoNome.split(" ")[0];
+  }
+
+  carregarStatusHoje(user.uid);
+  carregarHistorico(user.uid);
+});
+
+async function carregarStatusHoje(uid) {
+  const inicioHoje = new Date();
+  inicioHoje.setHours(0, 0, 0, 0);
+
+  const snap = await db.collection("checkins")
+    .where("alunoId", "==", uid)
+    .where("timestamp", ">=", inicioHoje)
+    .orderBy("timestamp", "desc")
+    .limit(1)
+    .get();
+
+  if (!snap.empty) {
+    const data = snap.docs[0].data();
+    statusHoje.textContent = "Presença já registrada hoje";
+    statusSub.textContent = "às " + formatDateTime(data.timestamp);
+    btnCheckin.disabled = true;
+    btnCheckin.textContent = "Check-in já feito hoje";
+  } else {
+    statusHoje.textContent = "Sem check-in hoje";
+    statusSub.textContent = "Toque no botão abaixo quando chegar na escola";
+  }
+}
+
+async function carregarHistorico(uid) {
+  const snap = await db.collection("checkins")
+    .where("alunoId", "==", uid)
+    .orderBy("timestamp", "desc")
+    .limit(15)
+    .get();
+
+  if (snap.empty) {
+    listaCheckins.innerHTML = "<li>Nenhum check-in ainda.</li>";
+    return;
+  }
+
+  listaCheckins.innerHTML = "";
+  snap.forEach((doc) => {
+    const data = doc.data();
+    const li = document.createElement("li");
+    li.innerHTML = "<span>Treino</span><span>" + formatDateTime(data.timestamp) + "</span>";
+    listaCheckins.appendChild(li);
+  });
+}
+
+btnCheckin.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    showMsg("Seu navegador não suporta geolocalização.", "error");
+    return;
+  }
+
+  btnCheckin.disabled = true;
+  btnCheckin.textContent = "Verificando localização...";
+  showMsg("Obtendo sua localização...", "info");
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const dist = distanceToSchoolMeters(lat, lng);
+
+    if (dist > CHECKIN_RADIUS_METERS) {
+      showMsg("Você está a " + Math.round(dist) + "m da escola. Chegue mais perto para fazer o check-in.", "error");
+      btnCheckin.disabled = false;
+      btnCheckin.textContent = "Fazer Check-in";
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      await db.collection("checkins").add({
+        alunoId: user.uid,
+        nome: alunoNome,
+        lat,
+        lng,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showMsg("Check-in realizado com sucesso!", "success");
+      btnCheckin.textContent = "Check-in já feito hoje";
+      carregarStatusHoje(user.uid);
+      carregarHistorico(user.uid);
+    } catch (err) {
+      showMsg("Não foi possível confirmar sua localização. Tente novamente mais perto da escola.", "error");
+      btnCheckin.disabled = false;
+      btnCheckin.textContent = "Fazer Check-in";
+    }
+  }, () => {
+    showMsg("Não foi possível obter sua localização. Verifique as permissões do navegador.", "error");
+    btnCheckin.disabled = false;
+    btnCheckin.textContent = "Fazer Check-in";
+  }, { enableHighAccuracy: true, timeout: 15000 });
+});
+</script>
+</body>
+</html>

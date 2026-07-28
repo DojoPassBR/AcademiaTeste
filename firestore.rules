@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
+    // Compara o quadrado da distância com o quadrado do raio permitido.
+    function dentroDoRaioDaEscola(lat, lng) {
+      let schoolLat = -23.5872555;
+      let schoolLng = -48.0212186;
+      let metersPerDegLat = 111320.0;
+      let metersPerDegLng = 102015.0; // 111320 * cos(latitude da escola)
+      let raioMetros = 150.0;
+      let dLat = (lat - schoolLat) * metersPerDegLat;
+      let dLng = (lng - schoolLng) * metersPerDegLng;
+      return (dLat * dLat + dLng * dLng) <= (raioMetros * raioMetros);
+    }
+
+    match /alunos/{alunoId} {
+      allow create: if isSignedIn() && request.auth.uid == alunoId;
+      allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
+      allow update: if isSignedIn() && request.auth.uid == alunoId;
+      allow delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if false; // só é possível adicionar pelo Console do Firebase
+    }
+
+    match /checkins/{checkinId} {
+      allow create: if isSignedIn()
+        && request.resource.data.alunoId == request.auth.uid
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && dentroDoRaioDaEscola(request.resource.data.lat, request.resource.data.lng)
+        && request.resource.data.timestamp == request.time;
+      allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+  }
+}

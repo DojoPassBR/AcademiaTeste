@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Jairo Vieira</title>
+<link rel="icon" type="image/jpeg" href="../assets/logo.jpeg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.jpeg" alt="Logo">
+    <h1>Área do Aluno</h1>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="card">
+    <h2>Entrar</h2>
+    <form id="form-login">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" required>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" required>
+
+      <button type="submit" class="btn" id="btn-entrar">Entrar</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <p class="switch-link">Ainda não tem cadastro? <a href="cadastro.html">Criar cadastro</a></p>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const form = document.getElementById("form-login");
+const msg = document.getElementById("msg");
+const btn = document.getElementById("btn-entrar");
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+
+  btn.disabled = true;
+  btn.textContent = "Entrando...";
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, senha);
+    const adminDoc = await db.collection("admins").doc(cred.user.uid).get();
+    window.location.href = adminDoc.exists ? "admin.html" : "checkin.html";
+  } catch (err) {
+    showMsg("E-mail ou senha incorretos.", "error");
+    btn.disabled = false;
+    btn.textContent = "Entrar";
+  }
+});
+</script>
+</body>
+</html>
