@@ -11,6 +11,13 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Mensalidade em dia = campo mensalidadeStatus do aluno igual a "pago".
+    // Ausência do campo (aluno novo, nunca marcado pelo professor) conta como pendente.
+    function mensalidadeEmDia(alunoId) {
+      let aluno = get(/databases/$(database)/documents/alunos/$(alunoId));
+      return aluno.data.get('mensalidadeStatus', 'pendente') == 'pago';
+    }
+
     // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
     // Compara o quadrado da distância com o quadrado do raio permitido.
     function dentroDoRaioDaEscola(lat, lng) {
@@ -25,9 +32,24 @@ service cloud.firestore {
     }
 
     match /alunos/{alunoId} {
-      allow create: if isSignedIn() && request.auth.uid == alunoId;
+      // Cadastro não pode vir com mensalidadeStatus setado (aluno não pode se auto-declarar "pago").
+      allow create: if isSignedIn() && request.auth.uid == alunoId
+        && !('mensalidadeStatus' in request.resource.data);
+
       allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
-      allow update: if isSignedIn() && request.auth.uid == alunoId;
+
+      // Aluno só edita seus próprios dados de cadastro (nunca a própria mensalidade).
+      // Professor (admin) só edita o status da mensalidade (nunca os dados de cadastro do aluno).
+      allow update: if isSignedIn() && (
+        (request.auth.uid == alunoId
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['nome', 'telefone', 'nascimento', 'faixa', 'email']))
+        ||
+        (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['mensalidadeStatus', 'mensalidadeAtualizadoEm']))
+      );
+
       allow delete: if false;
     }
 
@@ -42,7 +64,8 @@ service cloud.firestore {
         && request.resource.data.lat is number
         && request.resource.data.lng is number
         && dentroDoRaioDaEscola(request.resource.data.lat, request.resource.data.lng)
-        && request.resource.data.timestamp == request.time;
+        && request.resource.data.timestamp == request.time
+        && mensalidadeEmDia(request.auth.uid);
       allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
       allow update, delete: if false;
     }

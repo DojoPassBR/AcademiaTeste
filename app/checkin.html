@@ -18,6 +18,11 @@
 </header>
 
 <main class="app-main">
+  <div class="status-box" id="mensalidade-box">
+    <div class="big" id="mensalidade-status">Carregando...</div>
+    <div id="mensalidade-mes"></div>
+  </div>
+
   <div class="status-box">
     <div class="big" id="status-hoje">Carregando...</div>
     <div id="status-sub"></div>
@@ -26,6 +31,9 @@
   <div class="card">
     <h2>Check-in</h2>
     <p>O check-in só funciona quando você estiver na escola (dentro de ~150m do endereço).</p>
+    <p class="aviso-pendente" id="aviso-mensalidade" style="display:none;">
+      Sua mensalidade está pendente. Procure a recepção para regularizar e liberar o check-in.
+    </p>
     <button class="btn" id="btn-checkin">Fazer Check-in</button>
     <div class="msg" id="msg"></div>
   </div>
@@ -50,8 +58,13 @@ const saudacao = document.getElementById("saudacao");
 const statusHoje = document.getElementById("status-hoje");
 const statusSub = document.getElementById("status-sub");
 const listaCheckins = document.getElementById("lista-checkins");
+const mensalidadeStatusEl = document.getElementById("mensalidade-status");
+const mensalidadeMesEl = document.getElementById("mensalidade-mes");
+const avisoMensalidade = document.getElementById("aviso-mensalidade");
 
 let alunoNome = "";
+let mensalidadeEmDia = false;
+let jaCheckouHoje = false;
 
 function showMsg(text, type) {
   msg.textContent = text;
@@ -68,13 +81,45 @@ auth.onAuthStateChanged(async (user) => {
 
   const alunoDoc = await db.collection("alunos").doc(user.uid).get();
   if (alunoDoc.exists) {
-    alunoNome = alunoDoc.data().nome;
+    const alunoData = alunoDoc.data();
+    alunoNome = alunoData.nome;
     saudacao.textContent = "Olá, " + alunoNome.split(" ")[0];
+    mensalidadeEmDia = (alunoData.mensalidadeStatus || "pendente") === "pago";
   }
 
+  atualizarMensalidadeBox();
   carregarStatusHoje(user.uid);
   carregarHistorico(user.uid);
 });
+
+function atualizarMensalidadeBox() {
+  const mesLabel = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  mensalidadeMesEl.textContent = "Mensalidade de " + mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+
+  if (mensalidadeEmDia) {
+    mensalidadeStatusEl.textContent = "Em dia";
+    mensalidadeStatusEl.style.color = "#1a7a34";
+  } else {
+    mensalidadeStatusEl.textContent = "Pendente";
+    mensalidadeStatusEl.style.color = "#b10f0f";
+  }
+
+  avisoMensalidade.style.display = mensalidadeEmDia ? "none" : "block";
+  atualizarBotaoCheckin();
+}
+
+function atualizarBotaoCheckin() {
+  if (!mensalidadeEmDia) {
+    btnCheckin.disabled = true;
+    btnCheckin.textContent = "Check-in bloqueado";
+  } else if (jaCheckouHoje) {
+    btnCheckin.disabled = true;
+    btnCheckin.textContent = "Check-in já feito hoje";
+  } else {
+    btnCheckin.disabled = false;
+    btnCheckin.textContent = "Fazer Check-in";
+  }
+}
 
 async function carregarStatusHoje(uid) {
   const inicioHoje = new Date();
@@ -91,12 +136,13 @@ async function carregarStatusHoje(uid) {
     const data = snap.docs[0].data();
     statusHoje.textContent = "Presença já registrada hoje";
     statusSub.textContent = "às " + formatDateTime(data.timestamp);
-    btnCheckin.disabled = true;
-    btnCheckin.textContent = "Check-in já feito hoje";
+    jaCheckouHoje = true;
   } else {
     statusHoje.textContent = "Sem check-in hoje";
     statusSub.textContent = "Toque no botão abaixo quando chegar na escola";
+    jaCheckouHoje = false;
   }
+  atualizarBotaoCheckin();
 }
 
 async function carregarHistorico(uid) {
@@ -121,6 +167,11 @@ async function carregarHistorico(uid) {
 }
 
 btnCheckin.addEventListener("click", () => {
+  if (!mensalidadeEmDia) {
+    showMsg("Sua mensalidade está pendente. Procure a recepção para regularizar.", "error");
+    return;
+  }
+
   if (!navigator.geolocation) {
     showMsg("Seu navegador não suporta geolocalização.", "error");
     return;

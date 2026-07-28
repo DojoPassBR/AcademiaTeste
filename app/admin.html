@@ -29,10 +29,10 @@
       <div style="overflow-x:auto;">
         <table class="admin-table" id="tabela-alunos">
           <thead>
-            <tr><th>Nome</th><th>Telefone</th><th>Faixa</th><th>Nascimento</th><th>Presenças</th></tr>
+            <tr><th>Nome</th><th>Telefone</th><th>Faixa</th><th>Nascimento</th><th>Presenças</th><th>Mensalidade</th></tr>
           </thead>
           <tbody>
-            <tr><td colspan="5">Carregando...</td></tr>
+            <tr><td colspan="6">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -90,7 +90,7 @@ async function carregarAlunos() {
   const snap = await db.collection("alunos").orderBy("nome").get();
 
   if (snap.empty) {
-    tabelaAlunos.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado.</td></tr>";
+    tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
     return;
   }
 
@@ -102,16 +102,38 @@ async function carregarAlunos() {
 
     const tr = document.createElement("tr");
     const cor = BELT_COLORS[aluno.faixa] || "#666";
+    const emDia = (aluno.mensalidadeStatus || "pendente") === "pago";
     tr.innerHTML =
       "<td>" + aluno.nome + "</td>" +
       "<td>" + (aluno.telefone || "-") + "</td>" +
       "<td><span class='belt-tag' style='background:" + cor + "'>" + aluno.faixa + "</span></td>" +
       "<td>" + (aluno.nascimento ? new Date(aluno.nascimento + "T00:00:00").toLocaleDateString("pt-BR") : "-") + "</td>" +
-      "<td>" + checkinsSnap.size + "</td>";
+      "<td>" + checkinsSnap.size + "</td>" +
+      "<td>" +
+        "<span class='mensalidade-tag " + (emDia ? "pago" : "pendente") + "'>" + (emDia ? "Pago" : "Pendente") + "</span>" +
+        "<button type='button' class='mensalidade-btn' data-id='" + doc.id + "' data-novo='" + (emDia ? "pendente" : "pago") + "'>" +
+          (emDia ? "Marcar pendente" : "Marcar pago") +
+        "</button>" +
+      "</td>";
 
     tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
+
+    const btnMensalidade = tr.querySelector(".mensalidade-btn");
+    btnMensalidade.addEventListener("click", (e) => {
+      e.stopPropagation();
+      alterarMensalidade(e.target.dataset.id, e.target.dataset.novo);
+    });
+
     tabelaAlunos.appendChild(tr);
   }
+}
+
+async function alterarMensalidade(alunoId, novoStatus) {
+  await db.collection("alunos").doc(alunoId).update({
+    mensalidadeStatus: novoStatus,
+    mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  carregarAlunos();
 }
 
 function abrirHistorico(nome, checkinsSnap) {

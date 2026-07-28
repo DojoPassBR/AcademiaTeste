@@ -246,3 +246,38 @@ table.admin-table tr:hover td {
   font-weight: 700;
   color: #999;
 }
+
+.mensalidade-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-right: 8px;
+}
+
+.mensalidade-tag.pago { background: #1a7a34; }
+.mensalidade-tag.pendente { background: #b10f0f; }
+
+.mensalidade-btn {
+  border: 1px solid #ccc;
+  background: var(--white);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mensalidade-btn:hover { background: var(--gray); }
+
+.aviso-pendente {
+  background: #ffe5e5;
+  color: #b10f0f;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
