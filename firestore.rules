@@ -18,6 +18,18 @@ service cloud.firestore {
       return aluno.data.get('mensalidadeStatus', 'pendente') == 'pago';
     }
 
+    // Valida tipo/tamanho dos campos de cadastro do aluno e restringe a faixa às opções
+    // reais do formulário — sem isso, qualquer chamada direta ao SDK (fora do cadastro.html)
+    // conseguia gravar qualquer string em nome/telefone/faixa, o que também abria XSS
+    // no painel do professor (que exibia esses campos sem tratamento).
+    function dadosAlunoValidos(dados) {
+      return dados.nome is string && dados.nome.size() > 0 && dados.nome.size() < 100
+        && dados.telefone is string && dados.telefone.size() < 30
+        && dados.email is string && dados.email.size() < 100
+        && dados.nascimento is string
+        && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
+    }
+
     // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
     // Compara o quadrado da distância com o quadrado do raio permitido.
     function dentroDoRaioDaEscola(lat, lng) {
@@ -34,7 +46,8 @@ service cloud.firestore {
     match /alunos/{alunoId} {
       // Cadastro não pode vir com mensalidadeStatus setado (aluno não pode se auto-declarar "pago").
       allow create: if isSignedIn() && request.auth.uid == alunoId
-        && !('mensalidadeStatus' in request.resource.data);
+        && !('mensalidadeStatus' in request.resource.data)
+        && dadosAlunoValidos(request.resource.data);
 
       allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
 
@@ -43,7 +56,8 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (request.auth.uid == alunoId
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['nome', 'telefone', 'nascimento', 'faixa', 'email']))
+               .hasOnly(['nome', 'telefone', 'nascimento', 'faixa', 'email'])
+          && dadosAlunoValidos(request.resource.data))
         ||
         (isAdmin()
           && request.resource.data.diff(resource.data).affectedKeys()

@@ -111,26 +111,46 @@ async function carregarAlunos() {
     const tr = document.createElement("tr");
     const cor = BELT_COLORS[aluno.faixa] || "#666";
     const emDia = (aluno.mensalidadeStatus || "pendente") === "pago";
-    tr.innerHTML =
-      "<td>" + aluno.nome + "</td>" +
-      "<td>" + (aluno.telefone || "-") + "</td>" +
-      "<td><span class='belt-tag' style='background:" + cor + "'>" + aluno.faixa + "</span></td>" +
-      "<td>" + (aluno.nascimento ? new Date(aluno.nascimento + "T00:00:00").toLocaleDateString("pt-BR") : "-") + "</td>" +
-      "<td>" + checkinsSnap.size + "</td>" +
-      "<td>" +
-        "<span class='mensalidade-tag " + (emDia ? "pago" : "pendente") + "'>" + (emDia ? "Pago" : "Pendente") + "</span>" +
-        "<button type='button' class='mensalidade-btn' data-id='" + doc.id + "' data-novo='" + (emDia ? "pendente" : "pago") + "'>" +
-          (emDia ? "Marcar pendente" : "Marcar pago") +
-        "</button>" +
-      "</td>";
 
-    tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
+    // Nome, telefone e faixa vêm do cadastro do próprio aluno (conteúdo livre) —
+    // nunca colocar em innerHTML. textContent escapa qualquer HTML/script.
+    const tdNome = document.createElement("td");
+    tdNome.textContent = aluno.nome;
 
-    const btnMensalidade = tr.querySelector(".mensalidade-btn");
+    const tdTelefone = document.createElement("td");
+    tdTelefone.textContent = aluno.telefone || "-";
+
+    const tdFaixa = document.createElement("td");
+    const beltTag = document.createElement("span");
+    beltTag.className = "belt-tag";
+    beltTag.style.background = cor;
+    beltTag.textContent = aluno.faixa;
+    tdFaixa.appendChild(beltTag);
+
+    const tdNascimento = document.createElement("td");
+    tdNascimento.textContent = aluno.nascimento
+      ? new Date(aluno.nascimento + "T00:00:00").toLocaleDateString("pt-BR")
+      : "-";
+
+    const tdPresencas = document.createElement("td");
+    tdPresencas.textContent = checkinsSnap.size;
+
+    const tdMensalidade = document.createElement("td");
+    const mensalidadeTag = document.createElement("span");
+    mensalidadeTag.className = "mensalidade-tag " + (emDia ? "pago" : "pendente");
+    mensalidadeTag.textContent = emDia ? "Pago" : "Pendente";
+    const btnMensalidade = document.createElement("button");
+    btnMensalidade.type = "button";
+    btnMensalidade.className = "mensalidade-btn";
+    btnMensalidade.textContent = emDia ? "Marcar pendente" : "Marcar pago";
     btnMensalidade.addEventListener("click", (e) => {
       e.stopPropagation();
-      alterarMensalidade(e.target.dataset.id, e.target.dataset.novo);
+      alterarMensalidade(doc.id, emDia ? "pendente" : "pago");
     });
+    tdMensalidade.append(mensalidadeTag, btnMensalidade);
+
+    tr.append(tdNome, tdTelefone, tdFaixa, tdNascimento, tdPresencas, tdMensalidade);
+    tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
 
     tabelaAlunos.appendChild(tr);
   }
@@ -138,25 +158,50 @@ async function carregarAlunos() {
 
 function gerarRelatorio() {
   const linhas = Array.from(tabelaAlunos.querySelectorAll("tr"))
-    .filter((tr) => tr.querySelectorAll("td").length >= 6)
-    .map((tr) => {
+    .filter((tr) => tr.querySelectorAll("td").length >= 6);
+
+  relatorioImpressao.innerHTML = "";
+
+  const titulo = document.createElement("h1");
+  titulo.textContent = "Relatório de Presenças";
+  relatorioImpressao.appendChild(titulo);
+
+  if (linhas.length === 0) {
+    const p = document.createElement("p");
+    p.textContent = "Nenhum aluno cadastrado.";
+    relatorioImpressao.appendChild(p);
+  } else {
+    const p = document.createElement("p");
+    p.textContent = "Gerado em " + new Date().toLocaleDateString("pt-BR");
+    relatorioImpressao.appendChild(p);
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    thead.innerHTML = "<tr><th>Aluno</th><th>Check-ins</th><th>Mensalidade</th></tr>";
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    // Reconstrói cada linha via textContent (nunca innerHTML) — o nome do aluno
+    // não é confiável mesmo já tendo passado pela tabela na tela.
+    linhas.forEach((tr) => {
       const celulas = tr.querySelectorAll("td");
       const tagMensalidade = celulas[5].querySelector(".mensalidade-tag");
-      const statusTexto = tagMensalidade ? tagMensalidade.textContent : "-";
-      const statusClasse = tagMensalidade && tagMensalidade.classList.contains("pendente") ? "relatorio-pendente" : "";
-      return "<tr><td>" + celulas[0].textContent + "</td><td>" + celulas[4].textContent + "</td>" +
-        "<td class='" + statusClasse + "'>" + statusTexto + "</td></tr>";
-    })
-    .join("");
+      const pendente = tagMensalidade && tagMensalidade.classList.contains("pendente");
 
-  if (!linhas) {
-    relatorioImpressao.innerHTML = "<h1>Relatório de Presenças</h1><p>Nenhum aluno cadastrado.</p>";
-  } else {
-    const hoje = new Date().toLocaleDateString("pt-BR");
-    relatorioImpressao.innerHTML =
-      "<h1>Relatório de Presenças</h1>" +
-      "<p>Gerado em " + hoje + "</p>" +
-      "<table><thead><tr><th>Aluno</th><th>Check-ins</th><th>Mensalidade</th></tr></thead><tbody>" + linhas + "</tbody></table>";
+      const linha = document.createElement("tr");
+      const tdNome = document.createElement("td");
+      tdNome.textContent = celulas[0].textContent;
+      const tdCheckins = document.createElement("td");
+      tdCheckins.textContent = celulas[4].textContent;
+      const tdStatus = document.createElement("td");
+      tdStatus.textContent = tagMensalidade ? tagMensalidade.textContent : "-";
+      if (pendente) tdStatus.className = "relatorio-pendente";
+
+      linha.append(tdNome, tdCheckins, tdStatus);
+      tbody.appendChild(linha);
+    });
+    table.appendChild(tbody);
+    relatorioImpressao.appendChild(table);
   }
 
   window.print();
