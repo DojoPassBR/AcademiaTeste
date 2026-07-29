@@ -11,10 +11,16 @@ GitHub e dois projetos Firebase totalmente separados:
 
 | | Projeto original (produção) | Este projeto (sandbox) |
 |---|---|---|
-| Repositório GitHub | `arnaldohungria/jairovieira` | `tatamepass/AcademiaTeste` |
-| Site publicado | https://arnaldohungria.github.io/jairovieira/ | (ainda não publicado) |
+| Repositório GitHub | `arnaldohungria/jairovieira` | `DojoPassBR/AcademiaTeste` |
+| Site publicado | https://arnaldohungria.github.io/jairovieira/ | https://dojopassbr.github.io/AcademiaTeste/ |
 | Firebase project | `escolajairoveiria` | `academiateste-56922` |
 | Conta Google (Firebase) | `arnaldo@live.jp` | `tatamepass@gmail.com` |
+
+**Nome da marca:** o projeto/empresa se chama **DojoPass** (renomeado de "TatamePass" em 2026-07-29,
+porque esse nome já era usado por outra empresa). A conta do GitHub teve que ficar `DojoPassBR`
+(variação do nome — "DojoPass" sozinho já estava em uso por outra conta, sem relação). O e-mail do
+Google/Firebase continua `tatamepass@gmail.com` — não foi trocado, é só o endereço de e-mail, sem
+relação com o nome da marca.
 
 Regra de ouro: **qualquer trabalho novo (mensalidades, etc.) acontece aqui**,
 nunca na pasta/repositório original.
@@ -74,11 +80,14 @@ Como são duas contas em cada ferramenta, sempre confirmar qual está ativa
 antes de rodar comandos:
 
 ```bash
-# GitHub CLI
+# GitHub CLI — o gh ainda identifica essa conta localmente pelo nome antigo
+# "tatamepass" (não atualiza sozinho quando a conta é renomeada no GitHub;
+# o comando abaixo continua funcionando do mesmo jeito, é só o rótulo local
+# que ficou desatualizado — as URLs reais dos repos usam DojoPassBR).
 gh auth switch --user tatamepass       # antes de dar push aqui
 gh auth switch --user arnaldohungria   # antes de mexer no repo original
 
-# Firebase CLI
+# Firebase CLI (e-mail não mudou com o rename da marca)
 firebase login:use tatamepass@gmail.com   # antes de firebase deploy aqui
 ```
 
