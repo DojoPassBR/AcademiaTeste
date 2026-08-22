@@ -83,5 +83,21 @@ service cloud.firestore {
       allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
       allow update, delete: if false;
     }
+
+    // Cobranças Pix: só o Worker (Cloudflare + service account) cria/atualiza,
+    // usando credenciais de admin que passam por cima destas rules. Do cliente,
+    // só dá pra ler — nunca escrever — pra ninguém conseguir forjar um "pago".
+    match /cobrancas/{cobrancaId} {
+      allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // Configuração geral do sistema (hoje só o modo de mensalidade: "manual" ou "pix").
+    // Ausência do campo mensalidadeModo conta como "manual" (mesmo padrão de default
+    // já usado em mensalidadeStatus ausente = "pendente"). Só admin muda, via Console.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
   }
 }

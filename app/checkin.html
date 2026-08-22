@@ -28,6 +28,13 @@
     <div id="status-sub"></div>
   </div>
 
+  <div class="card" id="pix-pagamento" style="display:none;">
+    <h2>Pagar mensalidade via Pix</h2>
+    <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
+    <textarea id="pix-copia-cola" readonly rows="3" style="width:100%;margin:12px 0;padding:10px;font-size:0.85rem;"></textarea>
+    <button type="button" class="btn btn-secondary" id="btn-copiar-pix">Copiar código Pix</button>
+  </div>
+
   <div class="card">
     <h2>Check-in</h2>
     <p>O check-in só funciona quando você estiver na escola (dentro de ~150m do endereço).</p>
@@ -61,10 +68,14 @@ const listaCheckins = document.getElementById("lista-checkins");
 const mensalidadeStatusEl = document.getElementById("mensalidade-status");
 const mensalidadeMesEl = document.getElementById("mensalidade-mes");
 const avisoMensalidade = document.getElementById("aviso-mensalidade");
+const pixPagamento = document.getElementById("pix-pagamento");
+const pixCopiaCola = document.getElementById("pix-copia-cola");
+const btnCopiarPix = document.getElementById("btn-copiar-pix");
 
 let alunoNome = "";
 let mensalidadeEmDia = false;
 let bloqueadoPorIntervalo = false;
+let mensalidadeModo = "manual";
 
 function showMsg(text, type) {
   msg.textContent = text;
@@ -87,9 +98,35 @@ auth.onAuthStateChanged(async (user) => {
     mensalidadeEmDia = (alunoData.mensalidadeStatus || "pendente") === "pago";
   }
 
+  const configDoc = await db.collection("config").doc("geral").get();
+  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
+
   atualizarMensalidadeBox();
+  if (mensalidadeModo === "pix" && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
   carregarUltimoCheckin(user.uid);
   carregarHistorico(user.uid);
+});
+
+async function carregarCobrancaPendente(uid) {
+  const snap = await db.collection("cobrancas")
+    .where("alunoId", "==", uid)
+    .where("status", "==", "pendente")
+    .orderBy("criadoEm", "desc")
+    .limit(1)
+    .get();
+
+  if (!snap.empty && snap.docs[0].data().pixCopiaECola) {
+    pixCopiaCola.value = snap.docs[0].data().pixCopiaECola;
+    pixPagamento.style.display = "block";
+  } else {
+    pixPagamento.style.display = "none";
+  }
+}
+
+btnCopiarPix.addEventListener("click", async () => {
+  await navigator.clipboard.writeText(pixCopiaCola.value);
+  btnCopiarPix.textContent = "Copiado!";
+  setTimeout(() => { btnCopiarPix.textContent = "Copiar código Pix"; }, 2000);
 });
 
 function atualizarMensalidadeBox() {

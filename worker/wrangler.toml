@@ -1,0 +1,16 @@
+name = "academiateste-financeiro"
+main = "src/index.js"
+compatibility_date = "2026-07-28"
+
+[vars]
+FIREBASE_PROJECT_ID = "academiateste-56922"
+
+# Segredos (não vão pro código nem pro git) — configurar com:
+#   npx wrangler secret put MP_ACCESS_TOKEN
+#   npx wrangler secret put FIREBASE_CLIENT_EMAIL
+#   npx wrangler secret put FIREBASE_PRIVATE_KEY
+#
+# MP_ACCESS_TOKEN         -> Mercado Pago Developers, credenciais de teste/produção do app
+# FIREBASE_CLIENT_EMAIL   -> campo "client_email" da chave de service account (Firebase Console
+#                            > Configurações do projeto > Contas de serviço > Gerar nova chave privada)
+# FIREBASE_PRIVATE_KEY    -> campo "private_key" da mesma chave (inclui as linhas -----BEGIN/END-----)

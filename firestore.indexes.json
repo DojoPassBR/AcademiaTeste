@@ -7,6 +7,15 @@
         { "fieldPath": "alunoId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "cobrancas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "alunoId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

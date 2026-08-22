@@ -51,6 +51,17 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="cobranca-backdrop">
+  <div class="modal">
+    <span class="close" id="cobranca-close">&times;</span>
+    <h2 id="cobranca-titulo">Gerar cobrança Pix</h2>
+    <label for="cobranca-valor">Valor (R$)</label>
+    <input type="number" id="cobranca-valor" min="0" step="0.01" value="150">
+    <button type="button" class="btn" id="cobranca-confirmar">Gerar cobrança</button>
+    <div class="msg" id="cobranca-msg"></div>
+  </div>
+</div>
+
 <div class="only-print" id="relatorio-impressao"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -68,6 +79,16 @@ const modalLista = document.getElementById("modal-lista");
 const modalClose = document.getElementById("modal-close");
 const btnRelatorio = document.getElementById("btn-relatorio");
 const relatorioImpressao = document.getElementById("relatorio-impressao");
+const cobrancaBackdrop = document.getElementById("cobranca-backdrop");
+const cobrancaClose = document.getElementById("cobranca-close");
+const cobrancaTitulo = document.getElementById("cobranca-titulo");
+const cobrancaValor = document.getElementById("cobranca-valor");
+const cobrancaConfirmar = document.getElementById("cobranca-confirmar");
+const cobrancaMsg = document.getElementById("cobranca-msg");
+
+let cobrancaAlunoAtual = null;
+// "manual" (padrão) ou "pix" — lido de config/geral. Ver CONTEXT.md.
+let mensalidadeModo = "manual";
 
 const BELT_COLORS = {
   "Branca": "#999999", "Cinza": "#888888", "Amarela": "#e0b400", "Laranja": "#e07a00",
@@ -77,6 +98,8 @@ const BELT_COLORS = {
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
 btnRelatorio.addEventListener("click", gerarRelatorio);
+cobrancaClose.addEventListener("click", () => cobrancaBackdrop.classList.remove("show"));
+cobrancaConfirmar.addEventListener("click", confirmarGeracaoCobranca);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -89,6 +112,9 @@ auth.onAuthStateChanged(async (user) => {
     cardNegado.style.display = "block";
     return;
   }
+
+  const configDoc = await db.collection("config").doc("geral").get();
+  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
 
   conteudo.style.display = "block";
   carregarAlunos();
@@ -139,15 +165,41 @@ async function carregarAlunos() {
     const mensalidadeTag = document.createElement("span");
     mensalidadeTag.className = "mensalidade-tag " + (emDia ? "pago" : "pendente");
     mensalidadeTag.textContent = emDia ? "Pago" : "Pendente";
-    const btnMensalidade = document.createElement("button");
-    btnMensalidade.type = "button";
-    btnMensalidade.className = "mensalidade-btn";
-    btnMensalidade.textContent = emDia ? "Marcar pendente" : "Marcar pago";
-    btnMensalidade.addEventListener("click", (e) => {
-      e.stopPropagation();
-      alterarMensalidade(doc.id, emDia ? "pendente" : "pago");
-    });
-    tdMensalidade.append(mensalidadeTag, btnMensalidade);
+    tdMensalidade.appendChild(mensalidadeTag);
+
+    if (emDia) {
+      // Correção manual sempre disponível, nos dois modos (o professor pode reverter
+      // um "pago" por engano mesmo com cobrança automática ligada).
+      const btnMensalidade = document.createElement("button");
+      btnMensalidade.type = "button";
+      btnMensalidade.className = "mensalidade-btn";
+      btnMensalidade.textContent = "Marcar pendente";
+      btnMensalidade.addEventListener("click", (e) => {
+        e.stopPropagation();
+        alterarMensalidade(doc.id, "pendente");
+      });
+      tdMensalidade.appendChild(btnMensalidade);
+    } else if (mensalidadeModo === "pix") {
+      const btnCobranca = document.createElement("button");
+      btnCobranca.type = "button";
+      btnCobranca.className = "mensalidade-btn";
+      btnCobranca.textContent = "Gerar cobrança Pix";
+      btnCobranca.addEventListener("click", (e) => {
+        e.stopPropagation();
+        abrirModalCobranca(doc.id, aluno.nome);
+      });
+      tdMensalidade.appendChild(btnCobranca);
+    } else {
+      const btnMensalidade = document.createElement("button");
+      btnMensalidade.type = "button";
+      btnMensalidade.className = "mensalidade-btn";
+      btnMensalidade.textContent = "Marcar pago";
+      btnMensalidade.addEventListener("click", (e) => {
+        e.stopPropagation();
+        alterarMensalidade(doc.id, "pago");
+      });
+      tdMensalidade.appendChild(btnMensalidade);
+    }
 
     tr.append(tdNome, tdTelefone, tdFaixa, tdNascimento, tdPresencas, tdMensalidade);
     tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
@@ -213,6 +265,57 @@ async function alterarMensalidade(alunoId, novoStatus) {
     mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
   carregarAlunos();
+}
+
+function abrirModalCobranca(alunoId, alunoNome) {
+  cobrancaAlunoAtual = { id: alunoId, nome: alunoNome };
+  cobrancaTitulo.textContent = "Gerar cobrança Pix - " + alunoNome;
+  cobrancaValor.value = "150";
+  cobrancaMsg.className = "msg";
+  cobrancaBackdrop.classList.add("show");
+}
+
+async function confirmarGeracaoCobranca() {
+  const valor = parseFloat(cobrancaValor.value);
+  if (!valor || valor <= 0) {
+    cobrancaMsg.textContent = "Informe um valor válido.";
+    cobrancaMsg.className = "msg show error";
+    return;
+  }
+
+  if (!WORKER_URL) {
+    cobrancaMsg.textContent = "O serviço de pagamentos ainda não foi configurado pra esta academia.";
+    cobrancaMsg.className = "msg show error";
+    return;
+  }
+
+  cobrancaConfirmar.disabled = true;
+  cobrancaConfirmar.textContent = "Gerando...";
+
+  try {
+    const resp = await fetch(WORKER_URL + "/criar-cobranca", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        alunoId: cobrancaAlunoAtual.id,
+        alunoNome: cobrancaAlunoAtual.nome,
+        valor,
+        mesReferencia: new Date().toISOString().slice(0, 7)
+      })
+    });
+
+    if (!resp.ok) throw new Error("Falha ao gerar cobrança");
+
+    cobrancaMsg.textContent = "Cobrança Pix gerada! O aluno já pode pagar pela área dele.";
+    cobrancaMsg.className = "msg show success";
+    carregarAlunos();
+  } catch (err) {
+    cobrancaMsg.textContent = "Não foi possível gerar a cobrança. Tente novamente.";
+    cobrancaMsg.className = "msg show error";
+  } finally {
+    cobrancaConfirmar.disabled = false;
+    cobrancaConfirmar.textContent = "Gerar cobrança";
+  }
 }
 
 function abrirHistorico(nome, checkinsSnap) {

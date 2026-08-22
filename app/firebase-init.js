@@ -17,6 +17,12 @@ const SCHOOL_LNG = -48.067638301537485;
 const CHECKIN_RADIUS_METERS = 150;
 const CHECKIN_INTERVALO_MINUTOS = 90; // intervalo mínimo entre check-ins, pra evitar check-ins repetidos em sequência
 
+// URL do Cloudflare Worker do módulo financeiro (gera cobrança Pix + recebe webhook do
+// Mercado Pago) — vazia até esse cliente ativar cobrança automática. Com WORKER_URL vazia,
+// o botão de gerar cobrança em admin.html mostra um erro amigável em vez de falhar sem
+// explicação. Ver worker/ na raiz do repositório e config/geral.mensalidadeModo.
+const WORKER_URL = "";
+
 function distanceToSchoolMeters(lat, lng) {
   const metersPerDegLat = 111320;
   const metersPerDegLng = 111320 * Math.cos(SCHOOL_LAT * Math.PI / 180);
