@@ -33,10 +33,10 @@ service cloud.firestore {
     // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
     // Compara o quadrado da distância com o quadrado do raio permitido.
     function dentroDoRaioDaEscola(lat, lng) {
-      let schoolLat = -23.577781408829072;
-      let schoolLng = -48.0222291657568;
+      let schoolLat = -23.58810289825024;
+      let schoolLng = -48.067638301537485;
       let metersPerDegLat = 111320.0;
-      let metersPerDegLng = 102026.77; // 111320 * cos(latitude da escola)
+      let metersPerDegLng = 102018.75; // 111320 * cos(latitude da escola)
       let raioMetros = 150.0;
       let dLat = (lat - schoolLat) * metersPerDegLat;
       let dLng = (lng - schoolLng) * metersPerDegLng;

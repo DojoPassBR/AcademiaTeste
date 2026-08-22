@@ -12,8 +12,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const SCHOOL_LAT = -23.577781408829072;
-const SCHOOL_LNG = -48.0222291657568;
+const SCHOOL_LAT = -23.58810289825024;
+const SCHOOL_LNG = -48.067638301537485;
 const CHECKIN_RADIUS_METERS = 150;
 const CHECKIN_INTERVALO_MINUTOS = 90; // intervalo mínimo entre check-ins, pra evitar check-ins repetidos em sequência
 
