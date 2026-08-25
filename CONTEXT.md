@@ -152,28 +152,14 @@ configuração do Firebase pra validar que auth + Firestore estavam
 funcionando neste projeto novo. Pode ser ignorado ou apagado — não é dado
 real, e este projeto Firebase é só um sandbox mesmo.
 
-## Tarefa pendente (2026-08-24): dar acesso a um amigo dev
+## Acesso do dev parceiro (concluído em 2026-08-25)
 
-Arnaldo fez uma parceria com um amigo que é dev nesse projeto. Falta dar
-acesso a ele em dois lugares:
+Fabrício (amigo/parceiro dev) recebeu acesso de desenvolvimento ao projeto:
 
-| Sistema | Onde | Nível decidido |
-|---|---|---|
-| GitHub | `DojoPassBR/AcademiaTeste` | **Admin** |
-| Firebase | projeto `academiateste-56922` | **Editor** |
+| Sistema | Onde | Identificação | Nível | Status |
+|---|---|---|---|---|
+| GitHub | `DojoPassBR/AcademiaTeste` | `tansoooo` | Admin | Convite enviado (pendente de aceite dele) |
+| Firebase | projeto `academiateste-56922` | `fabriciofontesvidal@gmail.com` | Editor | Adicionado |
 
-**Ainda falta (bloqueado até o Arnaldo passar):**
-- Username do GitHub do amigo (pra convidar como collaborator/Admin no repo)
-- E-mail Google dele (pra adicionar como Editor no Firebase — Configurações
-  do projeto → Usuários e permissões, ou `firebase projects:addfirebaseowner`
-  não serve pro papel Editor, precisa ser pelo Console ou IAM)
-
-**Assim que tiver os dois dados, os passos são:**
-```bash
-gh auth switch --user tatamepass   # dono do repo AcademiaTeste
-gh api repos/DojoPassBR/AcademiaTeste/collaborators/<username> -X PUT -f permission=admin
-```
-E no Firebase Console (`console.firebase.google.com/project/academiateste-56922/settings/iam`),
-adicionar o e-mail dele com papel **Editor**.
-
-Retomar isso do PC do trabalho.
+Obs: ele também passou um e-mail `fabricio.fvidal@icloud.com` antes de confirmar que o
+Google/Firebase é o Gmail acima — só o Gmail foi usado nos convites.
