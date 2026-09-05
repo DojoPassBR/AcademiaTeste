@@ -525,7 +525,10 @@ service cloud.firestore {
     // docId == 'perfil' trava a coleção num só documento, mesma ideia do
     // docId == 'geral' em config/ (ninguém cria documentos arbitrários aqui).
     match /academia/{docId} {
-      allow read: if true;
+      // Só o documento "perfil" existe de verdade (é o único que allow write aceita) —
+      // restringir a leitura ao mesmo docId evita expor leitura pública de um caminho
+      // que nunca deveria ter dado nenhum, mesmo que hoje não haja outro documento aqui.
+      allow read: if docId == 'perfil';
       allow write: if isAdmin()
         && docId == 'perfil'
         && request.resource.data.keys().hasOnly(['endereco', 'complemento', 'cidadeUf', 'cep',
