@@ -433,6 +433,77 @@ describe("config/geral", () => {
     );
   });
 
+  // asaasDiasAvisoAntesVencimento é só o gatilho VISUAL do painel (destaque quando faltam
+  // N dias pro vencimento de uma cobrança Asaas). O prazo de vencimento em si continua
+  // sendo ASAAS_DUE_DATE_DIAS, var fixa do worker/wrangler.toml — este campo não muda
+  // cobrança nenhuma nem dispara envio algum.
+  it("admin grava asaasDiasAvisoAntesVencimento dentro da faixa 1..30", async () => {
+    await semearAdmin(ambiente, ADMIN_UID);
+    const db = ambiente.authenticatedContext(ADMIN_UID).firestore();
+    await assertSucceeds(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 5
+      })
+    );
+    await assertSucceeds(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 1
+      })
+    );
+    await assertSucceeds(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 30
+      })
+    );
+  });
+
+  it("recusa asaasDiasAvisoAntesVencimento fora da faixa 1..30", async () => {
+    await semearAdmin(ambiente, ADMIN_UID);
+    const db = ambiente.authenticatedContext(ADMIN_UID).firestore();
+    await assertFails(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 0
+      })
+    );
+    await assertFails(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 31
+      })
+    );
+  });
+
+  it("recusa asaasDiasAvisoAntesVencimento com tipo errado (string ou float)", async () => {
+    await semearAdmin(ambiente, ADMIN_UID);
+    const db = ambiente.authenticatedContext(ADMIN_UID).firestore();
+    await assertFails(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: "5"
+      })
+    );
+    await assertFails(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 5.5
+      })
+    );
+  });
+
+  it("não-admin não grava asaasDiasAvisoAntesVencimento", async () => {
+    const db = ambiente.authenticatedContext(ALUNO_UID).firestore();
+    await assertFails(
+      setDoc(doc(db, "config", "geral"), {
+        mensalidadeModo: "pix",
+        asaasDiasAvisoAntesVencimento: 5
+      })
+    );
+  });
+
   it("recusa campo extra em config/geral (hasOnly)", async () => {
     await semearAdmin(ambiente, ADMIN_UID);
     const db = ambiente.authenticatedContext(ADMIN_UID).firestore();

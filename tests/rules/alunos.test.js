@@ -197,3 +197,46 @@ describe("alunos — campos do Asaas só o Worker escreve", () => {
     );
   });
 });
+
+// criadoPorAdmin / criadoPorUid são o RASTRO de que o cadastro veio do endpoint
+// POST /criar-aluno do Worker (service account). Se um cliente conseguisse escrevê-los,
+// o rastro deixaria de valer como auditoria: qualquer aluno poderia se declarar
+// "cadastrado pelo professor fulano". Nenhum hasOnly de /alunos lista esses campos —
+// estes testes travam esse contrato.
+describe("alunos — carimbo de cadastro pelo admin só o Worker escreve", () => {
+  it("aluno não traz criadoPorAdmin/criadoPorUid já no cadastro", async () => {
+    const db = comoAluno();
+    await assertFails(
+      setDoc(doc(db, "alunos", ALUNO_UID), { ...ALUNO_VALIDO, criadoPorAdmin: true })
+    );
+    await assertFails(
+      setDoc(doc(db, "alunos", ALUNO_UID), { ...ALUNO_VALIDO, criadoPorUid: ADMIN_UID })
+    );
+  });
+
+  it("aluno não grava criadoPorAdmin/criadoPorUid por update", async () => {
+    await semearAluno(ambiente, ALUNO_UID);
+    const db = comoAluno();
+    await assertFails(updateDoc(doc(db, "alunos", ALUNO_UID), { criadoPorAdmin: true }));
+    await assertFails(updateDoc(doc(db, "alunos", ALUNO_UID), { criadoPorUid: ADMIN_UID }));
+  });
+
+  it("admin não grava criadoPorAdmin/criadoPorUid (nem no próprio create de outro uid)", async () => {
+    await semearAluno(ambiente, ALUNO_UID);
+    await semearAdmin(ambiente, ADMIN_UID);
+    const db = ambiente.authenticatedContext(ADMIN_UID).firestore();
+
+    await assertFails(updateDoc(doc(db, "alunos", ALUNO_UID), { criadoPorAdmin: true }));
+    await assertFails(updateDoc(doc(db, "alunos", ALUNO_UID), { criadoPorUid: ADMIN_UID }));
+
+    // E o admin também não cria o documento de outro aluno — esse caminho é exclusivo do
+    // Worker (POST /criar-aluno).
+    await assertFails(
+      setDoc(doc(db, "alunos", OUTRO_UID), {
+        ...ALUNO_VALIDO,
+        criadoPorAdmin: true,
+        criadoPorUid: ADMIN_UID
+      })
+    );
+  });
+});

@@ -70,6 +70,20 @@
     </ul>
   </div>
 
+  <div class="card" id="card-grade">
+    <h2>Grade de horários</h2>
+    <div id="grade-horarios">
+      <p class="grade-aviso">Carregando...</p>
+    </div>
+  </div>
+
+  <div class="card" id="card-equipe-app">
+    <h2>Nossa equipe</h2>
+    <ul class="equipe-lista" id="lista-equipe-app">
+      <li class="grade-aviso">Carregando...</li>
+    </ul>
+  </div>
+
   <div class="card">
     <h2>Últimas presenças</h2>
     <ul class="checkin-list" id="lista-checkins">
@@ -91,6 +105,8 @@ const statusHoje = document.getElementById("status-hoje");
 const statusSub = document.getElementById("status-sub");
 const listaCheckins = document.getElementById("lista-checkins");
 const listaEventos = document.getElementById("lista-eventos");
+const gradeHorarios = document.getElementById("grade-horarios");
+const listaEquipe = document.getElementById("lista-equipe-app");
 const mensalidadeStatusEl = document.getElementById("mensalidade-status");
 const mensalidadeMesEl = document.getElementById("mensalidade-mes");
 const avisoMensalidade = document.getElementById("aviso-mensalidade");
@@ -173,7 +189,275 @@ auth.onAuthStateChanged(async (user) => {
   // Mural de eventos: carga independente e não bloqueante — se falhar (rules, rede,
   // índice), o check-in em si continua funcionando normalmente.
   carregarEventos();
+  // Grade e equipe também são conteúdo público (rules com `allow read: if true`):
+  // cada uma tem seu próprio try/catch, então uma falha ali não derruba o check-in.
+  carregarGrade();
+  carregarEquipe();
 });
+
+// ---------------------------------------------------------------------------
+// Grade de horários e equipe (mesmo conteúdo público do site, dentro do app)
+// ---------------------------------------------------------------------------
+
+const DIAS_SEMANA = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado"
+];
+
+// Cores válidas de turma (mesmas do cadastro do professor). Qualquer outro valor
+// cai no estilo neutro — nunca monta uma classe CSS que não existe.
+const CORES_TURMA_TAG = { red: true, yellow: true, pink: true, white: true };
+
+// Ordem de exibição dos links de rede social e o rótulo humano de cada um,
+// igual ao site público (site-publico.js).
+const REDES_EQUIPE = [
+  { chave: "instagram", rotulo: "Instagram" },
+  { chave: "facebook", rotulo: "Facebook" },
+  { chave: "youtube", rotulo: "YouTube" },
+  { chave: "tiktok", rotulo: "TikTok" },
+  { chave: "whatsapp", rotulo: "WhatsApp" },
+  { chave: "site", rotulo: "Site" }
+];
+
+function textoNaoVazio(valor) {
+  return typeof valor === "string" && valor.trim().length > 0 ? valor.trim() : null;
+}
+
+// Esvazia um container removendo os filhos um a um. Nada de innerHTML.
+function limparNode(node) {
+  while (node.firstChild) {
+    node.removeChild(node.firstChild);
+  }
+}
+
+function criarEl(tag, classe, texto) {
+  const node = document.createElement(tag);
+  if (classe) node.className = classe;
+  if (texto) node.textContent = texto;
+  return node;
+}
+
+// Troca todo o conteúdo do container por uma única linha de texto (erro ou vazio).
+function avisoNoContainer(container, tag, texto) {
+  limparNode(container);
+  container.appendChild(criarEl(tag, "grade-aviso", texto));
+}
+
+function faixaHorario(horario) {
+  const inicio = textoNaoVazio(horario.horaInicio);
+  const fim = textoNaoVazio(horario.horaFim);
+  if (inicio && fim) return inicio + " às " + fim;
+  return inicio || fim || "";
+}
+
+// Três consultas soltas + JOIN em memória: as coleções são pequenas (dezenas de
+// docs) e desnormalizar nome de turma/professor dentro de horarios só criaria dado
+// duplicado pra manter sincronizado. Os índices compostos usados aqui
+// (horarios: ativo+diaSemana+horaInicio) já existem em firestore.indexes.json;
+// turmas e equipe são consultadas só com um where, que não precisa de índice.
+async function carregarGrade() {
+  let turmasSnap;
+  let horariosSnap;
+  let equipeSnap;
+
+  try {
+    [turmasSnap, horariosSnap, equipeSnap] = await Promise.all([
+      db.collection("turmas").where("ativo", "==", true).limit(50).get(),
+      db.collection("horarios")
+        .where("ativo", "==", true)
+        .orderBy("diaSemana")
+        .orderBy("horaInicio")
+        .limit(200)
+        .get(),
+      db.collection("equipe").where("ativo", "==", true).limit(50).get()
+    ]);
+  } catch (err) {
+    avisoNoContainer(gradeHorarios, "p", "Não foi possível carregar a grade de horários.");
+    return;
+  }
+
+  const turmasPorId = {};
+  turmasSnap.forEach((doc) => { turmasPorId[doc.id] = doc.data() || {}; });
+
+  const equipePorId = {};
+  equipeSnap.forEach((doc) => { equipePorId[doc.id] = doc.data() || {}; });
+
+  const grupos = [];
+  for (let dia = 0; dia <= 6; dia++) {
+    grupos.push({ dia, nome: DIAS_SEMANA[dia], linhas: [] });
+  }
+
+  horariosSnap.forEach((doc) => {
+    const horario = doc.data() || {};
+    const dia = horario.diaSemana;
+    if (typeof dia !== "number" || dia < 0 || dia > 6) return;
+
+    const turma = turmasPorId[horario.turmaId] || null;
+    const nomeTurma = turma ? textoNaoVazio(turma.nome) : null;
+    // Horário órfão (turma inativa ou apagada): não tem o que mostrar pro aluno.
+    if (!nomeTurma) return;
+
+    const professor = horario.professorId ? equipePorId[horario.professorId] || null : null;
+    const nomeProfessor = professor ? textoNaoVazio(professor.nome) : null;
+
+    const detalhes = [];
+    if (nomeProfessor) detalhes.push("Prof. " + nomeProfessor);
+    const observacao = textoNaoVazio(horario.observacao);
+    if (observacao) detalhes.push(observacao);
+
+    grupos[dia].linhas.push({
+      faixa: faixaHorario(horario),
+      turma: nomeTurma,
+      // nivel/descricao vêm do cadastro da turma no painel do professor.
+      nivel: turma ? textoNaoVazio(turma.nivel) : null,
+      descricao: turma ? textoNaoVazio(turma.descricao) : null,
+      cor: turma && CORES_TURMA_TAG[turma.cor] ? turma.cor : null,
+      detalhe: detalhes.length > 0 ? detalhes.join(" · ") : null
+    });
+  });
+
+  const totalLinhas = grupos.reduce((soma, grupo) => soma + grupo.linhas.length, 0);
+  if (totalLinhas === 0) {
+    avisoNoContainer(gradeHorarios, "p", "Nenhum horário cadastrado ainda.");
+    return;
+  }
+
+  const hoje = new Date().getDay();
+  // Dias sem aula somem, exceto o de hoje: o aluno precisa ver, explicitamente,
+  // que hoje não tem treino em vez de ficar procurando o dia na lista.
+  const visiveis = grupos.filter((grupo) => grupo.linhas.length > 0 || grupo.dia === hoje);
+
+  const lista = criarEl("ul", "grade-dias");
+
+  visiveis.forEach((grupo) => {
+    const ehHoje = grupo.dia === hoje;
+    const itemDia = criarEl("li", ehHoje ? "grade-dia grade-dia-hoje" : "grade-dia");
+
+    // O destaque de "hoje" nunca é só cor/borda: tem o rótulo "Hoje" em texto.
+    const titulo = criarEl("h3", "grade-dia-titulo", grupo.nome);
+    if (ehHoje) titulo.appendChild(criarEl("span", "grade-hoje-tag", "Hoje"));
+    itemDia.appendChild(titulo);
+
+    const linhas = criarEl("ul", "checkin-list");
+
+    if (grupo.linhas.length === 0) {
+      linhas.appendChild(criarEl("li", "grade-aviso", "Sem aulas neste dia."));
+    } else {
+      grupo.linhas.forEach((linha) => {
+        const item = document.createElement("li");
+        item.appendChild(criarEl("span", "grade-hora", linha.faixa));
+
+        const direita = criarEl("span", "grade-turma");
+        direita.appendChild(criarEl(
+          "span",
+          linha.cor ? "turma-tag turma-tag-" + linha.cor : "turma-tag",
+          linha.turma
+        ));
+        // Nível como subtítulo curto do nome da turma; descrição abaixo, quando houver.
+        if (linha.nivel) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", "— " + linha.nivel));
+        }
+        if (linha.descricao) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", linha.descricao));
+        }
+        if (linha.detalhe) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", linha.detalhe));
+        }
+
+        item.appendChild(direita);
+        linhas.appendChild(item);
+      });
+    }
+
+    itemDia.appendChild(linhas);
+    lista.appendChild(itemDia);
+  });
+
+  limparNode(gradeHorarios);
+  gradeHorarios.appendChild(lista);
+}
+
+// Links de rede social de um membro. Reaproveita linkHttpsValido(): só entra na
+// tela o que for https:// válido, com aria-label dizendo de quem é o perfil.
+function montarRedesEquipe(redes, nomeDono) {
+  if (!redes || typeof redes !== "object") return null;
+
+  const caixa = criarEl("span", "equipe-redes");
+  let algum = false;
+
+  REDES_EQUIPE.forEach((rede) => {
+    const href = linkHttpsValido(redes[rede.chave]);
+    if (!href) return;
+    const link = criarEl("a", "rede-link", rede.rotulo);
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", rede.rotulo + (nomeDono ? " de " + nomeDono : ""));
+    caixa.appendChild(link);
+    algum = true;
+  });
+
+  return algum ? caixa : null;
+}
+
+// Mesma ordenação do site público (ordem, depois nome). O índice composto
+// (ativo, ordem, nome) para 'equipe' já existe em firestore.indexes.json.
+async function carregarEquipe() {
+  let snap;
+  try {
+    snap = await db.collection("equipe")
+      .where("ativo", "==", true)
+      .orderBy("ordem")
+      .orderBy("nome")
+      .limit(50)
+      .get();
+  } catch (err) {
+    avisoNoContainer(listaEquipe, "li", "Não foi possível carregar a equipe.");
+    return;
+  }
+
+  const membros = [];
+  snap.forEach((doc) => {
+    const membro = doc.data() || {};
+    if (textoNaoVazio(membro.nome)) membros.push(membro);
+  });
+
+  if (membros.length === 0) {
+    avisoNoContainer(listaEquipe, "li", "Nenhum membro da equipe cadastrado ainda.");
+    return;
+  }
+
+  limparNode(listaEquipe);
+
+  membros.forEach((membro) => {
+    const nome = textoNaoVazio(membro.nome);
+    const item = document.createElement("li");
+
+    item.appendChild(criarEl("strong", "equipe-nome", nome));
+
+    const rotulos = [membro.tipo === "instrutor" ? "Instrutor" : "Professor"];
+    const faixa = textoNaoVazio(membro.faixa);
+    if (faixa) rotulos.push("Faixa " + faixa);
+    item.appendChild(criarEl("span", "equipe-tipo", rotulos.join(" · ")));
+
+    const bio = textoNaoVazio(membro.bio);
+    if (bio) item.appendChild(criarEl("p", "equipe-bio", bio));
+
+    // Telefone é opcional; texto simples (sem link), só quando cadastrado.
+    const telefoneMembro = textoNaoVazio(membro.telefone);
+    if (telefoneMembro) item.appendChild(criarEl("span", "equipe-telefone", telefoneMembro));
+
+    const redes = montarRedesEquipe(membro.redes, nome);
+    if (redes) item.appendChild(redes);
+
+    listaEquipe.appendChild(item);
+  });
+}
 
 // Só os eventos a partir de hoje: o filtro de data é feito no servidor (where + orderBy
 // no MESMO campo 'data', que o índice de campo único automático já atende — não precisa

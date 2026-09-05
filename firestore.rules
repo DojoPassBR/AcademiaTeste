@@ -70,7 +70,112 @@ service cloud.firestore {
               && dados.lembreteDiasParaAlerta >= 1
               && dados.lembreteDiasParaAlerta <= 60))
         && (!('lembreteTemplate' in dados) || (dados.lembreteTemplate is string
-              && dados.lembreteTemplate.size() <= 500));
+              && dados.lembreteTemplate.size() <= 500))
+        // asaasDiasAvisoAntesVencimento é APENAS UM GATILHO VISUAL do painel do professor:
+        // quando faltam N dias (ou menos) para o vencimento de uma cobrança Asaas, a linha
+        // do aluno ganha destaque. NÃO é o prazo de vencimento da cobrança — esse continua
+        // sendo a var de infra ASAAS_DUE_DATE_DIAS, fixa em worker/wrangler.toml, que é o
+        // que de fato define o dueDate enviado ao Asaas. Este campo também NÃO dispara
+        // nada sozinho (nenhum e-mail, WhatsApp ou cobrança automática): é só o número de
+        // dias a partir do qual a tela destaca a pendência.
+        && (!('asaasDiasAvisoAntesVencimento' in dados) || (dados.asaasDiasAvisoAntesVencimento is int
+              && dados.asaasDiasAvisoAntesVencimento >= 1
+              && dados.asaasDiasAvisoAntesVencimento <= 30));
+    }
+
+    // Valida o map opcional 'redes' (links de redes sociais) usado tanto pela equipe
+    // quanto pelo perfil público da academia. Só as 6 chaves conhecidas são aceitas
+    // (hasOnly), e cada valor presente tem que ser https:// — nada de http:// nem
+    // javascript:, que viraria XSS na hora de montar o <a> na página pública.
+    //
+    // Por que a checagem é repetida chave a chave em vez de um laço: a linguagem das
+    // Firestore Rules NÃO tem combinator de "todos os valores de um map" (não existe
+    // .values().all(...)). Verboso, mas é a única forma correta e explícita.
+    function redesValidas(dados) {
+      return !('redes' in dados) || (
+        dados.redes is map
+        && dados.redes.keys().hasOnly(['instagram', 'facebook', 'youtube', 'tiktok', 'site', 'whatsapp'])
+        && (!('instagram' in dados.redes) || (dados.redes.instagram is string
+              && dados.redes.instagram.size() <= 200
+              && dados.redes.instagram.matches('^https://[^ ]+[.][^ ]+$')))
+        && (!('facebook' in dados.redes) || (dados.redes.facebook is string
+              && dados.redes.facebook.size() <= 200
+              && dados.redes.facebook.matches('^https://[^ ]+[.][^ ]+$')))
+        && (!('youtube' in dados.redes) || (dados.redes.youtube is string
+              && dados.redes.youtube.size() <= 200
+              && dados.redes.youtube.matches('^https://[^ ]+[.][^ ]+$')))
+        && (!('tiktok' in dados.redes) || (dados.redes.tiktok is string
+              && dados.redes.tiktok.size() <= 200
+              && dados.redes.tiktok.matches('^https://[^ ]+[.][^ ]+$')))
+        && (!('site' in dados.redes) || (dados.redes.site is string
+              && dados.redes.site.size() <= 200
+              && dados.redes.site.matches('^https://[^ ]+[.][^ ]+$')))
+        && (!('whatsapp' in dados.redes) || (dados.redes.whatsapp is string
+              && dados.redes.whatsapp.size() <= 200
+              && dados.redes.whatsapp.matches('^https://[^ ]+[.][^ ]+$')))
+      );
+    }
+
+    // Valida uma turma do site público (nome, nível, cor da faixa-tema, ordem de exibição).
+    // Mesma disciplina de dadosAlunoValidos/dadosEventoValidos: tipo, tamanho e enum
+    // conferidos aqui, sem depender do formulário do admin.
+    function dadosTurmaValidos(dados) {
+      return dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 60
+        && (!('descricao' in dados) || (dados.descricao is string && dados.descricao.size() <= 300))
+        && dados.nivel in ['Infantil', 'Juvenil', 'Iniciante', 'Intermediario', 'Avancado',
+             'Competicao', 'Misto', 'Feminino', 'Livre']
+        && dados.cor in ['red', 'yellow', 'pink', 'white']
+        && dados.ativo is bool
+        && dados.ordem is int && dados.ordem >= 0 && dados.ordem <= 99;
+    }
+
+    // Valida um membro da equipe (professor/instrutor) exibido na página pública.
+    // Nada aqui é dado sensível: é o que o professor decidiu publicar sobre si mesmo
+    // e sobre a equipe (nome, telefone de contato da academia, bio, faixa, redes).
+    function dadosMembroValidos(dados) {
+      return dados.tipo in ['professor', 'instrutor']
+        && dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 80
+        && (!('telefone' in dados) || (dados.telefone is string && dados.telefone.size() <= 30))
+        && (!('bio' in dados) || (dados.bio is string && dados.bio.size() <= 400))
+        && (!('faixa' in dados) || (dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja',
+             'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta']))
+        && dados.ativo is bool
+        && dados.ordem is int && dados.ordem >= 0 && dados.ordem <= 99
+        && redesValidas(dados);
+    }
+
+    // Valida uma linha da grade de horários. diaSemana segue a convenção do JS
+    // (0 = domingo ... 6 = sábado), igual ao Date.getDay() usado no cliente.
+    // horaInicio/horaFim são strings 'HH:MM' zero-padded (24h) — nesse formato a
+    // comparação lexicográfica de string equivale à comparação cronológica
+    // ('09:30' < '10:00'), que é o que garante horaInicio < horaFim aqui sem precisar
+    // converter pra número. A regex acima é o que assegura o zero-padding.
+    function dadosHorarioValidos(dados) {
+      return dados.diaSemana is int && dados.diaSemana >= 0 && dados.diaSemana <= 6
+        && dados.horaInicio is string
+        && dados.horaInicio.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && dados.horaFim is string
+        && dados.horaFim.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && dados.horaInicio < dados.horaFim
+        && (!('observacao' in dados) || (dados.observacao is string && dados.observacao.size() <= 120))
+        && dados.ativo is bool;
+    }
+
+    // Valida o documento academia/perfil — endereço e contato públicos da academia.
+    // É informação institucional que o professor escolhe publicar; nada de aluno.
+    function dadosPerfilAcademiaValidos(dados) {
+      return dados.endereco is string && dados.endereco.size() > 0 && dados.endereco.size() <= 200
+        && (!('complemento' in dados) || (dados.complemento is string && dados.complemento.size() <= 120))
+        && (!('cidadeUf' in dados) || (dados.cidadeUf is string && dados.cidadeUf.size() <= 80))
+        && (!('cep' in dados) || (dados.cep is string && dados.cep.matches('^[0-9]{5}-?[0-9]{3}$')))
+        && (!('telefoneContato' in dados) || (dados.telefoneContato is string
+              && dados.telefoneContato.size() <= 30))
+        && (!('emailContato' in dados) || (dados.emailContato is string
+              && dados.emailContato.size() <= 100
+              && dados.emailContato.matches('^[^@]+@[^@]+[.][^@]+$')))
+        && (!('horarioFuncionamento' in dados) || (dados.horarioFuncionamento is string
+              && dados.horarioFuncionamento.size() <= 300))
+        && redesValidas(dados);
     }
 
     // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
@@ -104,6 +209,15 @@ service cloud.firestore {
       return checkinId == request.auth.uid + '_' + string(request.time.toMillis() / 5400000);
     }
 
+    // INTENCIONAL, NÃO É BUG: o create abaixo exige request.auth.uid == alunoId, ou seja,
+    // NENHUM cliente — nem o professor logado — cria o documento de OUTRA pessoa. Não
+    // "conserte" isso abrindo o create pra isAdmin(): é exatamente essa restrição que faz
+    // o único caminho de cadastro por terceiro ser o endpoint POST /criar-aluno do Worker
+    // (worker/src/index.js), que exige admin autenticado, valida todos os campos e deixa
+    // rastro nos campos criadoPorAdmin/criadoPorUid — campos que, de propósito, não
+    // aparecem em nenhum hasOnly aqui e por isso só a service account consegue gravar.
+    // Afrouxar o create aqui devolveria ao cliente a capacidade de forjar cadastro (e
+    // autoria de cadastro) de qualquer uid, sem auditoria nenhuma.
     match /alunos/{alunoId} {
       // Cadastro só pode conter os campos do formulário (hasOnly) e precisa trazer todos
       // os obrigatórios (hasAll). Nunca pode vir com mensalidadeStatus setado — isso já é
@@ -304,9 +418,123 @@ service cloud.firestore {
         && docId == 'geral'
         && request.resource.data.keys().hasOnly(['mensalidadeModo', 'valorMensalidadePadrao',
              'academiaNome', 'pixChaveManual', 'lembreteWhatsappAtivo', 'lembreteEmailAtivo',
-             'lembreteVisualAtivo', 'lembreteDiasParaAlerta', 'lembreteTemplate'])
+             'lembreteVisualAtivo', 'lembreteDiasParaAlerta', 'lembreteTemplate',
+             'asaasDiasAvisoAntesVencimento'])
         && 'mensalidadeModo' in request.resource.data
         && dadosConfigValidos(request.resource.data);
+    }
+
+    // ============================================================
+    // COLEÇÕES PÚBLICAS — leitura sem login (allow read: if true).
+    // Só conteúdo institucional que o professor decidiu tornar público
+    // (turmas, equipe, grade de horários, endereço/contato da academia).
+    // NUNCA adicionar aqui dado de aluno, financeiro ou credencial.
+    //
+    // Estas são as ÚNICAS quatro coleções do banco com leitura anônima. Todo o
+    // resto (alunos, checkins, cobrancas, config, eventos, admins) continua exigindo
+    // isSignedIn()/isAdmin() — e tests/rules/site-publico.test.js tem um bloco de
+    // regressão explícito provando que a leitura pública não vazou pra fora daqui.
+    // A escrita, nas quatro, continua sendo só de admin.
+    // ============================================================
+
+    // Turmas exibidas na página pública (nome, nível, cor-tema e ordem de exibição).
+    match /turmas/{turmaId} {
+      allow read: if true;
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['nome', 'descricao', 'nivel', 'cor', 'ativo',
+             'ordem', 'criadoPor', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'nivel', 'cor', 'ativo', 'ordem',
+             'criadoPor', 'criadoEm'])
+        && request.resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoEm == request.time
+        && dadosTurmaValidos(request.resource.data);
+
+      // Mesma disciplina do mural de eventos: só os campos editáveis mudam (+ carimbo)
+      // e a autoria original é conferida contra o documento existente.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nome', 'descricao', 'nivel', 'cor', 'ativo', 'ordem', 'atualizadoEm'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && dadosTurmaValidos(request.resource.data);
+
+      allow delete: if isAdmin();
+    }
+
+    // Equipe (professores e instrutores) exibida na página pública.
+    match /equipe/{membroId} {
+      allow read: if true;
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['tipo', 'nome', 'telefone', 'bio', 'faixa',
+             'redes', 'ativo', 'ordem', 'criadoPor', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['tipo', 'nome', 'ativo', 'ordem',
+             'criadoPor', 'criadoEm'])
+        && request.resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoEm == request.time
+        && dadosMembroValidos(request.resource.data);
+
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['tipo', 'nome', 'telefone', 'bio', 'faixa', 'redes', 'ativo', 'ordem',
+                       'atualizadoEm'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && dadosMembroValidos(request.resource.data);
+
+      allow delete: if isAdmin();
+    }
+
+    // Grade de horários. turmaId é obrigatório e professorId é opcional, mas os dois,
+    // quando presentes, têm que apontar pra documentos que existem de verdade — é o
+    // mesmo exists() já usado em cobrancas pra impedir referência órfã.
+    match /horarios/{horarioId} {
+      allow read: if true;
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['diaSemana', 'horaInicio', 'horaFim', 'turmaId',
+             'professorId', 'observacao', 'ativo', 'criadoPor', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['diaSemana', 'horaInicio', 'horaFim', 'turmaId',
+             'ativo', 'criadoPor', 'criadoEm'])
+        && request.resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoEm == request.time
+        && dadosHorarioValidos(request.resource.data)
+        && exists(/databases/$(database)/documents/turmas/$(request.resource.data.turmaId))
+        && (!('professorId' in request.resource.data)
+            || exists(/databases/$(database)/documents/equipe/$(request.resource.data.professorId)));
+
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['diaSemana', 'horaInicio', 'horaFim', 'turmaId', 'professorId',
+                       'observacao', 'ativo', 'atualizadoEm'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && dadosHorarioValidos(request.resource.data)
+        && exists(/databases/$(database)/documents/turmas/$(request.resource.data.turmaId))
+        && (!('professorId' in request.resource.data)
+            || exists(/databases/$(database)/documents/equipe/$(request.resource.data.professorId)));
+
+      allow delete: if isAdmin();
+    }
+
+    // Perfil público da academia: endereço, contato e redes. Documento único —
+    // docId == 'perfil' trava a coleção num só documento, mesma ideia do
+    // docId == 'geral' em config/ (ninguém cria documentos arbitrários aqui).
+    match /academia/{docId} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && docId == 'perfil'
+        && request.resource.data.keys().hasOnly(['endereco', 'complemento', 'cidadeUf', 'cep',
+             'telefoneContato', 'emailContato', 'horarioFuncionamento', 'redes',
+             'atualizadoPor', 'atualizadoEm'])
+        && 'endereco' in request.resource.data
+        && request.resource.data.atualizadoPor == request.auth.uid
+        && request.resource.data.atualizadoEm == request.time
+        && dadosPerfilAcademiaValidos(request.resource.data);
     }
   }
 }

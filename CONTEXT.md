@@ -632,6 +632,110 @@ npx wrangler deploy
 Guarde o valor num gerenciador de senhas: perdê-lo significa recadastrar a chave do Asaas
 pelo painel (nada mais quebra), e trocá-lo tem o mesmo efeito.
 
+## Cadastro de aluno pelo professor — `POST /criar-aluno` (2026-09-05)
+
+Até aqui, só o próprio aluno conseguia criar a conta dele (`cadastro.html`, ou o link de
+convite pré-preenchido gerado no painel). Agora o professor também pode cadastrar direto
+do painel — **mas o caminho continua sendo só um: o Worker.**
+
+### Por que pelo Worker e não pelo SDK no navegador
+
+`createUserWithEmailAndPassword` no cliente **troca a sessão do navegador** pelo usuário
+recém-criado: o professor seria deslogado do próprio painel a cada aluno cadastrado. E as
+rules de `/alunos` exigem `request.auth.uid == alunoId` no create — ou seja, nem com a
+sessão certa o professor criaria o documento de outra pessoa.
+
+### O endpoint
+
+`POST /criar-aluno` (worker/src/index.js) — exige `Authorization: Bearer <ID token>` e que
+o UID esteja em `admins/{uid}`, igual a `/criar-cobranca`.
+
+Corpo: `{ nome, email, senha, telefone, nascimento, faixa }`. **Toda** a validação acontece
+antes de qualquer chamada externa (worker/src/validacao.js: `nomeAlunoCadastroValido`,
+`emailValido`, `senhaInicialValida`, `telefoneValido`, `nascimentoValido`, `faixaValida`),
+com 400 específico por campo. Esses limites são um espelho de `dadosAlunoValidos` em
+`firestore.rules` e do `<select>` de `app/cadastro.html` — divergir ali cria um documento
+que o **próprio aluno** depois não consegue editar (o update dele é revalidado pelas rules
+e falha em silêncio).
+
+Fluxo: cria a conta no Firebase Auth → valida o UID devolvido com `alunoIdValido()` (defesa
+em profundidade: o UID vira caminho de documento) → `createDocument('alunos/<uid>', ...)`.
+
+Respostas: `200 { ok: true, alunoId }`; `409` e-mail já cadastrado; `400` senha fraca /
+e-mail inválido / campo inválido; `401`/`403` autenticação e permissão; `500` genérico —
+o erro cru do Google **nunca** vaza pro cliente. Caso especial: se o Auth criou a conta mas
+o Firestore falhou, a resposta é 500 **com o UID órfão** ("contate o suporte com este
+código: …"), pra o professor não tentar de novo às cegas e bater em `EMAIL_EXISTS` pra
+sempre.
+
+A senha só existe em memória durante a requisição: não vai pra log, nem pro Firestore, nem
+pra resposta. No painel, o input de senha é limpo assim que a requisição volta e ao fechar
+o modal. O aviso no modal diz na cara: *"Você vai conhecer a senha deste aluno — para maior
+privacidade, prefira o link de convite."*
+
+### Scope OAuth novo: `identitytoolkit`
+
+`worker/src/identity.js` fala com `https://identitytoolkit.googleapis.com/v1/accounts`
+**sem `?key=`**, autenticado só pelo Bearer da service account. Isso exigiu mudar
+`getAccessToken(env, scope)` (worker/src/firestore.js): o token é emitido **por scope**, e o
+cache virou um `Map` keyed pelo scope — com o objeto único de antes, pedir o token de
+`identitytoolkit` sobrescrevia o de `datastore` e a próxima escrita no Firestore ia com o
+token errado. Constantes exportadas: `SCOPE_DATASTORE`, `SCOPE_IDENTITY`.
+
+### Campos `criadoPorAdmin` / `criadoPorUid`
+
+Gravados só pelo Worker em `alunos/{uid}`: `criadoPorAdmin: true` e `criadoPorUid` = UID do
+**admin que fez a chamada** (não o do aluno). São o rastro de auditoria do cadastro por
+terceiro. Como `asaasCustomerId`, eles não aparecem em **nenhum** `hasOnly` das rules —
+logo, nenhum cliente (aluno ou admin) consegue escrevê-los. `tests/rules/alunos.test.js`
+trava esse contrato.
+
+O bloco `match /alunos/{alunoId}` das rules **não mudou** e não deve mudar: o comentário
+acima dele explica que o create restrito a `request.auth.uid == alunoId` é justamente o que
+faz o `/criar-aluno` ser o único caminho auditável de cadastro por terceiro.
+
+### ⚠️ Resultado do teste real (2026-09-05) — endpoint NÃO validado ponta a ponta
+
+O deploy foi feito (`npx wrangler deploy`) e a rota responde. O que dá pra confirmar:
+
+- sem token → `401 {"erro":"Não autenticado."}`; token malformado → `401`. OK.
+- **o teste de criar aluno de verdade NÃO passou** — e o motivo não é o código novo.
+
+Durante o teste apareceu um **bug pré-existente que quebra TODO o caminho de service
+account do Worker** (`/criar-cobranca`, `/webhook-asaas`, `/enviar-lembrete`,
+`/comprovante` — tudo, não só o endpoint novo). Dois problemas, em sequência:
+
+1. `atob() called with invalid base64-encoded data` no `importPrivateKey`: a secret
+   `FIREBASE_PRIVATE_KEY` chega com `\n` **escapado** (dois caracteres, `\` + `n`), e a
+   `\` não é removida por `/\s/g`. **Corrigido nesta fatia**: `normalizarPem()` em
+   worker/src/firestore.js agora desescapa `\n`, tira aspas envolventes, e um PEM inválido
+   passou a virar log claro em vez de `Erro interno`.
+2. Depois disso, o Google passou a responder
+   `invalid_grant: "Invalid grant: account not found"`. O log de diagnóstico (também
+   adicionado nesta fatia) mostra o motivo:
+   **`iss=fabriciofontesvidal@gmail.com`** — a secret `FIREBASE_CLIENT_EMAIL` está com o
+   **e-mail pessoal do dono do projeto**, não com o `client_email` da service account
+   (algo como `firebase-adminsdk-xxxxx@academiateste-56922.iam.gserviceaccount.com`).
+   Um Gmail não é uma service account, então o JWT nunca vai ser trocado por access token.
+
+**O que falta (só o dono do projeto consegue fazer — envolve a chave privada):**
+
+```bash
+# Firebase Console > Configurações do projeto > Contas de serviço > Gerar nova chave privada
+# Do JSON baixado:
+cd worker
+npx wrangler secret put FIREBASE_CLIENT_EMAIL   # cole o campo "client_email" (…@….iam.gserviceaccount.com)
+npx wrangler secret put FIREBASE_PRIVATE_KEY    # cole o campo "private_key" inteiro
+npx wrangler deploy
+```
+
+Depois disso, refazer o teste de `/criar-aluno` com um ID token de admin. Se o Google
+responder `PERMISSION_DENIED` / `insufficient permission` **na chamada ao Identity
+Toolkit** (e não no Firestore), aí sim é papel de IAM: a service account precisa de
+**Firebase Authentication Admin** em
+<https://console.cloud.google.com/iam-admin/iam?project=academiateste-56922>.
+**Isso ainda não foi possível verificar** — a autenticação morre antes de chegar lá.
+
 ## Dados de teste
 
 Um usuário de teste (`teste.config@example.com`) foi criado durante a
@@ -650,3 +754,62 @@ Fabrício (amigo/parceiro dev) recebeu acesso de desenvolvimento ao projeto:
 
 Obs: ele também passou um e-mail `fabricio.fvidal@icloud.com` antes de confirmar que o
 Google/Firebase é o Gmail acima — só o Gmail foi usado nos convites.
+
+## Grade de horários, equipe e perfil público da academia (2026-09-05)
+
+**Primeira leitura pública do projeto.** Até aqui, toda coleção do Firestore exigia
+`isSignedIn()` no mínimo. Quatro coleções novas quebram esse padrão de propósito, porque
+o conteúdo é institucional e a academia quer divulgar sem exigir login:
+
+- **`turmas/{id}`** — nome, descricao?, nivel (enum fixo), cor (`red`/`yellow`/`pink`/`white`,
+  mapeia as pílulas de turma), ativo, ordem, criadoPor/criadoEm/atualizadoEm?.
+- **`equipe/{id}`** — UMA coleção só para professor e instrutor (campo `tipo`), sem
+  nenhuma relação com `admins` (que continua sendo só quem loga como professor no app):
+  nome, telefone? (comercial, rotulado "aparece no site público"), bio?, faixa?, redes?
+  (map de 6 chaves fixas — instagram/facebook/youtube/tiktok/site/whatsapp — cada uma
+  validada `https://` nas rules), ativo, ordem.
+- **`horarios/{id}`** — diaSemana (0=Domingo..6=Sábado), horaInicio/horaFim (`HH:MM`),
+  turmaId (`exists()` conferido na rule), professorId? (idem, em `equipe`), observacao?,
+  ativo. Sem desnormalizar nome de turma/professor — o join é feito em memória no
+  cliente (as três coleções são pequenas), o que evita a classe de bug "renomeei a turma
+  e o horário antigo ainda mostra o nome velho".
+- **`academia/perfil`** — documento único (rule trava `docId == 'perfil'` na própria
+  condição do match, mesmo padrão de `config/geral`): endereco (obrigatório),
+  complemento?, cidadeUf?, cep?, telefoneContato?, emailContato?, horarioFuncionamento?
+  (texto livre), redes?. **Isto é só texto exibido no site — não tem relação nenhuma com
+  o geofence de check-in.** `SCHOOL_LAT`/`SCHOOL_LNG` continuam hardcoded em
+  `firestore.rules` e `app/firebase-init.js`, sincronizados manualmente pelos marcadores
+  `GEO-SYNC` e conferidos por `scripts/check-geo-drift.mjs` — mudar o endereço aqui não
+  move o círculo de 150m de onde o check-in é aceito.
+
+Regra permanente, documentada também em `firestore.rules` acima dos 4 blocos: **nunca
+adicionar campo de dado de aluno, financeiro ou credencial nessas coleções** — elas são
+lidas por qualquer um, sem login, sem rate limit próprio do Firestore além do App Check
+(ainda pendente, ver seção "Pendente: App Check").
+
+### Onde isso aparece
+
+- **Site institucional (`index.html`)** — `site-firebase.js` (config pública do Firebase,
+  SEM `firebase.auth()`, nunca cria sessão) + `site-publico.js` (busca as 4 coleções com
+  timeout de 6s cada, uma leitura por carregamento, sem `onSnapshot`) substituem
+  progressivamente a grade/equipe/endereço estáticos. **O HTML estático nunca é
+  removido** — ele é o fallback: se o Firestore falhar, demorar, estiver bloqueado por
+  extensão, ou o visitante estiver com JS desligado, a página continua exatamente como
+  antes desta feature.
+- **App (`app/checkin.html`)** — cards "Grade de horários" e "Nossa equipe" pro aluno
+  logado, carregados em paralelo ao resto da tela (try/catch isolado, igual ao card de
+  eventos — uma falha aqui não pode quebrar o check-in).
+- **Painel do professor (`app/admin.html`)** — 4 cards novos (Turmas, Equipe, Grade de
+  horários, Perfil da academia), cada um com o aviso fixo "Tudo o que for salvo aqui
+  aparece no site público, sem necessidade de login." Uma barra de âncoras
+  (`.admin-nav`) foi adicionada no topo do painel pra navegar entre as seções, já que o
+  arquivo cresceu bastante.
+
+### Testes
+
+`tests/rules/site-publico.test.js` cobre as 4 coleções (leitura pública, escrita negada
+pra não-admin, `hasOnly`, enums, `exists()` de `turmaId`/`professorId`, redes não-https) e
+tem um bloco de **regressão explícita**: prova que a leitura pública NÃO vazou para
+`alunos`, `checkins`, `cobrancas`, `config/geral`, `config/credenciais`, `eventos` nem
+`admins` — esse é o teste mais importante do arquivo, porque é o que detectaria no futuro
+um `match` novo escrito largo demais.

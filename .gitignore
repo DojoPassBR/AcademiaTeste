@@ -1,4 +1,5 @@
 .feature-state.json
+.feature-state*.json
 
 # Dependências dos testes de rules (tests/ tem package.json próprio, isolado do app)
 node_modules/

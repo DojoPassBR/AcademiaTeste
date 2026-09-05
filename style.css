@@ -181,6 +181,16 @@ a { text-decoration: none; color: inherit; }
 .schedule .tag.yellow { color: #ffd93d; }
 .schedule .tag.pink { color: #ff5fa2; }
 
+/* Detalhe opcional da linha da grade (professor / observação), preenchido pelo
+   site-publico.js a partir do Firestore. Some naturalmente quando não existe. */
+.grade-detalhe {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #bbbbbb;
+  white-space: normal;
+}
+
 /* Grade em cards (mobile) */
 .schedule-mobile {
   display: none;
@@ -227,6 +237,10 @@ a { text-decoration: none; color: inherit; }
 .time-row .tag.yellow { color: #ffd93d; }
 .time-row .tag.pink { color: #ff5fa2; }
 
+.time-turma {
+  text-align: right;
+}
+
 .staff {
   display: flex;
   gap: 20px;
@@ -266,6 +280,57 @@ a { text-decoration: none; color: inherit; }
 
 .staff-list li {
   line-height: 1.6;
+}
+
+/* Campos opcionais do card de equipe (faixa, bio, redes), vindos do Firestore. */
+.staff-faixa {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--red);
+  margin-top: 4px;
+}
+
+.staff-bio {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #dddddd;
+  margin-top: 8px;
+}
+
+.staff-telefone {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #bbbbbb;
+  margin-top: 8px;
+}
+
+.staff-redes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.staff-redes a {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  padding: 4px 12px;
+  transition: background 0.2s;
+}
+
+.staff-redes a:hover {
+  background: var(--red);
+}
+
+.local-horario {
+  margin-top: 14px;
 }
 
 /* Local / Map */

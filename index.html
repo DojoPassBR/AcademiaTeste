@@ -51,7 +51,7 @@
         <thead>
           <tr><th>Dia</th><th>Horário</th><th>Turma</th></tr>
         </thead>
-        <tbody>
+        <tbody id="grade-tabela-corpo">
           <tr><td rowspan="3">Segunda-feira</td><td>11:00 às 12:00</td><td class="tag red">No-Gi</td></tr>
           <tr><td>19:00 às 20:00</td><td>Juvenil / Iniciante</td></tr>
           <tr><td>20:00 às 21:30</td><td>Adulto</td></tr>
@@ -80,7 +80,7 @@
       </table>
     </div>
 
-    <div class="schedule-mobile">
+    <div class="schedule-mobile" id="grade-mobile">
       <div class="day-group">
         <h3 class="day-title">Segunda-feira</h3>
         <div class="time-row"><span class="time">11:00 às 12:00</span><span class="tag red">No-Gi</span></div>
@@ -129,7 +129,7 @@
       </div>
     </div>
 
-    <div class="staff">
+    <div class="staff" id="lista-equipe">
       <div class="staff-card">
         <span class="staff-label">Professor Responsável</span>
         <span class="staff-name">[Nome do Professor Responsável]</span>
@@ -152,9 +152,9 @@
 
 <section id="local" class="section">
   <div class="container local-inner">
-    <div class="local-info">
+    <div class="local-info" id="local-info">
       <h2>Onde estamos</h2>
-      <p><strong>Endereço:</strong><br>
+      <p id="local-endereco"><strong>Endereço:</strong><br>
       Av. Dr. Waldomiro de Carvalho, 434<br>
       Itapetininga-SP - CEP: 18209-110</p>
     </div>
@@ -172,12 +172,12 @@
 <section id="contato" class="section">
   <div class="container contato-inner">
     <h2>Contato</h2>
-    <div class="contato-cards">
-      <a class="card" href="tel:+5500000000000">
+    <div class="contato-cards" id="contato-cards">
+      <a class="card" id="contato-telefone" href="tel:+5500000000000">
         <span class="card-label">Telefone</span>
         <span class="card-value">(00) 00000-0000</span>
       </a>
-      <a class="card" href="https://instagram.com/academia.exemplo" target="_blank" rel="noopener">
+      <a class="card" id="contato-instagram" href="https://instagram.com/academia.exemplo" target="_blank" rel="noopener noreferrer">
         <span class="card-label">Instagram</span>
         <span class="card-value">@academia.exemplo</span>
       </a>
@@ -193,5 +193,13 @@
 </footer>
 
 <script src="script.js"></script>
+
+<!-- Hidratação opcional do site com os dados do admin (turmas, equipe, grade, endereço).
+     Tudo com defer e depois do conteúdo: se qualquer um destes scripts falhar, não
+     carregar ou for bloqueado, o HTML estático acima continua na tela como fallback. -->
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script defer src="site-firebase.js"></script>
+<script defer src="site-publico.js"></script>
 </body>
 </html>

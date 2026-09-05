@@ -72,6 +72,60 @@ function cobrancaIdValido(v) {
   return alunoIdValido(v.slice(0, corte)) && mesReferenciaValido(v.slice(corte + 1));
 }
 
+// ---------------------------------------------------------------------------
+// Validadores do cadastro de aluno feito PELO PROFESSOR (POST /criar-aluno).
+//
+// ATENÇÃO: estes limites são um espelho da função `dadosAlunoValidos` de
+// firestore.rules (e das opções do <select> de app/cadastro.html). Qualquer divergência
+// aqui cria, via service account (que passa por cima das rules), um documento de aluno
+// que o PRÓPRIO ALUNO depois não consegue editar — o update dele é revalidado por
+// dadosAlunoValidos e falha em silêncio pra sempre. Mudou lá, muda aqui.
+// ---------------------------------------------------------------------------
+
+// nome: string, 1..99 (rules: size() > 0 && size() < 100). alunoNomeValido aceita 100,
+// então não serve — daí o validador próprio.
+function nomeAlunoCadastroValido(v) {
+  return typeof v === "string" && v.length > 0 && v.length < 100;
+}
+
+// telefone: string com size() < 30 nas rules. Pode ser vazio (as rules não exigem > 0).
+function telefoneValido(v) {
+  return typeof v === "string" && v.length < 30;
+}
+
+// nascimento: "YYYY-MM-DD" nas rules (só formato). Aqui é mais estrito: tem que ser uma
+// data que existe de verdade, mesma checagem de dueDateValido.
+function nascimentoValido(v) {
+  if (typeof v !== "string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v)) return false;
+  const data = new Date(v + "T00:00:00Z");
+  if (Number.isNaN(data.getTime())) return false;
+  return data.toISOString().slice(0, 10) === v;
+}
+
+// Lista EXATA de dadosAlunoValidos (firestore.rules) e do <select> de app/cadastro.html.
+const FAIXAS_VALIDAS = [
+  "Branca",
+  "Cinza",
+  "Amarela",
+  "Laranja",
+  "Verde",
+  "Azul",
+  "Roxa",
+  "Marrom",
+  "Preta"
+];
+
+function faixaValida(v) {
+  return typeof v === "string" && FAIXAS_VALIDAS.includes(v);
+}
+
+// Senha inicial escolhida pelo professor. Mínimo 6 é o piso do Firebase Auth (abaixo
+// disso o Identity Toolkit devolve WEAK_PASSWORD); o teto de 128 é sanitário.
+// O VALOR nunca é logado em lugar nenhum — só o resultado booleano desta função.
+function senhaInicialValida(v) {
+  return typeof v === "string" && v.length >= 6 && v.length <= 128;
+}
+
 // Reexportado daqui pro index.js importar todas as validações de um lugar só.
 export { cpfCnpjValido } from "./cpf.js";
 
@@ -83,5 +137,11 @@ export {
   emailValido,
   dueDateValido,
   derivarCobrancaId,
-  cobrancaIdValido
+  cobrancaIdValido,
+  nomeAlunoCadastroValido,
+  telefoneValido,
+  nascimentoValido,
+  faixaValida,
+  senhaInicialValida,
+  FAIXAS_VALIDAS
 };

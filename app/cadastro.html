@@ -27,7 +27,10 @@
       <input type="tel" id="telefone" placeholder="(15) 99999-9999" required>
 
       <label for="nascimento">Data de nascimento</label>
-      <input type="date" id="nascimento" required>
+      <div class="date-input-wrap">
+        <input type="date" id="nascimento" placeholder="dd/mm/aaaa" required>
+        <button type="button" class="date-picker-btn" id="nascimento-abrir-calendario" aria-label="Abrir calendário">📅</button>
+      </div>
 
       <label for="faixa">Faixa atual</label>
       <select id="faixa" required>
@@ -68,6 +71,78 @@
 const form = document.getElementById("form-cadastro");
 const msg = document.getElementById("msg");
 const btn = document.getElementById("btn-cadastrar");
+
+// UX do <input type="date"> no Safari: ao digitar o dia, o foco não avança sozinho pro
+// segmento de mês (diferente do Chrome). Esse comportamento é nativo do controle do
+// navegador/SO e não há forma confiável de interceptar isso via JS sem recriar o input
+// inteiro como um componente customizado (fora de escopo aqui - mais risco de quebrar
+// acessibilidade do que benefício). Como mitigação pragmática, adicionamos um botão que
+// abre o seletor de calendário nativo via showPicker(), suportado no Safari e Chrome
+// modernos.
+function abrirSeletorDeData(inputId, botaoId) {
+  const input = document.getElementById(inputId);
+  const botao = document.getElementById(botaoId);
+  if (!input || !botao) return;
+  botao.addEventListener("click", () => {
+    try {
+      input.showPicker();
+    } catch (erro) {
+      // showPicker() pode não existir (navegador antigo) ou lançar se não for chamado
+      // a partir de um gesto do usuário. Nesses casos, cai no fallback de focar o input
+      // para que o usuário abra o calendário do jeito nativo do navegador.
+      input.focus();
+    }
+  });
+}
+abrirSeletorDeData("nascimento", "nascimento-abrir-calendario");
+
+// Convite do professor: admin.html gera um link cadastro.html?nome=...&telefone=... só pra
+// poupar digitação. Os campos continuam totalmente editáveis e nada disso é confiado como
+// verdade — quem grava o documento em alunos/{uid} é o próprio aluno, sob as Firestore
+// Rules. Os limites abaixo são os mesmos de dadosAlunoValidos nas rules.
+const CONVITE_NOME_MAX = 99;
+const CONVITE_TELEFONE_MAX = 29;
+
+function preencherPorConvite() {
+  let parametros;
+  try {
+    parametros = new URLSearchParams(window.location.search);
+  } catch (erro) {
+    return;
+  }
+
+  const nome = parametros.get("nome");
+  const telefone = parametros.get("telefone");
+  if (nome === null && telefone === null) return;
+
+  let veioDeConvite = false;
+
+  if (nome !== null) {
+    const valor = nome.trim().slice(0, CONVITE_NOME_MAX);
+    if (valor) {
+      document.getElementById("nome").value = valor;
+      veioDeConvite = true;
+    }
+  }
+
+  if (telefone !== null) {
+    const valor = telefone.trim().slice(0, CONVITE_TELEFONE_MAX);
+    if (valor) {
+      document.getElementById("telefone").value = valor;
+      veioDeConvite = true;
+    }
+  }
+
+  if (!veioDeConvite) return;
+
+  const aviso = document.createElement("p");
+  aviso.className = "config-dica";
+  aviso.id = "convite-aviso";
+  aviso.textContent = "Convite da sua academia — confira seus dados e escolha seu e-mail e senha.";
+  form.parentNode.insertBefore(aviso, form);
+}
+
+preencherPorConvite();
 
 function showMsg(text, type) {
   msg.textContent = text;

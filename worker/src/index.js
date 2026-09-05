@@ -20,8 +20,14 @@ import {
   alunoNomeValido,
   emailValido,
   derivarCobrancaId,
-  cpfCnpjValido
+  cpfCnpjValido,
+  nomeAlunoCadastroValido,
+  telefoneValido,
+  nascimentoValido,
+  faixaValida,
+  senhaInicialValida
 } from "./validacao.js";
+import { criarUsuarioAuth } from "./identity.js";
 
 // ASAAS_API_KEY saiu desta lista na Fase 5: a chave do Asaas pode vir do documento
 // cifrado config/credenciais (cadastrada pelo professor) OU da secret legada, então a
@@ -540,6 +546,139 @@ async function handleEnviarLembrete(request, env) {
 }
 
 // ---------------------------------------------------------------------------
+// Cadastro de aluno pelo professor (POST /criar-aluno).
+//
+// Cria a conta no Firebase Auth (via service account, ver worker/src/identity.js) E o
+// documento alunos/{uid} — coisa que o cliente NÃO consegue fazer: a rule de create em
+// /alunos exige request.auth.uid == alunoId, ou seja, só o próprio aluno cria o próprio
+// documento. Esse caminho de terceiro existe só aqui, exige admin autenticado e deixa
+// rastro (criadoPorAdmin/criadoPorUid).
+//
+// A alternativa preferida continua sendo o link de convite (o professor não fica
+// sabendo a senha do aluno) — a UI diz isso explicitamente.
+// ---------------------------------------------------------------------------
+
+// Mapeia o código do Identity Toolkit pro par (status HTTP, mensagem pro professor).
+// O erro cru do Google NUNCA é devolvido ao cliente.
+function respostaErroIdentity(codigo, request, env) {
+  if (codigo === "EMAIL_EXISTS") {
+    return json({ erro: "Este e-mail já está cadastrado." }, 409, request, env);
+  }
+  if (codigo === "WEAK_PASSWORD" || codigo === "INVALID_PASSWORD") {
+    return json({ erro: "Senha muito fraca (mínimo 6 caracteres)." }, 400, request, env);
+  }
+  if (codigo === "INVALID_EMAIL") {
+    return json({ erro: "E-mail inválido." }, 400, request, env);
+  }
+  return json(
+    { erro: "Não foi possível criar a conta agora. Tente novamente em instantes." },
+    500,
+    request,
+    env
+  );
+}
+
+async function handleCriarAluno(request, env) {
+  const faltando = credenciaisFaltando(env);
+  if (faltando) {
+    return json(
+      { erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") },
+      501,
+      request,
+      env
+    );
+  }
+
+  // 1) Autenticação + admin, mesmo padrão de handleCriarCobranca.
+  const { uid: adminUid, resposta } = await exigirAdmin(request, env, "cadastrar alunos");
+  if (resposta) return resposta;
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  const { nome, email, senha, telefone, nascimento, faixa } = body;
+
+  // 2) TODA a validação acontece antes de qualquer chamada externa — um payload inválido
+  // não chega a criar conta no Google nem a gastar quota.
+  if (!nomeAlunoCadastroValido(nome)) {
+    return json({ erro: "Nome inválido (1 a 99 caracteres)." }, 400, request, env);
+  }
+  if (!emailValido(email)) {
+    return json({ erro: "E-mail inválido." }, 400, request, env);
+  }
+  if (!senhaInicialValida(senha)) {
+    // Nunca ecoar a senha recebida, nem o tamanho dela, em log ou resposta.
+    return json({ erro: "Senha inválida (6 a 128 caracteres)." }, 400, request, env);
+  }
+  if (!telefoneValido(telefone)) {
+    return json({ erro: "Telefone inválido (até 29 caracteres)." }, 400, request, env);
+  }
+  if (!nascimentoValido(nascimento)) {
+    return json({ erro: "Data de nascimento inválida (use AAAA-MM-DD)." }, 400, request, env);
+  }
+  if (!faixaValida(faixa)) {
+    return json({ erro: "Faixa inválida." }, 400, request, env);
+  }
+
+  // 3) Conta no Firebase Auth.
+  let uid;
+  try {
+    ({ uid } = await criarUsuarioAuth(env, { email, senha, nomeExibicao: nome }));
+  } catch (err) {
+    return respostaErroIdentity(err.codigoGoogle || "ERRO_DESCONHECIDO", request, env);
+  }
+
+  // 4) Defesa em profundidade: o UID vira caminho de documento ("alunos/" + uid). Mesmo
+  // vindo do Google, é validado antes de ser concatenado.
+  if (!alunoIdValido(uid)) {
+    console.error("Identity Toolkit devolveu um UID em formato inesperado para:", email);
+    return json(
+      { erro: "Conta criada, mas o cadastro não pôde ser salvo. Contate o suporte." },
+      500,
+      request,
+      env
+    );
+  }
+
+  // 5) Documento do aluno. Os campos de dados espelham exatamente dadosAlunoValidos das
+  // rules, pra que o aluno consiga editar o próprio cadastro depois.
+  try {
+    await createDocument(env, "alunos/" + uid, {
+      nome,
+      telefone,
+      nascimento,
+      faixa,
+      email,
+      criadoEm: new Date(),
+      criadoPorAdmin: true,
+      criadoPorUid: adminUid
+    });
+  } catch (err) {
+    // A conta JÁ existe no Auth neste ponto. Devolver um 500 genérico faria o professor
+    // tentar de novo e bater em EMAIL_EXISTS pra sempre — então o UID órfão vai na
+    // mensagem (e no log) pra dar o que fazer ao suporte.
+    console.error(
+      "Aluno criado no Auth mas SEM documento no Firestore (uid órfão):",
+      uid,
+      email,
+      err
+    );
+    return json(
+      {
+        erro:
+          "Conta criada mas cadastro não foi salvo — contate o suporte com este código: " +
+          uid
+      },
+      500,
+      request,
+      env
+    );
+  }
+
+  return json({ ok: true, alunoId: uid }, 200, request, env);
+}
+
+// ---------------------------------------------------------------------------
 // Credencial do Asaas do próprio professor (Fase 5) — /config/credencial-asaas.
 //
 // GET    → metadados (configurada?, últimos 4 dígitos, ambiente, quando)
@@ -674,6 +813,10 @@ export default {
       // Lembrete de mensalidade por e-mail (um aluno por chamada).
       if (pathname === "/enviar-lembrete" && request.method === "POST") {
         return await handleEnviarLembrete(request, env);
+      }
+      // Cadastro de aluno pelo professor (cria conta no Auth + documento). Só admin.
+      if (pathname === "/criar-aluno" && request.method === "POST") {
+        return await handleCriarAluno(request, env);
       }
       // Comprovante de pagamento do modo Pix manual (ver worker/src/comprovante.js).
       if (pathname === "/comprovante" && request.method === "POST") {
