@@ -24,10 +24,94 @@
   </div>
 
   <div id="conteudo" style="display:none;">
-    <div class="card">
+    <!-- Índice do painel. O arquivo tem muitos cards e o professor costuma vir atrás de
+         um só; os links são âncoras puras (nada de JS) pros ids dos cards. -->
+    <div class="admin-tabs" role="tablist" aria-label="Seções do painel">
+      <button type="button" class="admin-tab" role="tab" id="aba-dashboard" aria-controls="tela-dashboard" aria-selected="true" tabindex="0">Dashboard</button>
+      <button type="button" class="admin-tab" role="tab" id="aba-configuracoes" aria-controls="tela-configuracoes" aria-selected="false" tabindex="-1">Configurações</button>
+    </div>
+
+    <section id="tela-dashboard" role="tabpanel" aria-labelledby="aba-dashboard" tabindex="-1">
+    <div class="card" id="card-dashboard" tabindex="-1">
+      <h2>Dashboard</h2>
+      <div id="dashboard-conteudo" role="status" aria-live="polite">
+        <div class="dashboard-kpis" id="dashboard-kpis">
+          <div class="kpi" id="kpi-total-alunos">
+            <span class="kpi-numero">—</span>
+            <span class="kpi-rotulo">Total de alunos</span>
+          </div>
+          <div class="kpi" id="kpi-em-dia">
+            <span class="kpi-numero">—</span>
+            <span class="kpi-rotulo">Mensalidade em dia</span>
+          </div>
+          <div class="kpi destaque" id="kpi-pendentes">
+            <span class="kpi-numero">—</span>
+            <span class="kpi-rotulo">Mensalidade pendente</span>
+          </div>
+          <div class="kpi" id="kpi-checkins-hoje">
+            <span class="kpi-numero">—</span>
+            <span class="kpi-rotulo">Check-ins de hoje</span>
+          </div>
+          <div class="kpi destaque" id="kpi-aguardando-confirmacao">
+            <span class="kpi-numero">—</span>
+            <span class="kpi-rotulo">Cobranças aguardando confirmação</span>
+          </div>
+        </div>
+
+        <div class="dashboard-listas">
+          <div>
+            <h3>Próximos eventos</h3>
+            <ul class="checkin-list" id="dashboard-lista-eventos"></ul>
+          </div>
+          <div>
+            <h3>Aulas de hoje</h3>
+            <ul class="checkin-list" id="dashboard-lista-aulas"></ul>
+          </div>
+        </div>
+
+        <div class="dashboard-graficos">
+          <figure class="grafico-figura">
+            <figcaption>Mensalidade</figcaption>
+            <div class="grafico-box"><canvas id="grafico-mensalidade" aria-hidden="true"></canvas></div>
+            <p class="grafico-indisponivel" id="grafico-mensalidade-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
+            <ul class="grafico-dados" id="grafico-mensalidade-dados"></ul>
+          </figure>
+          <figure class="grafico-figura">
+            <figcaption>Check-ins (últimos 7 dias)</figcaption>
+            <div class="grafico-box"><canvas id="grafico-checkins" aria-hidden="true"></canvas></div>
+            <p class="grafico-indisponivel" id="grafico-checkins-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
+            <ul class="grafico-dados" id="grafico-checkins-dados"></ul>
+          </figure>
+          <figure class="grafico-figura">
+            <figcaption>Cobranças por status</figcaption>
+            <div class="grafico-box"><canvas id="grafico-cobrancas" aria-hidden="true"></canvas></div>
+            <p class="grafico-indisponivel" id="grafico-cobrancas-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
+            <ul class="grafico-dados" id="grafico-cobrancas-dados"></ul>
+          </figure>
+        </div>
+      </div>
+    </div>
+    </section>
+
+    <section id="tela-configuracoes" role="tabpanel" aria-labelledby="aba-configuracoes" tabindex="-1" hidden>
+    <nav class="admin-subnav" aria-label="Seções de configurações">
+      <a href="#card-alunos">Alunos</a>
+      <a href="#card-turmas">Turmas</a>
+      <a href="#card-equipe">Equipe</a>
+      <a href="#card-horarios">Grade de horários</a>
+      <a href="#card-perfil-academia">Perfil da academia</a>
+      <a href="#card-eventos">Eventos</a>
+      <a href="#card-configuracoes">Configurações</a>
+    </nav>
+
+    <div class="card" id="card-alunos" tabindex="-1">
       <div class="card-header-row">
         <h2>Alunos cadastrados</h2>
-        <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-convite">Gerar link de convite</button>
+          <button type="button" class="btn-secundario" id="btn-novo-aluno">Cadastrar aluno</button>
+          <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
+        </div>
       </div>
       <div style="overflow-x:auto;">
         <table class="admin-table" id="tabela-alunos">
@@ -40,6 +124,405 @@
         </table>
       </div>
     </div>
+
+    <!-- ====================================================================
+         Conteúdo público do site (turmas, equipe, grade de horários, perfil).
+         São as quatro coleções com `allow read: if true` em firestore.rules —
+         por isso o aviso amarelo se repete em cada um dos quatro cards.
+         ==================================================================== -->
+
+    <div class="card" id="card-turmas" tabindex="-1">
+      <h2>Turmas</h2>
+      <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
+        Desmarcar "Turma ativa" só tira a turma da exibição (site e app): o registro continua
+        no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
+        diretamente. Para remover de verdade, use o botão Apagar.</p>
+      <p>Cada turma vira um card na página da academia. A ordem define a posição na
+        listagem (0 aparece primeiro).</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="turma-nome">Nome da turma</label>
+          <input type="text" id="turma-nome" maxlength="60" placeholder="Ex.: Kids manhã">
+        </div>
+        <div>
+          <label for="turma-nivel">Nível</label>
+          <select id="turma-nivel">
+            <option value="Infantil">Infantil</option>
+            <option value="Juvenil">Juvenil</option>
+            <option value="Iniciante">Iniciante</option>
+            <option value="Intermediario">Intermediário</option>
+            <option value="Avancado">Avançado</option>
+            <option value="Competicao">Competição</option>
+            <option value="Misto">Misto</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Livre">Livre</option>
+          </select>
+        </div>
+        <div>
+          <label for="turma-cor">Cor de destaque</label>
+          <select id="turma-cor">
+            <option value="red">Vermelho</option>
+            <option value="yellow">Amarelo</option>
+            <option value="pink">Rosa</option>
+            <option value="white">Branco</option>
+          </select>
+        </div>
+        <div>
+          <label for="turma-ordem">Ordem de exibição (0 a 99)</label>
+          <input type="number" id="turma-ordem" min="0" max="99" step="1" value="0">
+        </div>
+      </div>
+
+      <label for="turma-descricao">Descrição (opcional)</label>
+      <textarea id="turma-descricao" class="config-textarea" maxlength="300" rows="3"
+        placeholder="Ex.: Turma para crianças de 6 a 10 anos, foco em coordenação e disciplina."></textarea>
+
+      <fieldset class="config-toggles">
+        <legend>Exibição no site</legend>
+        <label class="config-check"><input type="checkbox" id="turma-ativo" checked> Turma ativa (exibir no site e no app)</label>
+        <p class="config-dica">Desmarcado, a turma deixa de ser exibida — mas não é apagada nem
+          fica escondida de quem consultar o banco direto. Use Apagar para remover.</p>
+      </fieldset>
+
+      <button type="button" class="btn" id="turma-salvar">Cadastrar turma</button>
+      <button type="button" class="btn-secundario" id="turma-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+      <div class="msg" id="turma-msg" role="status" aria-live="polite"></div>
+
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table" id="tabela-turmas">
+          <thead>
+            <tr><th>Nome</th><th>Nível</th><th>Cor</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="card-equipe" tabindex="-1">
+      <h2>Equipe</h2>
+      <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
+        Desmarcar a exibição só tira o membro da listagem (site e app): o registro continua
+        no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
+        diretamente. Para remover de verdade, use o botão Apagar.</p>
+      <p>Professores e instrutores exibidos na página da academia.</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="equipe-tipo">Tipo</label>
+          <select id="equipe-tipo">
+            <option value="professor">Professor</option>
+            <option value="instrutor">Instrutor</option>
+          </select>
+        </div>
+        <div>
+          <label for="equipe-nome">Nome</label>
+          <input type="text" id="equipe-nome" maxlength="80" placeholder="Ex.: Carlos Souza">
+        </div>
+        <div>
+          <label for="equipe-telefone">Telefone (opcional — aparece no site público)</label>
+          <input type="tel" id="equipe-telefone" maxlength="30" placeholder="(15) 99999-9999">
+        </div>
+        <div>
+          <label for="equipe-faixa">Faixa (opcional)</label>
+          <select id="equipe-faixa">
+            <option value="">Não informar</option>
+            <option value="Branca">Branca</option>
+            <option value="Cinza">Cinza</option>
+            <option value="Amarela">Amarela</option>
+            <option value="Laranja">Laranja</option>
+            <option value="Verde">Verde</option>
+            <option value="Azul">Azul</option>
+            <option value="Roxa">Roxa</option>
+            <option value="Marrom">Marrom</option>
+            <option value="Preta">Preta</option>
+          </select>
+        </div>
+        <div>
+          <label for="equipe-ordem">Ordem de exibição (0 a 99)</label>
+          <input type="number" id="equipe-ordem" min="0" max="99" step="1" value="0">
+        </div>
+      </div>
+
+      <label for="equipe-bio">Bio (opcional)</label>
+      <textarea id="equipe-bio" class="config-textarea" maxlength="400" rows="3"
+        placeholder="Ex.: Faixa preta há 8 anos, competidor e responsável pelas turmas infantis."></textarea>
+
+      <fieldset class="config-toggles">
+        <legend>Redes sociais (opcional — todos os links precisam começar com https://)</legend>
+        <label for="equipe-rede-instagram">Instagram</label>
+        <input type="url" id="equipe-rede-instagram" maxlength="200" placeholder="https://instagram.com/...">
+        <label for="equipe-rede-facebook">Facebook</label>
+        <input type="url" id="equipe-rede-facebook" maxlength="200" placeholder="https://facebook.com/...">
+        <label for="equipe-rede-youtube">YouTube</label>
+        <input type="url" id="equipe-rede-youtube" maxlength="200" placeholder="https://youtube.com/...">
+        <label for="equipe-rede-tiktok">TikTok</label>
+        <input type="url" id="equipe-rede-tiktok" maxlength="200" placeholder="https://tiktok.com/@...">
+        <label for="equipe-rede-site">Site</label>
+        <input type="url" id="equipe-rede-site" maxlength="200" placeholder="https://...">
+        <label for="equipe-rede-whatsapp">WhatsApp</label>
+        <input type="url" id="equipe-rede-whatsapp" maxlength="200" placeholder="https://wa.me/5515999999999">
+      </fieldset>
+
+      <fieldset class="config-toggles">
+        <legend>Exibição no site</legend>
+        <label class="config-check"><input type="checkbox" id="equipe-ativo" checked> Exibir no site e no app</label>
+        <p class="config-dica">Desmarcado, o membro deixa de ser exibido — mas não é apagado nem
+          fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
+      </fieldset>
+
+      <button type="button" class="btn" id="equipe-salvar">Cadastrar na equipe</button>
+      <button type="button" class="btn-secundario" id="equipe-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+      <div class="msg" id="equipe-msg" role="status" aria-live="polite"></div>
+
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table" id="tabela-equipe">
+          <thead>
+            <tr><th>Nome</th><th>Tipo</th><th>Telefone</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="card-horarios" tabindex="-1">
+      <h2>Grade de horários</h2>
+      <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
+        Desmarcar "Horário ativo" só tira a aula da grade exibida (site e app): o registro continua
+        no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
+        diretamente. Para remover de verdade, use o botão Apagar.</p>
+      <p>Cada linha é uma aula na semana. A turma é obrigatória; o professor é opcional.</p>
+
+      <!-- Sem nenhuma turma cadastrada não dá pra criar horário: a rule exige que o
+           turmaId aponte pra um documento que existe de verdade. -->
+      <p class="aviso-pendente" id="horario-sem-turma" style="display:none;">Cadastre ao menos
+        uma turma antes de montar a grade de horários.</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="horario-dia">Dia da semana</label>
+          <select id="horario-dia">
+            <option value="0">Domingo</option>
+            <option value="1">Segunda-feira</option>
+            <option value="2">Terça-feira</option>
+            <option value="3">Quarta-feira</option>
+            <option value="4">Quinta-feira</option>
+            <option value="5">Sexta-feira</option>
+            <option value="6">Sábado</option>
+          </select>
+        </div>
+        <div>
+          <label for="horario-turma">Turma</label>
+          <select id="horario-turma">
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+        <div>
+          <label for="horario-inicio">Hora de início</label>
+          <input type="time" id="horario-inicio">
+        </div>
+        <div>
+          <label for="horario-fim">Hora de término</label>
+          <input type="time" id="horario-fim">
+        </div>
+        <div>
+          <label for="horario-professor">Professor / instrutor (opcional)</label>
+          <select id="horario-professor">
+            <option value="">Nenhum</option>
+          </select>
+        </div>
+        <div>
+          <label for="horario-observacao">Observação (opcional)</label>
+          <input type="text" id="horario-observacao" maxlength="120" placeholder="Ex.: Sala 2 / traga quimono">
+        </div>
+      </div>
+
+      <fieldset class="config-toggles">
+        <legend>Exibição no site</legend>
+        <label class="config-check"><input type="checkbox" id="horario-ativo" checked> Horário ativo (exibir no site e no app)</label>
+        <p class="config-dica">Desmarcado, o horário deixa de ser exibido — mas não é apagado nem
+          fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
+      </fieldset>
+
+      <button type="button" class="btn" id="horario-salvar">Cadastrar horário</button>
+      <button type="button" class="btn-secundario" id="horario-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+      <div class="msg" id="horario-msg" role="status" aria-live="polite"></div>
+
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table" id="tabela-horarios">
+          <caption class="config-dica" style="caption-side:bottom;text-align:left;">Grade
+            agrupada por dia da semana.</caption>
+          <thead>
+            <tr><th>Horário</th><th>Turma</th><th>Professor</th><th>Observação</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="card-perfil-academia" tabindex="-1">
+      <h2>Perfil da academia</h2>
+      <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
+        Campos deixados em branco somem da exibição (site e app), mas qualquer dado já salvo aqui
+        continua no banco e é tecnicamente legível por quem consultá-lo diretamente. Só apague o
+        conteúdo do campo e salve para removê-lo de verdade.</p>
+      <p>Endereço, contato e redes sociais exibidos na página da academia.</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="perfil-endereco">Endereço</label>
+          <input type="text" id="perfil-endereco" maxlength="200" placeholder="Ex.: Rua das Palmeiras, 123">
+        </div>
+        <div>
+          <label for="perfil-complemento">Complemento (opcional)</label>
+          <input type="text" id="perfil-complemento" maxlength="120" placeholder="Ex.: Fundos, ao lado da praça">
+        </div>
+        <div>
+          <label for="perfil-cidade-uf">Cidade / UF (opcional)</label>
+          <input type="text" id="perfil-cidade-uf" maxlength="80" placeholder="Ex.: Itapetininga/SP">
+        </div>
+        <div>
+          <label for="perfil-cep">CEP (opcional)</label>
+          <input type="text" id="perfil-cep" maxlength="9" inputmode="numeric" placeholder="00000-000">
+        </div>
+        <div>
+          <label for="perfil-telefone">Telefone de contato (opcional)</label>
+          <input type="tel" id="perfil-telefone" maxlength="30" placeholder="(15) 99999-9999">
+        </div>
+        <div>
+          <label for="perfil-email">E-mail de contato (opcional)</label>
+          <input type="email" id="perfil-email" maxlength="100" placeholder="contato@academia.com.br">
+        </div>
+      </div>
+
+      <label for="perfil-horario">Horário de funcionamento (opcional)</label>
+      <textarea id="perfil-horario" class="config-textarea" maxlength="300" rows="3"
+        placeholder="Seg a Sex 8h-22h | Sáb 9h-12h"></textarea>
+
+      <fieldset class="config-toggles">
+        <legend>Redes sociais da academia (opcional — todos os links precisam começar com https://)</legend>
+        <label for="perfil-rede-instagram">Instagram</label>
+        <input type="url" id="perfil-rede-instagram" maxlength="200" placeholder="https://instagram.com/...">
+        <label for="perfil-rede-facebook">Facebook</label>
+        <input type="url" id="perfil-rede-facebook" maxlength="200" placeholder="https://facebook.com/...">
+        <label for="perfil-rede-youtube">YouTube</label>
+        <input type="url" id="perfil-rede-youtube" maxlength="200" placeholder="https://youtube.com/...">
+        <label for="perfil-rede-tiktok">TikTok</label>
+        <input type="url" id="perfil-rede-tiktok" maxlength="200" placeholder="https://tiktok.com/@...">
+        <label for="perfil-rede-site">Site</label>
+        <input type="url" id="perfil-rede-site" maxlength="200" placeholder="https://...">
+        <label for="perfil-rede-whatsapp">WhatsApp</label>
+        <input type="url" id="perfil-rede-whatsapp" maxlength="200" placeholder="https://wa.me/5515999999999">
+      </fieldset>
+
+      <button type="button" class="btn" id="perfil-salvar">Salvar perfil da academia</button>
+      <div class="msg" id="perfil-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="card" id="card-eventos" tabindex="-1">
+      <h2>Eventos e campeonatos</h2>
+      <p>Cadastre aqui os eventos da escola. Todos os alunos veem os próximos eventos na área de check-in.</p>
+
+      <div class="evento-form-row">
+        <div>
+          <label for="evento-nome">Nome do evento</label>
+          <input type="text" id="evento-nome" maxlength="120" required placeholder="Ex.: Campeonato Paulista">
+        </div>
+        <div>
+          <label for="evento-data">Data</label>
+          <div class="date-input-wrap">
+            <input type="date" id="evento-data" placeholder="dd/mm/aaaa" required>
+            <button type="button" class="date-picker-btn" id="evento-data-abrir-calendario" aria-label="Abrir calendário">📅</button>
+          </div>
+        </div>
+        <div>
+          <label for="evento-local">Local</label>
+          <input type="text" id="evento-local" maxlength="160" required placeholder="Ex.: Ginásio Municipal - Itapetininga/SP">
+        </div>
+        <div>
+          <label for="evento-link">Link (opcional)</label>
+          <input type="url" id="evento-link" maxlength="500" placeholder="https://... (opcional)">
+        </div>
+      </div>
+
+      <button type="button" class="btn" id="evento-salvar">Cadastrar evento</button>
+      <button type="button" class="btn-secundario" id="evento-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+      <div class="msg" id="evento-msg" role="status" aria-live="polite"></div>
+
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table" id="tabela-eventos">
+          <thead>
+            <tr><th>Nome</th><th>Data</th><th>Local</th><th>Link</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="card-configuracoes" tabindex="-1">
+      <h2>Configurações</h2>
+      <p>Ajustes gerais da academia: como a mensalidade é cobrada e como os alunos são lembrados do vencimento.</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="config-modo">Modo de mensalidade</label>
+          <select id="config-modo">
+            <option value="manual">Manual (professor marca pago/pendente)</option>
+            <option value="pix">Pix automático (Asaas)</option>
+            <option value="pixManual">Pix manual (professor lança a cobrança)</option>
+          </select>
+        </div>
+        <div>
+          <label for="config-valor">Valor padrão da mensalidade (R$)</label>
+          <input type="number" id="config-valor" min="0" max="5000" step="0.01" placeholder="Ex.: 150">
+        </div>
+        <div>
+          <label for="config-academia">Nome da academia</label>
+          <input type="text" id="config-academia" maxlength="80" placeholder="Ex.: Academia Exemplo">
+        </div>
+        <div>
+          <label for="config-pix">Chave Pix da academia</label>
+          <input type="text" id="config-pix" maxlength="200" placeholder="Chave Pix ou código copia e cola">
+        </div>
+        <div>
+          <label for="config-dias">Avisar quando a mensalidade estiver pendente há quantos dias</label>
+          <input type="number" id="config-dias" min="1" max="60" step="1" placeholder="Ex.: 5">
+        </div>
+      </div>
+
+      <fieldset class="config-toggles">
+        <legend>Lembretes de mensalidade</legend>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-whatsapp"> Lembrete por WhatsApp</label>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-email"> Lembrete por e-mail</label>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-visual"> Aviso visual no app do aluno</label>
+      </fieldset>
+
+      <label for="config-template">Texto do lembrete</label>
+      <textarea id="config-template" class="config-textarea" maxlength="500" rows="4"
+        placeholder="Ex.: Olá {nome}, a mensalidade de {mes} da {academia} (R$ {valor}) está próxima do vencimento. Pix: {pix}"></textarea>
+      <p class="config-dica">Placeholders disponíveis: {nome}, {mes}, {valor}, {academia}, {pix}.</p>
+
+      <button type="button" class="btn" id="config-salvar">Salvar configurações</button>
+      <div class="msg" id="config-msg" role="status" aria-live="polite"></div>
+
+      <!-- Resumo da integração de pagamento. Só faz sentido no modo "pix" (Asaas), então
+           fica escondido nos outros modos. Esconder NÃO apaga nada: a credencial cifrada
+           continua em config/credenciais até o professor clicar em "Remover credencial"
+           dentro do modal. -->
+      <div id="credencial-resumo" style="display:none;margin-top:20px;">
+        <p class="config-dica" id="credencial-status" role="status" aria-live="polite">Carregando...</p>
+        <button type="button" class="btn-secundario" id="credencial-editar">Editar credencial Asaas</button>
+      </div>
+    </div>
+    </section>
   </div>
 </main>
 
@@ -57,8 +540,151 @@
     <h2 id="cobranca-titulo">Gerar cobrança Pix</h2>
     <label for="cobranca-valor">Valor (R$)</label>
     <input type="number" id="cobranca-valor" min="0" step="0.01" value="150">
+    <!-- Só aparece quando o Worker responde 422 precisaCpf: o Asaas exige CPF pra criar o
+         pagador na PRIMEIRA cobrança de cada aluno. O valor é usado só nessa chamada e não
+         é salvo em lugar nenhum (nem no Firestore, nem aqui depois que o modal fecha). -->
+    <div id="cobranca-cpf-bloco" style="display:none;">
+      <label for="cobranca-cpf">CPF do aluno</label>
+      <input type="text" id="cobranca-cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+    </div>
     <button type="button" class="btn" id="cobranca-confirmar">Gerar cobrança</button>
     <div class="msg" id="cobranca-msg"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="manual-backdrop">
+  <div class="modal">
+    <span class="close" id="manual-close">&times;</span>
+    <h2 id="manual-titulo">Lançar cobrança Pix manual</h2>
+    <p class="config-dica">A cobrança é gravada direto no DojoPass (sem Asaas). O aluno vê o código Pix na área dele.</p>
+    <label for="manual-mes">Mês de referência</label>
+    <input type="month" id="manual-mes">
+    <label for="manual-valor">Valor (R$)</label>
+    <input type="number" id="manual-valor" min="0" max="5000" step="0.01">
+    <label for="manual-pix">Código Pix copia e cola (opcional)</label>
+    <textarea id="manual-pix" class="config-textarea" maxlength="500" rows="3"></textarea>
+    <button type="button" class="btn" id="manual-confirmar">Lançar cobrança</button>
+    <div class="msg" id="manual-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- Credencial do Asaas. Vira modal porque só interessa no momento em que a academia
+     escolhe o modo "Pix automático (Asaas)": o modal abre sozinho nessa troca e, se o
+     professor fechar sem cadastrar nada, o modo volta pro valor anterior — nada de deixar
+     a tela dizendo "Pix automático" sem credencial nenhuma configurada. -->
+<div class="modal-backdrop" id="credencial-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="credencial-titulo">
+    <span class="close" id="credencial-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="credencial-titulo">Integração de pagamento (Asaas)</h2>
+    <p>Chave de API da sua conta no Asaas, usada para gerar as cobranças Pix automáticas.
+      Ela é guardada criptografada e nunca é exibida de volta aqui — se você perder a chave,
+      gere outra no painel do Asaas e cadastre novamente.</p>
+
+    <p class="config-dica" id="credencial-status-modal" role="status" aria-live="polite">Carregando...</p>
+
+    <label for="credencial-chave">Chave de API do Asaas</label>
+    <input type="password" id="credencial-chave" autocomplete="off" spellcheck="false"
+      maxlength="200" placeholder="Cole a chave aqui (ela não volta a aparecer)">
+
+    <label for="credencial-ambiente">Ambiente</label>
+    <select id="credencial-ambiente">
+      <option value="sandbox">Sandbox (testes)</option>
+      <option value="producao">Produção (cobranças reais)</option>
+    </select>
+
+    <label for="credencial-aviso-dias">Avisar quantos dias antes do vencimento</label>
+    <input type="number" id="credencial-aviso-dias" min="1" max="30" step="1" placeholder="Ex.: 3">
+    <p class="config-dica">Só muda o destaque da cobrança aqui no painel. O prazo de
+      vencimento da cobrança no Asaas é configurado no servidor e não muda por aqui.</p>
+
+    <button type="button" class="btn" id="credencial-salvar">Salvar credencial</button>
+    <button type="button" class="btn-secundario" id="credencial-cancelar" style="margin-top:12px;">Cancelar</button>
+    <button type="button" class="btn-secundario" id="credencial-remover" style="margin-top:12px;display:none;">Remover credencial</button>
+    <div class="msg" id="credencial-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- Link de convite. Não cria nada no Firestore: só monta uma URL de cadastro.html com
+     nome/telefone na query string, pra que o aluno chegue no formulário com os dados já
+     preenchidos (e ainda editáveis). Quem cria a conta continua sendo o próprio aluno. -->
+<div class="modal-backdrop" id="convite-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="convite-titulo">
+    <span class="close" id="convite-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="convite-titulo">Gerar link de convite</h2>
+    <p class="config-dica">Preencha o nome e o telefone do aluno para gerar um link de
+      cadastro já pré-preenchido. O aluno escolhe o próprio e-mail e senha.</p>
+
+    <label for="convite-nome">Nome do aluno</label>
+    <input type="text" id="convite-nome" maxlength="99" autocomplete="off" placeholder="Ex.: Maria Silva">
+
+    <label for="convite-telefone">Telefone (opcional)</label>
+    <input type="tel" id="convite-telefone" maxlength="29" autocomplete="off" placeholder="(15) 99999-9999">
+
+    <button type="button" class="btn" id="convite-gerar">Gerar link</button>
+
+    <div id="convite-resultado" style="display:none;margin-top:20px;">
+      <label for="convite-url">Link de convite</label>
+      <div class="convite-link-row">
+        <input type="text" id="convite-url" readonly spellcheck="false">
+        <button type="button" class="btn-secundario" id="convite-copiar">Copiar</button>
+      </div>
+      <button type="button" class="btn-secundario" id="convite-whatsapp" style="margin-top:12px;">Enviar por WhatsApp</button>
+      <p class="config-dica" id="convite-whatsapp-aviso" style="display:none;">Informe um
+        telefone válido para enviar o convite por WhatsApp.</p>
+    </div>
+
+    <div class="msg" id="convite-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- Cadastro de aluno pelo professor. Diferente do convite, aqui a conta é criada de
+     verdade — pelo Worker (POST /criar-aluno), que fala com o Firebase Auth pela service
+     account. É por isso que o professor acaba conhecendo a senha inicial do aluno; o
+     aviso abaixo diz isso na cara e recomenda o link de convite.
+     A senha vive só no input, some do DOM assim que o modal fecha ou o cadastro sai, e
+     nunca é gravada em lugar nenhum. -->
+<div class="modal-backdrop" id="novo-aluno-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="novo-aluno-titulo">
+    <span class="close" id="novo-aluno-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="novo-aluno-titulo">Cadastrar aluno</h2>
+    <p class="config-dica"><strong>Você vai conhecer a senha deste aluno — para maior
+      privacidade, prefira o link de convite.</strong></p>
+
+    <label for="novo-aluno-nome">Nome do aluno</label>
+    <input type="text" id="novo-aluno-nome" maxlength="99" autocomplete="off" placeholder="Ex.: Maria Silva">
+
+    <label for="novo-aluno-email">E-mail</label>
+    <input type="email" id="novo-aluno-email" maxlength="99" autocomplete="off" placeholder="maria@exemplo.com">
+
+    <label for="novo-aluno-senha">Senha inicial (mínimo 6 caracteres)</label>
+    <input type="password" id="novo-aluno-senha" maxlength="128" autocomplete="off">
+
+    <label for="novo-aluno-telefone">Telefone</label>
+    <input type="tel" id="novo-aluno-telefone" maxlength="29" autocomplete="off" placeholder="(15) 99999-9999">
+
+    <label for="novo-aluno-nascimento">Data de nascimento</label>
+    <div class="date-input-wrap">
+      <input type="date" id="novo-aluno-nascimento" placeholder="dd/mm/aaaa">
+      <button type="button" class="date-picker-btn" id="novo-aluno-nascimento-abrir-calendario" aria-label="Abrir calendário">📅</button>
+    </div>
+
+    <label for="novo-aluno-faixa">Faixa atual</label>
+    <select id="novo-aluno-faixa">
+      <option value="">Selecione...</option>
+      <option value="Branca">Branca</option>
+      <option value="Cinza">Cinza (infantil)</option>
+      <option value="Amarela">Amarela (infantil)</option>
+      <option value="Laranja">Laranja (infantil)</option>
+      <option value="Verde">Verde (infantil)</option>
+      <option value="Azul">Azul</option>
+      <option value="Roxa">Roxa</option>
+      <option value="Marrom">Marrom</option>
+      <option value="Preta">Preta</option>
+    </select>
+
+    <button type="button" class="btn" id="novo-aluno-criar">Criar conta do aluno</button>
+
+    <div class="msg" id="novo-aluno-msg" role="status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -67,6 +693,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script src="firebase-init.js"></script>
 <script>
 const btnSair = document.getElementById("btn-sair");
@@ -85,10 +712,516 @@ const cobrancaTitulo = document.getElementById("cobranca-titulo");
 const cobrancaValor = document.getElementById("cobranca-valor");
 const cobrancaConfirmar = document.getElementById("cobranca-confirmar");
 const cobrancaMsg = document.getElementById("cobranca-msg");
+const cobrancaCpfBloco = document.getElementById("cobranca-cpf-bloco");
+const cobrancaCpf = document.getElementById("cobranca-cpf");
+const btnConvite = document.getElementById("btn-convite");
+const conviteBackdrop = document.getElementById("convite-backdrop");
+const conviteClose = document.getElementById("convite-close");
+const conviteNome = document.getElementById("convite-nome");
+const conviteTelefone = document.getElementById("convite-telefone");
+const conviteGerar = document.getElementById("convite-gerar");
+const conviteResultado = document.getElementById("convite-resultado");
+const conviteUrl = document.getElementById("convite-url");
+const conviteCopiar = document.getElementById("convite-copiar");
+const conviteWhatsapp = document.getElementById("convite-whatsapp");
+const conviteWhatsappAviso = document.getElementById("convite-whatsapp-aviso");
+const conviteMsg = document.getElementById("convite-msg");
+const btnNovoAluno = document.getElementById("btn-novo-aluno");
+const novoAlunoBackdrop = document.getElementById("novo-aluno-backdrop");
+const novoAlunoClose = document.getElementById("novo-aluno-close");
+const novoAlunoNome = document.getElementById("novo-aluno-nome");
+const novoAlunoEmail = document.getElementById("novo-aluno-email");
+const novoAlunoSenha = document.getElementById("novo-aluno-senha");
+const novoAlunoTelefone = document.getElementById("novo-aluno-telefone");
+const novoAlunoNascimento = document.getElementById("novo-aluno-nascimento");
+const novoAlunoFaixa = document.getElementById("novo-aluno-faixa");
+const novoAlunoCriar = document.getElementById("novo-aluno-criar");
+const novoAlunoMsg = document.getElementById("novo-aluno-msg");
+const dashboardListaEventos = document.getElementById("dashboard-lista-eventos");
+const dashboardListaAulas = document.getElementById("dashboard-lista-aulas");
+
+const tabelaEventos = document.querySelector("#tabela-eventos tbody");
+const eventoNome = document.getElementById("evento-nome");
+const eventoData = document.getElementById("evento-data");
+const eventoLocal = document.getElementById("evento-local");
+const eventoLink = document.getElementById("evento-link");
+const eventoSalvar = document.getElementById("evento-salvar");
+const eventoCancelar = document.getElementById("evento-cancelar");
+const eventoMsg = document.getElementById("evento-msg");
+
+// UX do <input type="date"> no Safari: ao digitar o dia, o foco não avança sozinho pro
+// segmento de mês (diferente do Chrome). Esse comportamento é nativo do controle do
+// navegador/SO e não há forma confiável de interceptar isso via JS sem recriar o input
+// inteiro como um componente customizado (fora de escopo aqui - mais risco de quebrar
+// acessibilidade do que benefício). Como mitigação pragmática, adicionamos um botão que
+// abre o seletor de calendário nativo via showPicker(), suportado no Safari e Chrome
+// modernos.
+function abrirSeletorDeData(inputId, botaoId) {
+  const input = document.getElementById(inputId);
+  const botao = document.getElementById(botaoId);
+  if (!input || !botao) return;
+  botao.addEventListener("click", () => {
+    try {
+      input.showPicker();
+    } catch (erro) {
+      // showPicker() pode não existir (navegador antigo) ou lançar se não for chamado
+      // a partir de um gesto do usuário. Nesses casos, cai no fallback de focar o input
+      // para que o usuário abra o calendário do jeito nativo do navegador.
+      input.focus();
+    }
+  });
+}
+abrirSeletorDeData("novo-aluno-nascimento", "novo-aluno-nascimento-abrir-calendario");
+abrirSeletorDeData("evento-data", "evento-data-abrir-calendario");
+const configModo = document.getElementById("config-modo");
+const configValor = document.getElementById("config-valor");
+const configAcademia = document.getElementById("config-academia");
+const configPix = document.getElementById("config-pix");
+const configDias = document.getElementById("config-dias");
+const configLembreteWhatsapp = document.getElementById("config-lembrete-whatsapp");
+const configLembreteEmail = document.getElementById("config-lembrete-email");
+const configLembreteVisual = document.getElementById("config-lembrete-visual");
+const configTemplate = document.getElementById("config-template");
+const configSalvar = document.getElementById("config-salvar");
+const configMsg = document.getElementById("config-msg");
+const credencialResumo = document.getElementById("credencial-resumo");
+const credencialStatus = document.getElementById("credencial-status");
+const credencialStatusModal = document.getElementById("credencial-status-modal");
+const credencialEditar = document.getElementById("credencial-editar");
+const credencialBackdrop = document.getElementById("credencial-backdrop");
+const credencialClose = document.getElementById("credencial-close");
+const credencialChave = document.getElementById("credencial-chave");
+const credencialAmbiente = document.getElementById("credencial-ambiente");
+const credencialAvisoDias = document.getElementById("credencial-aviso-dias");
+const credencialSalvar = document.getElementById("credencial-salvar");
+const credencialCancelar = document.getElementById("credencial-cancelar");
+const credencialRemover = document.getElementById("credencial-remover");
+const credencialMsg = document.getElementById("credencial-msg");
+const manualBackdrop = document.getElementById("manual-backdrop");
+const manualClose = document.getElementById("manual-close");
+const manualTitulo = document.getElementById("manual-titulo");
+const manualMes = document.getElementById("manual-mes");
+const manualValor = document.getElementById("manual-valor");
+const manualPix = document.getElementById("manual-pix");
+const manualConfirmar = document.getElementById("manual-confirmar");
+const manualMsg = document.getElementById("manual-msg");
+
+// ---------------------------------------------------------------------------
+// Navegação em abas (Dashboard / Configurações). Só duas abas reais — o resto do
+// painel (Alunos, Turmas, Equipe, Grade de horários, Perfil da academia, Eventos,
+// Configurações) mora todo dentro de "tela-configuracoes", navegável pela sub-nav
+// de âncoras que já existia como nav de índice.
+// ---------------------------------------------------------------------------
+const abaDashboard = document.getElementById("aba-dashboard");
+const abaConfiguracoes = document.getElementById("aba-configuracoes");
+const telaDashboard = document.getElementById("tela-dashboard");
+const telaConfiguracoes = document.getElementById("tela-configuracoes");
+
+// Ids dos cards que vivem dentro da aba "Configurações" — usados para o deep-link:
+// se a página abrir (ou o hash mudar) para um desses ids, a aba certa é ativada
+// antes do navegador rolar até a âncora.
+const IDS_CARDS_CONFIGURACOES = [
+  "card-alunos", "card-turmas", "card-equipe", "card-horarios",
+  "card-perfil-academia", "card-eventos", "card-configuracoes"
+];
+
+function ativarAba(idAba) {
+  const dashboardAtiva = idAba === "aba-dashboard";
+
+  abaDashboard.setAttribute("aria-selected", dashboardAtiva ? "true" : "false");
+  abaDashboard.tabIndex = dashboardAtiva ? 0 : -1;
+  abaConfiguracoes.setAttribute("aria-selected", dashboardAtiva ? "false" : "true");
+  abaConfiguracoes.tabIndex = dashboardAtiva ? -1 : 0;
+
+  telaDashboard.hidden = !dashboardAtiva;
+  telaConfiguracoes.hidden = dashboardAtiva;
+
+  const telaAtiva = dashboardAtiva ? telaDashboard : telaConfiguracoes;
+  telaAtiva.focus();
+}
+
+abaDashboard.addEventListener("click", () => {
+  ativarAba("aba-dashboard");
+  history.replaceState(null, "", "#aba-dashboard");
+});
+abaConfiguracoes.addEventListener("click", () => {
+  ativarAba("aba-configuracoes");
+  history.replaceState(null, "", "#aba-configuracoes");
+});
+
+// Setas esquerda/direita alternam entre as duas abas quando o foco está num botão
+// de aba (padrão de teclado do papel ARIA "tablist"). Como só há duas abas, o foco
+// pode simplesmente alternar entre elas.
+[abaDashboard, abaConfiguracoes].forEach((botaoAba) => {
+  botaoAba.addEventListener("keydown", (evento) => {
+    if (evento.key !== "ArrowLeft" && evento.key !== "ArrowRight") return;
+    evento.preventDefault();
+    const proximaAba = botaoAba === abaDashboard ? abaConfiguracoes : abaDashboard;
+    ativarAba(proximaAba.id);
+    history.replaceState(null, "", "#" + proximaAba.id);
+    // Diferente do clique, a navegação por teclado entre abas mantém o foco na
+    // lista de abas (em vez de pular pro conteúdo), para permitir continuar
+    // navegando com as setas.
+    proximaAba.focus();
+  });
+});
+
+// Deep-link: se a página carregar (ou o hash mudar) com #aba-configuracoes ou com
+// o id de um dos cards que vivem dentro dela, ativa a aba de Configurações antes
+// de rolar manualmente até o card (a rolagem nativa do navegador não alcança um
+// elemento que ainda está oculto por [hidden]).
+function ativarAbaConformeHash() {
+  const hash = location.hash.replace("#", "");
+  if (!hash) return;
+
+  if (hash === "aba-dashboard") {
+    ativarAba("aba-dashboard");
+    return;
+  }
+
+  if (hash === "aba-configuracoes" || IDS_CARDS_CONFIGURACOES.includes(hash)) {
+    ativarAba("aba-configuracoes");
+    if (IDS_CARDS_CONFIGURACOES.includes(hash)) {
+      const alvo = document.getElementById(hash);
+      if (alvo) alvo.scrollIntoView();
+    }
+  }
+}
+ativarAbaConformeHash();
+window.addEventListener("hashchange", ativarAbaConformeHash);
 
 let cobrancaAlunoAtual = null;
-// "manual" (padrão) ou "pix" — lido de config/geral. Ver CONTEXT.md.
+let manualAlunoAtual = null;
+// null = modo criação; string = id do evento sendo editado.
+let eventoEditandoId = null;
+// "manual" (padrão), "pix" (Asaas) ou "pixManual" — lido de config/geral. Ver CONTEXT.md.
 let mensalidadeModo = "manual";
+// Cópia do documento config/geral já normalizada (com os defaults do cliente aplicados).
+let configGeral = configPadrao();
+// Último valor "aceito" do <select> de modo — é pra onde a tela volta se o modal de
+// credencial do Asaas for fechado sem credencial cadastrada.
+let modoMensalidadeAnterior = "manual";
+// true quando o Worker confirma que existe uma chave de API do Asaas cadastrada.
+let credencialConfigurada = false;
+
+// ---------------------------------------------------------------------------
+// Estado do Dashboard. Tudo aqui é alimentado por dados que outras funções já
+// carregam (carregarAlunos, carregarComprovantesPendentes, carregarEventos,
+// carregarHorarios) — as únicas consultas novas são carregarCheckins7Dias() e
+// contarCobrancasPorStatus(). null = ainda não carregado (ou falhou); o KPI/gráfico
+// mostra "—" nesse caso.
+let dashboardTotalAlunos = null;
+let dashboardAlunosEmDia = null;
+let dashboardCobrancasAguardando = null;
+let dashboardCheckinsHoje = null;
+// Array de 7 objetos { data: Date, total: number|null }, do mais antigo (6 dias
+// atrás) ao mais recente (hoje) — alimenta o gráfico de check-ins do dashboard.
+let dashboardCheckins7Dias = null;
+let dashboardCobrancasPendentes = null;
+let dashboardCobrancasPagas = null;
+let dashboardCobrancasCanceladas = null;
+// Cópia dos eventos já carregados por carregarEventos(), reaproveitada para a
+// lista "Próximos eventos" do dashboard (nada de nova query).
+let eventosCache = [];
+
+// Consulta nova do dashboard: 7 agregações (.count()) em paralelo, uma por dia dos
+// últimos 7 dias (hoje incluso, horário local do navegador). Cada dia é isolado em
+// try/catch — se um falhar (índice ausente, offline, regra), aquele bucket vira
+// null e a lista mostra "—" só para ele, sem travar os outros. O bucket de HOJE
+// (o último) continua alimentando o KPI numérico "Check-ins de hoje".
+async function carregarCheckins7Dias() {
+  const inicioDeHoje = new Date();
+  inicioDeHoje.setHours(0, 0, 0, 0);
+
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const inicio = new Date(inicioDeHoje);
+    inicio.setDate(inicio.getDate() - i);
+    const fim = new Date(inicio);
+    fim.setDate(fim.getDate() + 1);
+    dias.push({ inicio, fim });
+  }
+
+  const resultados = await Promise.all(
+    dias.map(({ inicio, fim }) =>
+      db.collection("checkins")
+        .where("timestamp", ">=", inicio)
+        .where("timestamp", "<", fim)
+        .count()
+        .get()
+        .then((agg) => agg.data().count)
+        .catch(() => null)
+    )
+  );
+
+  dashboardCheckins7Dias = dias.map((dia, indice) => ({ data: dia.inicio, total: resultados[indice] }));
+  dashboardCheckinsHoje = resultados[resultados.length - 1];
+
+  renderDashboard();
+}
+
+// Outra consulta nova do dashboard: 3 agregações (.count()) em paralelo por status
+// de cobrança. O total de "aguardando_confirmacao" NÃO é recalculado aqui — vem de
+// dashboardCobrancasAguardando, já preenchido por carregarComprovantesPendentes().
+async function contarCobrancasPorStatus() {
+  const [pendente, pago, cancelado] = await Promise.all([
+    db.collection("cobrancas").where("status", "==", "pendente").count().get()
+      .then((agg) => agg.data().count).catch(() => null),
+    db.collection("cobrancas").where("status", "==", "pago").count().get()
+      .then((agg) => agg.data().count).catch(() => null),
+    db.collection("cobrancas").where("status", "==", "cancelado").count().get()
+      .then((agg) => agg.data().count).catch(() => null)
+  ]);
+  dashboardCobrancasPendentes = pendente;
+  dashboardCobrancasPagas = pago;
+  dashboardCobrancasCanceladas = cancelado;
+  renderDashboard();
+}
+
+function atualizarKpiNumero(idKpi, valor) {
+  const elemento = document.querySelector("#" + idKpi + " .kpi-numero");
+  if (!elemento) return;
+  elemento.textContent = (typeof valor === "number" && isFinite(valor)) ? String(valor) : "—";
+}
+
+// Chamada por carregarAlunos(), carregarComprovantesPendentes() (via carregarAlunos),
+// carregarEventos() e carregarHorarios() sempre que qualquer uma delas termina —
+// cada uma alimenta um pedaço do estado acima e redesenha o dashboard inteiro com o
+// que já estiver disponível (sem nova consulta ao Firestore, exceto checkins de hoje).
+function renderDashboard() {
+  atualizarKpiNumero("kpi-total-alunos", dashboardTotalAlunos);
+  atualizarKpiNumero("kpi-em-dia", dashboardAlunosEmDia);
+  atualizarKpiNumero(
+    "kpi-pendentes",
+    (dashboardTotalAlunos !== null && dashboardAlunosEmDia !== null)
+      ? dashboardTotalAlunos - dashboardAlunosEmDia
+      : null
+  );
+  atualizarKpiNumero("kpi-checkins-hoje", dashboardCheckinsHoje);
+  atualizarKpiNumero("kpi-aguardando-confirmacao", dashboardCobrancasAguardando);
+
+  renderDashboardEventos();
+  renderDashboardAulasHoje();
+  renderGraficosDashboard();
+}
+
+// Filtra em memória, a partir do array já carregado por carregarEventos() (mesma
+// consulta da tabela de eventos) — nenhuma query nova é feita aqui.
+function renderDashboardEventos() {
+  dashboardListaEventos.innerHTML = "";
+
+  const hoje = hojeISO();
+  const proximos = eventosCache
+    .filter((evento) => typeof evento.data === "string" && evento.data >= hoje)
+    .sort((a, b) => a.data.localeCompare(b.data))
+    .slice(0, 5);
+
+  if (proximos.length === 0) {
+    const li = document.createElement("li");
+    li.className = "dashboard-vazio";
+    li.textContent = "Nenhum evento agendado.";
+    dashboardListaEventos.appendChild(li);
+    return;
+  }
+
+  proximos.forEach((evento) => {
+    const li = document.createElement("li");
+    const spanNome = document.createElement("span");
+    spanNome.textContent = evento.nome || "Evento sem nome";
+    const spanData = document.createElement("span");
+    spanData.textContent = new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR");
+    li.append(spanNome, spanData);
+    dashboardListaEventos.appendChild(li);
+  });
+}
+
+// Filtra horariosCache (já carregado por carregarHorarios()) pelo dia da semana de
+// hoje, e faz o mesmo "join" em memória com turmasCache/equipeCache que a grade de
+// horários já faz (nomeDaTurma / nomeDoProfessor) — sem consulta nova ao Firestore.
+function renderDashboardAulasHoje() {
+  dashboardListaAulas.innerHTML = "";
+
+  if (horariosCache === null) {
+    const li = document.createElement("li");
+    li.className = "dashboard-vazio";
+    li.textContent = "Carregando...";
+    dashboardListaAulas.appendChild(li);
+    return;
+  }
+
+  const diaHoje = new Date().getDay();
+  const aulasHoje = horariosCache
+    .filter((horario) => horario.diaSemana === diaHoje && horario.ativo !== false)
+    .sort((a, b) => String(a.horaInicio || "").localeCompare(String(b.horaInicio || "")));
+
+  if (aulasHoje.length === 0) {
+    const li = document.createElement("li");
+    li.className = "dashboard-vazio";
+    li.textContent = "Nenhuma aula hoje.";
+    dashboardListaAulas.appendChild(li);
+    return;
+  }
+
+  aulasHoje.forEach((horario) => {
+    const li = document.createElement("li");
+
+    const spanInfo = document.createElement("span");
+    const nomeProfessor = nomeDoProfessor(horario.professorId);
+    spanInfo.textContent = nomeDaTurma(horario.turmaId)
+      + (nomeProfessor !== "—" ? " — " + nomeProfessor : "");
+
+    const spanHorario = document.createElement("span");
+    spanHorario.textContent = (horario.horaInicio || "--:--") + " - " + (horario.horaFim || "--:--");
+
+    li.append(spanInfo, spanHorario);
+    dashboardListaAulas.appendChild(li);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Gráficos do dashboard (Chart.js, carregado via CDN com SRI). A lista textual de
+// cada figure é sempre populada, com ou sem Chart.js disponível — ela é o fallback
+// visual E a legenda acessível dos dados. Os valores nunca são gerados de novo aqui:
+// vêm todos do estado já calculado por carregarAlunos, carregarCheckins7Dias e
+// contarCobrancasPorStatus.
+// ---------------------------------------------------------------------------
+const graficosDashboard = {};
+
+// Alterna entre o <canvas> e o aviso ".grafico-indisponivel" conforme o Chart.js
+// carregou ou não (ex.: bloqueado por um bloqueador de scripts, CDN fora do ar).
+// Devolve true quando o Chart.js está indisponível, para o chamador pular a
+// criação/atualização do gráfico.
+function prepararCanvasGrafico(idIndisponivel, idCanvas) {
+  const aviso = document.getElementById(idIndisponivel);
+  const canvas = document.getElementById(idCanvas);
+  const indisponivel = typeof Chart === "undefined";
+  if (aviso) aviso.hidden = !indisponivel;
+  if (canvas) canvas.hidden = indisponivel;
+  return indisponivel;
+}
+
+function criarOuAtualizarGrafico(chave, idCanvas, config) {
+  const canvas = document.getElementById(idCanvas);
+  if (!canvas) return;
+  const existente = graficosDashboard[chave];
+  if (existente) {
+    existente.data.labels = config.data.labels;
+    existente.data.datasets[0].data = config.data.datasets[0].data;
+    existente.update();
+    return;
+  }
+  graficosDashboard[chave] = new Chart(canvas, config);
+}
+
+// Popula a <ul class="grafico-dados"> com "Rótulo: número" por <li>, sempre via
+// createElement/textContent (nunca innerHTML) — os rótulos são fixos no código,
+// mas o padrão vale como regra geral do painel.
+function preencherListaGrafico(idLista, itens) {
+  const lista = document.getElementById(idLista);
+  if (!lista) return;
+  lista.innerHTML = "";
+  itens.forEach((item) => {
+    const li = document.createElement("li");
+    const valorTexto = (typeof item.valor === "number" && isFinite(item.valor)) ? String(item.valor) : "—";
+    li.textContent = item.rotulo + ": " + valorTexto;
+    lista.appendChild(li);
+  });
+}
+
+function renderGraficoMensalidade() {
+  const emDia = dashboardAlunosEmDia;
+  const pendente = (dashboardTotalAlunos !== null && dashboardAlunosEmDia !== null)
+    ? dashboardTotalAlunos - dashboardAlunosEmDia
+    : null;
+
+  preencherListaGrafico("grafico-mensalidade-dados", [
+    { rotulo: "Em dia", valor: emDia },
+    { rotulo: "Pendente", valor: pendente }
+  ]);
+
+  if (prepararCanvasGrafico("grafico-mensalidade-indisponivel", "grafico-mensalidade")) return;
+
+  criarOuAtualizarGrafico("mensalidade", "grafico-mensalidade", {
+    type: "doughnut",
+    data: {
+      labels: ["Em dia", "Pendente"],
+      datasets: [{
+        data: [emDia || 0, pendente || 0],
+        backgroundColor: ["#2e9e3e", "#d31515"]
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { position: "bottom" } }
+    }
+  });
+}
+
+function renderGraficoCheckins() {
+  const buckets = dashboardCheckins7Dias || [];
+
+  preencherListaGrafico("grafico-checkins-dados", buckets.map((bucket) => ({
+    rotulo: bucket.data.toLocaleDateString("pt-BR"),
+    valor: bucket.total
+  })));
+
+  if (prepararCanvasGrafico("grafico-checkins-indisponivel", "grafico-checkins")) return;
+
+  const labels = buckets.map((bucket) => bucket.data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }));
+  const valores = buckets.map((bucket) => (typeof bucket.total === "number" ? bucket.total : 0));
+
+  criarOuAtualizarGrafico("checkins", "grafico-checkins", {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Check-ins", data: valores, backgroundColor: "#1a5fd0" }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      animation: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderGraficoCobrancasPorStatus() {
+  const itens = [
+    { rotulo: "Pendente", valor: dashboardCobrancasPendentes },
+    { rotulo: "Pago", valor: dashboardCobrancasPagas },
+    { rotulo: "Aguardando confirmação", valor: dashboardCobrancasAguardando },
+    { rotulo: "Cancelado", valor: dashboardCobrancasCanceladas }
+  ];
+
+  preencherListaGrafico("grafico-cobrancas-dados", itens);
+
+  if (prepararCanvasGrafico("grafico-cobrancas-indisponivel", "grafico-cobrancas")) return;
+
+  criarOuAtualizarGrafico("cobrancas", "grafico-cobrancas", {
+    type: "bar",
+    data: {
+      labels: itens.map((item) => item.rotulo),
+      datasets: [{
+        label: "Cobranças",
+        data: itens.map((item) => item.valor || 0),
+        backgroundColor: ["#e0b400", "#2e9e3e", "#1a5fd0", "#888888"]
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      animation: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderGraficosDashboard() {
+  renderGraficoMensalidade();
+  renderGraficoCheckins();
+  renderGraficoCobrancasPorStatus();
+}
 
 const BELT_COLORS = {
   "Branca": "#999999", "Cinza": "#888888", "Amarela": "#e0b400", "Laranja": "#e07a00",
@@ -98,8 +1231,65 @@ const BELT_COLORS = {
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
 btnRelatorio.addEventListener("click", gerarRelatorio);
-cobrancaClose.addEventListener("click", () => cobrancaBackdrop.classList.remove("show"));
+cobrancaClose.addEventListener("click", fecharModalCobranca);
 cobrancaConfirmar.addEventListener("click", confirmarGeracaoCobranca);
+eventoSalvar.addEventListener("click", salvarEvento);
+eventoCancelar.addEventListener("click", limparFormularioEvento);
+configSalvar.addEventListener("click", salvarConfiguracoes);
+configModo.addEventListener("change", aoTrocarModoMensalidade);
+credencialEditar.addEventListener("click", abrirModalCredencial);
+credencialSalvar.addEventListener("click", salvarCredencialDoModal);
+credencialCancelar.addEventListener("click", () => fecharModalCredencial(true));
+credencialClose.addEventListener("click", () => fecharModalCredencial(true));
+credencialClose.addEventListener("keydown", (evento) => {
+  if (evento.key === "Enter" || evento.key === " ") {
+    evento.preventDefault();
+    fecharModalCredencial(true);
+  }
+});
+credencialRemover.addEventListener("click", removerCredencialAsaas);
+// Clique no fundo escuro (fora da caixa) fecha do mesmo jeito que o "Cancelar".
+credencialBackdrop.addEventListener("click", (evento) => {
+  if (evento.target === credencialBackdrop) fecharModalCredencial(true);
+});
+document.addEventListener("keydown", (evento) => {
+  if (evento.key !== "Escape") return;
+  if (credencialBackdrop.classList.contains("show")) {
+    fecharModalCredencial(true);
+  } else if (novoAlunoBackdrop.classList.contains("show")) {
+    fecharModalNovoAluno();
+  } else if (conviteBackdrop.classList.contains("show")) {
+    fecharModalConvite();
+  }
+});
+btnNovoAluno.addEventListener("click", abrirModalNovoAluno);
+novoAlunoClose.addEventListener("click", fecharModalNovoAluno);
+novoAlunoClose.addEventListener("keydown", (evento) => {
+  if (evento.key === "Enter" || evento.key === " ") {
+    evento.preventDefault();
+    fecharModalNovoAluno();
+  }
+});
+novoAlunoBackdrop.addEventListener("click", (evento) => {
+  if (evento.target === novoAlunoBackdrop) fecharModalNovoAluno();
+});
+novoAlunoCriar.addEventListener("click", criarAlunoPeloProfessor);
+btnConvite.addEventListener("click", abrirModalConvite);
+conviteClose.addEventListener("click", fecharModalConvite);
+conviteClose.addEventListener("keydown", (evento) => {
+  if (evento.key === "Enter" || evento.key === " ") {
+    evento.preventDefault();
+    fecharModalConvite();
+  }
+});
+conviteBackdrop.addEventListener("click", (evento) => {
+  if (evento.target === conviteBackdrop) fecharModalConvite();
+});
+conviteGerar.addEventListener("click", gerarLinkConvite);
+conviteCopiar.addEventListener("click", copiarLinkConvite);
+conviteWhatsapp.addEventListener("click", enviarConvitePorWhatsapp);
+manualClose.addEventListener("click", fecharModalManual);
+manualConfirmar.addEventListener("click", confirmarCobrancaManual);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -114,10 +1304,17 @@ auth.onAuthStateChanged(async (user) => {
   }
 
   const configDoc = await db.collection("config").doc("geral").get();
-  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
+  configGeral = normalizarConfig(configDoc.exists ? configDoc.data() : {});
+  mensalidadeModo = configGeral.mensalidadeModo;
+  preencherFormularioConfig();
 
   conteudo.style.display = "block";
   carregarAlunos();
+  carregarEventos();
+  carregarCredencialAsaas();
+  carregarConteudoPublico();
+  carregarCheckins7Dias();
+  contarCobrancasPorStatus();
 });
 
 async function carregarAlunos() {
@@ -125,14 +1322,41 @@ async function carregarAlunos() {
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
+    dashboardTotalAlunos = 0;
+    dashboardAlunosEmDia = 0;
+    dashboardCobrancasAguardando = 0;
+    renderDashboard();
     return;
   }
 
   tabelaAlunos.innerHTML = "";
 
-  for (const doc of snap.docs) {
+  // Alimenta os KPIs do dashboard com a MESMA expressão usada abaixo pra decidir
+  // "em dia" (aluno.mensalidadeStatus || 'pendente') === 'pago' — pra nunca divergir
+  // do que a tabela mostra.
+  dashboardTotalAlunos = snap.size;
+  dashboardAlunosEmDia = snap.docs.filter(
+    (doc) => (doc.data().mensalidadeStatus || "pendente") === "pago"
+  ).length;
+
+  // Contagem de presenças por agregação (.count()) em vez de baixar todos os documentos
+  // de check-in de cada aluno — antes o painel lia N x (todos os check-ins do aluno) só
+  // pra mostrar um número. O histórico completo só é carregado quando a linha é clicada.
+  const contagens = await Promise.all(
+    snap.docs.map((doc) =>
+      db.collection("checkins").where("alunoId", "==", doc.id).count().get()
+        .then((agg) => agg.data().count)
+        .catch(() => null)
+    )
+  );
+
+  // Cobranças com comprovante anexado esperando o "ok" do professor. Uma única consulta
+  // pra tabela inteira (índice de campo único em status), em vez de uma por aluno.
+  const aguardandoPorAluno = await carregarComprovantesPendentes();
+
+  snap.docs.forEach((doc, indice) => {
     const aluno = doc.data();
-    const checkinsSnap = await db.collection("checkins").where("alunoId", "==", doc.id).get();
+    const totalCheckins = contagens[indice];
 
     const tr = document.createElement("tr");
     const cor = BELT_COLORS[aluno.faixa] || "#666";
@@ -159,13 +1383,42 @@ async function carregarAlunos() {
       : "-";
 
     const tdPresencas = document.createElement("td");
-    tdPresencas.textContent = checkinsSnap.size;
+    tdPresencas.textContent = totalCheckins === null ? "-" : totalCheckins;
 
     const tdMensalidade = document.createElement("td");
+    // Dias de atraso: contados desde a última vez que o status foi mexido. Aluno que
+    // nunca foi marcado não tem mensalidadeAtualizadoEm — aí o badge fica sem contagem
+    // em vez de inventar um número. O badge SEMPRE tem texto (nunca informa só por cor).
+    const diasPendente = emDia ? null : diasDesde(aluno.mensalidadeAtualizadoEm);
+    const diasParaAlerta = configGeral.lembreteDiasParaAlerta === null
+      ? LEMBRETE_DIAS_PADRAO
+      : configGeral.lembreteDiasParaAlerta;
+    const atrasoForte = diasPendente !== null && diasPendente >= diasParaAlerta;
+
     const mensalidadeTag = document.createElement("span");
-    mensalidadeTag.className = "mensalidade-tag " + (emDia ? "pago" : "pendente");
-    mensalidadeTag.textContent = emDia ? "Pago" : "Pendente";
+    let classesTag = "mensalidade-tag " + (emDia ? "pago" : "pendente");
+    if (atrasoForte) classesTag += " mensalidade-tag-alerta";
+    mensalidadeTag.className = classesTag;
+    mensalidadeTag.textContent = emDia ? "Em dia" : textoPendencia(diasPendente);
     tdMensalidade.appendChild(mensalidadeTag);
+
+    if (!emDia && configGeral.lembreteWhatsappAtivo) {
+      tdMensalidade.appendChild(criarBotaoWhatsapp(aluno));
+    }
+
+    // E-mail é opt-in explícito (default false): diferente do WhatsApp, aqui o clique
+    // dispara um envio de verdade, com custo e reputação de remetente em jogo.
+    if (!emDia && configGeral.lembreteEmailAtivo) {
+      tdMensalidade.append(" ", criarBotaoEmail(doc.id, aluno));
+    }
+
+    // Comprovante enviado pelo aluno (modo Pix manual): o professor vê o arquivo e
+    // confirma. Aparece independente do modo configurado — uma cobrança manual antiga
+    // continua precisando de confirmação mesmo se a academia trocar de modo depois.
+    const cobrancaAguardando = aguardandoPorAluno[doc.id];
+    if (!emDia && cobrancaAguardando) {
+      tdMensalidade.appendChild(criarBlocoComprovante(cobrancaAguardando, doc.id));
+    }
 
     if (emDia) {
       // Correção manual sempre disponível, nos dois modos (o professor pode reverter
@@ -189,6 +1442,28 @@ async function carregarAlunos() {
         abrirModalCobranca(doc.id, aluno.nome);
       });
       tdMensalidade.appendChild(btnCobranca);
+    } else if (mensalidadeModo === "pixManual") {
+      // Pix manual: não passa pelo Worker/Asaas — o documento em cobrancas/ é gravado
+      // direto pelo painel, com origem 'manual' (ver firestore.rules).
+      const btnManual = document.createElement("button");
+      btnManual.type = "button";
+      btnManual.className = "mensalidade-btn";
+      btnManual.textContent = "Lançar cobrança Pix manual";
+      btnManual.addEventListener("click", (e) => {
+        e.stopPropagation();
+        abrirModalManual(doc.id, aluno.nome);
+      });
+      tdMensalidade.appendChild(btnManual);
+
+      const btnPago = document.createElement("button");
+      btnPago.type = "button";
+      btnPago.className = "mensalidade-btn";
+      btnPago.textContent = "Marcar pago";
+      btnPago.addEventListener("click", (e) => {
+        e.stopPropagation();
+        alterarMensalidade(doc.id, "pago");
+      });
+      tdMensalidade.append(" ", btnPago);
     } else {
       const btnMensalidade = document.createElement("button");
       btnMensalidade.type = "button";
@@ -202,9 +1477,514 @@ async function carregarAlunos() {
     }
 
     tr.append(tdNome, tdTelefone, tdFaixa, tdNascimento, tdPresencas, tdMensalidade);
-    tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
+    tr.addEventListener("click", () => abrirHistorico(aluno.nome, doc.id));
 
     tabelaAlunos.appendChild(tr);
+  });
+
+  renderDashboard();
+}
+
+// ---------------------------------------------------------------------------
+// Comprovantes de pagamento (modo Pix manual — Fase 3).
+//
+// O arquivo em si mora num bucket R2 da Cloudflare (o Firebase Storage exigiria o plano
+// Blaze) e é servido pelo Worker em GET /comprovante/<cobrancaId>, que só responde pra
+// quem é admin. Como abrir uma aba nova não permite mandar header Authorization, o token
+// vai na query string — ver a nota em worker/src/comprovante.js.
+// ---------------------------------------------------------------------------
+
+// { alunoId: cobrancaId } das cobranças com comprovante aguardando confirmação.
+// Se a consulta falhar, devolve {} — a tabela de alunos continua funcionando.
+async function carregarComprovantesPendentes() {
+  const mapa = {};
+  let snap;
+  try {
+    snap = await db.collection("cobrancas")
+      .where("status", "==", "aguardando_confirmacao")
+      .get();
+  } catch (err) {
+    // Falhou: o KPI do dashboard fica em "—" (não força um zero enganoso).
+    dashboardCobrancasAguardando = null;
+    return mapa;
+  }
+  // snap.size é o total de COBRANÇAS aguardando confirmação — Object.keys(mapa).length
+  // contaria só ALUNOS com pendência, subestimando quando um aluno tem mais de uma
+  // cobrança aguardando confirmação.
+  dashboardCobrancasAguardando = snap.size;
+  snap.forEach((docCobranca) => {
+    const dados = docCobranca.data();
+    if (typeof dados.alunoId === "string") mapa[dados.alunoId] = docCobranca.id;
+  });
+  return mapa;
+}
+
+function criarBlocoComprovante(cobrancaId, alunoId) {
+  const bloco = document.createElement("span");
+  bloco.className = "comprovante-acoes";
+
+  const tag = document.createElement("span");
+  tag.className = "comprovante-tag";
+  tag.textContent = "Comprovante enviado";
+  bloco.appendChild(tag);
+
+  const btnVer = document.createElement("button");
+  btnVer.type = "button";
+  btnVer.className = "mensalidade-btn";
+  btnVer.textContent = "Ver comprovante";
+  btnVer.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    await abrirComprovante(cobrancaId, btnVer);
+  });
+  bloco.append(" ", btnVer);
+
+  const btnConfirmar = document.createElement("button");
+  btnConfirmar.type = "button";
+  btnConfirmar.className = "mensalidade-btn comprovante-btn-confirmar";
+  btnConfirmar.textContent = "Confirmar pagamento";
+  btnConfirmar.addEventListener("click", (e) => {
+    e.stopPropagation();
+    confirmarPagamentoComprovante(cobrancaId, alunoId, btnConfirmar);
+  });
+  bloco.append(" ", btnConfirmar);
+
+  return bloco;
+}
+
+// O ID token é curto (≈1h) e viaja na query string por falta de alternativa simples numa
+// navegação de aba. Ele é buscado na hora do clique pra nunca abrir uma aba com token
+// vencido, e a aba vai com noopener.
+async function abrirComprovante(cobrancaId, botao) {
+  if (!WORKER_URL) {
+    alert("O serviço de comprovantes ainda não foi configurado nesta academia.");
+    return;
+  }
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Abrindo...";
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const url = WORKER_URL + "/comprovante/" + encodeURIComponent(cobrancaId)
+      + "?token=" + encodeURIComponent(token);
+    window.open(url, "_blank", "noopener");
+  } catch (err) {
+    alert("Não foi possível abrir o comprovante. Tente novamente.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
+  }
+}
+
+// Duas escritas em coleções diferentes (cobrancas e alunos), na ordem em que importam:
+// primeiro a cobrança (é ela que carrega o rastro de quem confirmou), depois o aluno
+// (que é o que libera o check-in). Se a segunda falhar, a mensagem diz exatamente isso —
+// nada de "sucesso" com a mensalidade ainda pendente.
+async function confirmarPagamentoComprovante(cobrancaId, alunoId, botao) {
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Confirmando...";
+
+  try {
+    await db.collection("cobrancas").doc(cobrancaId).update({
+      status: "pago",
+      confirmadoPorUid: auth.currentUser.uid,
+      confirmadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
+    alert(err && err.code === "permission-denied"
+      ? "Sua conta não tem permissão para confirmar esta cobrança."
+      : "Não foi possível confirmar a cobrança. Tente novamente.");
+    return;
+  }
+
+  try {
+    await db.collection("alunos").doc(alunoId).update({
+      mensalidadeStatus: "pago",
+      mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    alert("A cobrança foi confirmada, mas a mensalidade do aluno não pôde ser atualizada. Marque como paga manualmente.");
+  }
+
+  carregarAlunos();
+}
+
+// ---------------------------------------------------------------------------
+// Lembrete de mensalidade (badge de atraso + botão de WhatsApp).
+// Nada é enviado automaticamente: o botão só abre o WhatsApp já com o texto pronto,
+// e quem aperta "enviar" é o professor, no próprio app do WhatsApp.
+// ---------------------------------------------------------------------------
+
+function textoPendencia(dias) {
+  if (dias === null) return "Pendente";
+  if (dias <= 0) return "Pendente desde hoje";
+  if (dias === 1) return "Pendente há 1 dia";
+  return "Pendente há " + dias + " dias";
+}
+
+function mesAtualPtBr() {
+  const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return mes.charAt(0).toUpperCase() + mes.slice(1);
+}
+
+function valorMensalidadeTexto() {
+  const valor = configGeral.valorMensalidadePadrao;
+  if (typeof valor !== "number" || !isFinite(valor) || valor <= 0) return "a combinar";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function montarTextoLembrete(aluno) {
+  const template = configGeral.lembreteTemplate || LEMBRETE_TEMPLATE_PADRAO;
+  return preencherTemplate(template, {
+    nome: aluno.nome || "",
+    mes: mesAtualPtBr(),
+    valor: valorMensalidadeTexto(),
+    academia: configGeral.academiaNome || "a academia",
+    pix: configGeral.pixChaveManual || ""
+  });
+}
+
+// O telefone vem do cadastro do aluno (conteúdo livre): montarLinkWhatsapp devolve null
+// quando não dá pra formar um número plausível, e aí o botão fica desabilitado com um
+// texto explicando o porquê — nunca abre um wa.me quebrado.
+function criarBotaoWhatsapp(aluno) {
+  const nome = aluno.nome || "aluno";
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "mensalidade-btn mensalidade-btn-whats";
+  const link = montarLinkWhatsapp(aluno.telefone, "");
+
+  if (!link) {
+    botao.textContent = "Sem telefone p/ WhatsApp";
+    botao.disabled = true;
+    botao.title = "Cadastre um telefone válido para " + nome + " para enviar o lembrete.";
+    botao.setAttribute("aria-label", "Lembrete por WhatsApp indisponível: " + nome + " não tem telefone válido cadastrado");
+    return botao;
+  }
+
+  botao.textContent = "Lembrar no WhatsApp";
+  botao.setAttribute("aria-label", "Lembrar " + nome + " no WhatsApp");
+  botao.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const url = montarLinkWhatsapp(aluno.telefone, montarTextoLembrete(aluno));
+    if (!url) return;
+    window.open(url, "_blank", "noopener");
+  });
+  return botao;
+}
+
+// Plausibilidade do e-mail cadastrado — mesma regra do firestore.rules e de
+// worker/src/validacao.js (emailValido). Só serve pra desabilitar o botão em vez de
+// disparar uma chamada que o Worker recusaria de qualquer jeito.
+function emailPlausivel(valor) {
+  return typeof valor === "string" && valor.length > 0 && valor.length < 100
+    && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(valor);
+}
+
+// Diferente do WhatsApp (que só abre um link), este botão manda o Worker enviar um
+// e-mail de verdade. Por isso só aparece com config/geral.lembreteEmailAtivo === true.
+// O texto é montado no servidor a partir do MESMO template de config/geral — o cliente
+// manda só o alunoId; o endereço de destino sai do documento do aluno no Firestore.
+function criarBotaoEmail(alunoId, aluno) {
+  const nome = aluno.nome || "aluno";
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "mensalidade-btn mensalidade-btn-email";
+
+  if (!emailPlausivel(aluno.email)) {
+    botao.textContent = "Sem e-mail cadastrado";
+    botao.disabled = true;
+    botao.title = "Cadastre um e-mail válido para " + nome + " para enviar o lembrete.";
+    botao.setAttribute("aria-label", "Lembrete por e-mail indisponível: " + nome + " não tem e-mail válido cadastrado");
+    return botao;
+  }
+
+  botao.textContent = "Enviar lembrete por e-mail";
+  botao.setAttribute("aria-label", "Enviar lembrete de mensalidade por e-mail para " + nome);
+  botao.addEventListener("click", (e) => {
+    e.stopPropagation();
+    enviarLembreteEmail(alunoId, botao);
+  });
+  return botao;
+}
+
+async function enviarLembreteEmail(alunoId, botao) {
+  if (!WORKER_URL) {
+    alert("O envio de lembretes por e-mail ainda não foi configurado nesta academia.");
+    return;
+  }
+
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Enviando...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/enviar-lembrete", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ alunoId: alunoId })
+    });
+
+    const dados = await resp.json().catch(() => null);
+
+    if (resp.ok && dados && dados.ok) {
+      botao.textContent = "Lembrete enviado";
+      // Fica desabilitado depois do sucesso: um segundo clique só mandaria o mesmo
+      // e-mail de novo. Volta ao normal na próxima recarga da lista.
+      return;
+    }
+
+    if (resp.status === 501) {
+      alert("O lembrete por e-mail ainda não foi configurado no servidor. Peça para configurar a chave do serviço de e-mail.");
+    } else if (resp.status === 429) {
+      alert("Limite diário de lembretes por e-mail atingido. Tente novamente amanhã.");
+    } else if (resp.status === 401 || resp.status === 403) {
+      alert("Sua conta não tem permissão para enviar lembretes por e-mail.");
+    } else {
+      alert((dados && dados.erro) || "Não foi possível enviar o lembrete. Tente novamente.");
+    }
+  } catch (err) {
+    alert("Não foi possível falar com o servidor de lembretes. Verifique a conexão e tente novamente.");
+  } finally {
+    if (botao.textContent === "Enviando...") {
+      botao.disabled = false;
+      botao.textContent = textoOriginal;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mural de eventos e campeonatos (cadastro manual do professor).
+// ---------------------------------------------------------------------------
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// O link vem do Firestore e, mesmo já validado pelas rules, é tratado como conteúdo
+// não confiável na hora de virar href: só https:// e só se o próprio parser de URL do
+// navegador aceitar. Qualquer outra coisa (javascript:, data:, lixo) devolve null e a
+// célula fica com travessão — nunca vira <a>.
+function linkHttpsValido(valor) {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  if (!limpo.startsWith("https://")) return null;
+  try {
+    const url = new URL(limpo);
+    return url.protocol === "https:" ? limpo : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function mostrarMsgEvento(texto, tipo) {
+  eventoMsg.textContent = texto;
+  eventoMsg.className = "msg show " + tipo;
+}
+
+function limparFormularioEvento() {
+  eventoEditandoId = null;
+  eventoNome.value = "";
+  eventoData.value = "";
+  eventoLocal.value = "";
+  eventoLink.value = "";
+  eventoSalvar.textContent = "Cadastrar evento";
+  eventoCancelar.style.display = "none";
+  eventoMsg.className = "msg";
+  eventoMsg.textContent = "";
+}
+
+async function carregarEventos() {
+  let snap;
+  try {
+    snap = await db.collection("eventos").orderBy("data", "desc").get();
+  } catch (err) {
+    tabelaEventos.innerHTML = "<tr><td colspan='5'>Não foi possível carregar os eventos.</td></tr>";
+    eventosCache = [];
+    renderDashboard();
+    return;
+  }
+
+  // Cache reaproveitado pela lista "Próximos eventos" do dashboard — mesma consulta,
+  // sem nova query.
+  eventosCache = snap.docs.map((docEvento) => Object.assign({ id: docEvento.id }, docEvento.data()));
+
+  if (snap.empty) {
+    tabelaEventos.innerHTML = "<tr><td colspan='5'>Nenhum evento cadastrado.</td></tr>";
+    renderDashboard();
+    return;
+  }
+
+  tabelaEventos.innerHTML = "";
+  const hoje = hojeISO();
+
+  snap.docs.forEach((docEvento) => {
+    const evento = docEvento.data();
+    const encerrado = typeof evento.data === "string" && evento.data < hoje;
+
+    const tr = document.createElement("tr");
+    if (encerrado) tr.classList.add("evento-encerrado");
+
+    // Nome e local são texto livre digitado pelo professor — sempre textContent.
+    const tdNome = document.createElement("td");
+    tdNome.textContent = evento.nome || "-";
+    if (encerrado) {
+      const tag = document.createElement("span");
+      tag.className = "evento-tag-encerrado";
+      tag.textContent = "Encerrado";
+      tdNome.append(" ", tag);
+    }
+
+    const tdData = document.createElement("td");
+    tdData.textContent = typeof evento.data === "string"
+      ? new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR")
+      : "-";
+
+    const tdLocal = document.createElement("td");
+    tdLocal.textContent = evento.local || "-";
+
+    const tdLink = document.createElement("td");
+    const href = linkHttpsValido(evento.link);
+    if (href) {
+      const a = document.createElement("a");
+      a.className = "evento-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "Abrir";
+      tdLink.appendChild(a);
+    } else {
+      tdLink.textContent = "-";
+    }
+
+    const tdAcoes = document.createElement("td");
+    const nomeEvento = evento.nome || "sem nome";
+
+    const btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.className = "mensalidade-btn";
+    btnEditar.textContent = "Editar";
+    btnEditar.setAttribute("aria-label", "Editar o evento " + nomeEvento);
+    btnEditar.addEventListener("click", () => editarEvento(docEvento.id, evento));
+
+    const btnApagar = document.createElement("button");
+    btnApagar.type = "button";
+    btnApagar.className = "mensalidade-btn";
+    btnApagar.textContent = "Apagar";
+    btnApagar.setAttribute("aria-label", "Apagar o evento " + nomeEvento);
+    btnApagar.addEventListener("click", () => apagarEvento(docEvento.id, nomeEvento));
+
+    tdAcoes.append(btnEditar, " ", btnApagar);
+
+    tr.append(tdNome, tdData, tdLocal, tdLink, tdAcoes);
+    tabelaEventos.appendChild(tr);
+  });
+
+  renderDashboard();
+}
+
+function editarEvento(id, evento) {
+  eventoEditandoId = id;
+  eventoNome.value = evento.nome || "";
+  eventoData.value = typeof evento.data === "string" ? evento.data : "";
+  eventoLocal.value = evento.local || "";
+  eventoLink.value = typeof evento.link === "string" ? evento.link : "";
+  eventoSalvar.textContent = "Salvar alterações";
+  eventoCancelar.style.display = "inline-block";
+  eventoMsg.className = "msg";
+  eventoMsg.textContent = "";
+  eventoNome.focus();
+}
+
+// Valida no cliente ANTES de gravar — as mesmas checagens vivem em firestore.rules
+// (que é quem realmente manda); aqui é só pra dar mensagem de erro decente em vez de
+// um permission-denied seco.
+async function salvarEvento() {
+  const nome = eventoNome.value.trim();
+  const data = eventoData.value.trim();
+  const local = eventoLocal.value.trim();
+  const link = eventoLink.value.trim();
+
+  if (!nome || nome.length > 120) {
+    mostrarMsgEvento("Informe o nome do evento (até 120 caracteres).", "error");
+    return;
+  }
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(data)) {
+    mostrarMsgEvento("Informe a data do evento.", "error");
+    return;
+  }
+  if (!local || local.length > 160) {
+    mostrarMsgEvento("Informe o local do evento (até 160 caracteres).", "error");
+    return;
+  }
+  if (link && (link.length > 500 || !linkHttpsValido(link))) {
+    mostrarMsgEvento("O link precisa começar com https:// e ser um endereço válido.", "error");
+    return;
+  }
+
+  eventoSalvar.disabled = true;
+  const textoOriginal = eventoSalvar.textContent;
+  eventoSalvar.textContent = "Salvando...";
+
+  try {
+    if (eventoEditandoId) {
+      await db.collection("eventos").doc(eventoEditandoId).update({
+        nome,
+        data,
+        local,
+        // Campo vazio some do documento em vez de virar string "" (a rule aceita link
+        // ausente, mas não uma string que não casa com o regex de https).
+        link: link ? link : firebase.firestore.FieldValue.delete(),
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      limparFormularioEvento();
+      mostrarMsgEvento("Evento atualizado.", "success");
+    } else {
+      const payload = {
+        nome,
+        data,
+        local,
+        criadoPor: auth.currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (link) payload.link = link;
+
+      await db.collection("eventos").add(payload);
+      limparFormularioEvento();
+      mostrarMsgEvento("Evento cadastrado.", "success");
+    }
+    carregarEventos();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEvento(
+      semPermissao
+        ? "Sua conta não tem permissão para cadastrar eventos."
+        : "Não foi possível salvar o evento. Tente novamente.",
+      "error"
+    );
+  } finally {
+    eventoSalvar.disabled = false;
+    if (eventoSalvar.textContent === "Salvando...") eventoSalvar.textContent = textoOriginal;
+  }
+}
+
+async function apagarEvento(id, nome) {
+  if (!confirm('Apagar o evento "' + nome + '"?')) return;
+
+  try {
+    await db.collection("eventos").doc(id).delete();
+    if (eventoEditandoId === id) limparFormularioEvento();
+    mostrarMsgEvento("Evento apagado.", "success");
+    carregarEventos();
+  } catch (err) {
+    mostrarMsgEvento("Não foi possível apagar o evento.", "error");
   }
 }
 
@@ -270,9 +2050,23 @@ async function alterarMensalidade(alunoId, novoStatus) {
 function abrirModalCobranca(alunoId, alunoNome) {
   cobrancaAlunoAtual = { id: alunoId, nome: alunoNome };
   cobrancaTitulo.textContent = "Gerar cobrança Pix - " + alunoNome;
-  cobrancaValor.value = "150";
+  cobrancaValor.value = configGeral.valorMensalidadePadrao === null
+    ? "150"
+    : String(configGeral.valorMensalidadePadrao);
   cobrancaMsg.className = "msg";
+  esconderCampoCpf();
   cobrancaBackdrop.classList.add("show");
+}
+
+// O CPF nunca fica guardado: some do input assim que o modal fecha ou a cobrança sai.
+function esconderCampoCpf() {
+  cobrancaCpf.value = "";
+  cobrancaCpfBloco.style.display = "none";
+}
+
+function fecharModalCobranca() {
+  cobrancaBackdrop.classList.remove("show");
+  esconderCampoCpf();
 }
 
 async function confirmarGeracaoCobranca() {
@@ -293,20 +2087,80 @@ async function confirmarGeracaoCobranca() {
   cobrancaConfirmar.textContent = "Gerando...";
 
   try {
+    // O Worker exige um ID token do Firebase e confere se o UID está na coleção admins —
+    // sem esse header a chamada volta 401.
+    const idToken = await auth.currentUser.getIdToken();
+
+    const corpo = {
+      alunoId: cobrancaAlunoAtual.id,
+      alunoNome: cobrancaAlunoAtual.nome,
+      valor,
+      mesReferencia: new Date().toISOString().slice(0, 7)
+    };
+
+    // Só vai junto quando o Worker pediu (422 precisaCpf) e o professor digitou.
+    const cpfDigitado = cobrancaCpf.value.trim();
+    if (cpfDigitado) corpo.cpfCnpj = cpfDigitado;
+
     const resp = await fetch(WORKER_URL + "/criar-cobranca", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        alunoId: cobrancaAlunoAtual.id,
-        alunoNome: cobrancaAlunoAtual.nome,
-        valor,
-        mesReferencia: new Date().toISOString().slice(0, 7)
-      })
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken
+      },
+      body: JSON.stringify(corpo)
     });
+
+    if (resp.status === 401) {
+      cobrancaMsg.textContent = "Sua sessão expirou. Saia e entre de novo para gerar a cobrança.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    if (resp.status === 403) {
+      cobrancaMsg.textContent = "Sua conta não tem permissão de professor para gerar cobranças.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    // Primeira cobrança deste aluno: o Asaas precisa do CPF pra criar o pagador.
+    if (resp.status === 422) {
+      const dados = await resp.json().catch(() => ({}));
+      if (dados.precisaCpf) {
+        cobrancaCpfBloco.style.display = "block";
+        cobrancaCpf.focus();
+        cobrancaMsg.textContent =
+          "Para gerar a primeira cobrança Pix deste aluno, informe o CPF dele — usado só " +
+          "para emitir a cobrança no Asaas, não fica salvo no DojoPass.";
+        cobrancaMsg.className = "msg show error";
+        return;
+      }
+      throw new Error("Falha ao gerar cobrança");
+    }
+
+    if (resp.status === 400 && cpfDigitado) {
+      cobrancaMsg.textContent = "CPF inválido. Confira os números e tente de novo.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    if (resp.status === 409) {
+      cobrancaMsg.textContent = "Este mês já está pago.";
+      cobrancaMsg.className = "msg show error";
+      esconderCampoCpf();
+      return;
+    }
 
     if (!resp.ok) throw new Error("Falha ao gerar cobrança");
 
-    cobrancaMsg.textContent = "Cobrança Pix gerada! O aluno já pode pagar pela área dele.";
+    const dados = await resp.json().catch(() => ({}));
+
+    // O CPF já cumpriu o papel dele nesta chamada — apaga antes de qualquer outra coisa.
+    esconderCampoCpf();
+
+    cobrancaMsg.textContent = dados.jaExistia
+      ? "Já havia uma cobrança pendente deste mês — o aluno continua com o mesmo código Pix."
+      : "Cobrança Pix gerada! O aluno já pode pagar pela área dele.";
     cobrancaMsg.className = "msg show success";
     carregarAlunos();
   } catch (err) {
@@ -318,27 +2172,1970 @@ async function confirmarGeracaoCobranca() {
   }
 }
 
-function abrirHistorico(nome, checkinsSnap) {
-  modalTitulo.textContent = "Histórico - " + nome;
-  modalLista.innerHTML = "";
+// ---------------------------------------------------------------------------
+// Configurações da academia (documento config/geral).
+// Todos os campos novos são opcionais no Firestore — os defaults abaixo são do cliente,
+// pra tela nunca depender de um documento completo. Ver firestore.rules: só admin grava,
+// só no documento "geral", e cada campo tem tipo/tamanho conferido no servidor.
+// ---------------------------------------------------------------------------
 
-  const docs = checkinsSnap.docs.slice().sort((a, b) => {
-    const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
-    const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
-    return tb - ta;
-  });
+function configPadrao() {
+  return {
+    mensalidadeModo: "manual",
+    valorMensalidadePadrao: null,
+    academiaNome: "",
+    pixChaveManual: "",
+    // WhatsApp e aviso visual vêm LIGADOS por padrão: não custam nada, não disparam
+    // nada sozinhos (o professor é quem clica) e academia recém-configurada, sem o
+    // documento config/geral, já ganha o lembrete. Só desligam se o campo estiver
+    // gravado explicitamente como false. E-mail continua desligado por padrão porque
+    // depende de infra de envio que ainda não existe.
+    lembreteWhatsappAtivo: true,
+    lembreteEmailAtivo: false,
+    lembreteVisualAtivo: true,
+    lembreteDiasParaAlerta: null,
+    lembreteTemplate: "",
+    // Gatilho VISUAL do modo Pix automático: com quantos dias de antecedência a cobrança
+    // do Asaas aparece destacada no painel. Não é o prazo de vencimento (esse é fixo no
+    // servidor, ASAAS_DUE_DATE_DIAS) e não dispara envio nenhum.
+    asaasDiasAvisoAntesVencimento: null
+  };
+}
 
-  if (docs.length === 0) {
-    modalLista.innerHTML = "<li>Nenhuma presença registrada.</li>";
-  } else {
-    docs.forEach((doc) => {
-      const li = document.createElement("li");
-      li.innerHTML = "<span>Treino</span><span>" + formatDateTime(doc.data().timestamp) + "</span>";
-      modalLista.appendChild(li);
-    });
+// Dias de atraso a partir dos quais o alerta vira "forte" quando config/geral não
+// define lembreteDiasParaAlerta. Usado no painel e espelhado em checkin.html.
+const LEMBRETE_DIAS_PADRAO = 7;
+
+// Texto usado quando o professor não escreveu nenhum template em config/geral.
+const LEMBRETE_TEMPLATE_PADRAO =
+  "Olá {nome}, tudo bem? Passando pra lembrar da mensalidade de {mes} da {academia}. " +
+  "Valor: {valor}. Pix: {pix}";
+
+const MODOS_MENSALIDADE = ["manual", "pix", "pixManual"];
+
+function normalizarConfig(dados) {
+  const base = configPadrao();
+  if (!dados || typeof dados !== "object") return base;
+
+  if (MODOS_MENSALIDADE.indexOf(dados.mensalidadeModo) !== -1) {
+    base.mensalidadeModo = dados.mensalidadeModo;
+  }
+  if (typeof dados.valorMensalidadePadrao === "number" && dados.valorMensalidadePadrao > 0) {
+    base.valorMensalidadePadrao = dados.valorMensalidadePadrao;
+  }
+  if (typeof dados.academiaNome === "string") base.academiaNome = dados.academiaNome;
+  if (typeof dados.pixChaveManual === "string") base.pixChaveManual = dados.pixChaveManual;
+  // !== false: campo ausente mantém o default (ligado); só um false gravado desliga.
+  base.lembreteWhatsappAtivo = dados.lembreteWhatsappAtivo !== false;
+  base.lembreteEmailAtivo = dados.lembreteEmailAtivo === true;
+  base.lembreteVisualAtivo = dados.lembreteVisualAtivo !== false;
+  if (typeof dados.lembreteDiasParaAlerta === "number") {
+    base.lembreteDiasParaAlerta = dados.lembreteDiasParaAlerta;
+  }
+  if (typeof dados.lembreteTemplate === "string") base.lembreteTemplate = dados.lembreteTemplate;
+  if (typeof dados.asaasDiasAvisoAntesVencimento === "number") {
+    base.asaasDiasAvisoAntesVencimento = dados.asaasDiasAvisoAntesVencimento;
+  }
+  return base;
+}
+
+// value é sempre string aqui (é atributo de input) — nada de innerHTML em lugar nenhum.
+function preencherFormularioConfig() {
+  configModo.value = configGeral.mensalidadeModo;
+  configValor.value = configGeral.valorMensalidadePadrao === null
+    ? ""
+    : String(configGeral.valorMensalidadePadrao);
+  configAcademia.value = configGeral.academiaNome;
+  configPix.value = configGeral.pixChaveManual;
+  configDias.value = configGeral.lembreteDiasParaAlerta === null
+    ? ""
+    : String(configGeral.lembreteDiasParaAlerta);
+  configLembreteWhatsapp.checked = configGeral.lembreteWhatsappAtivo;
+  configLembreteEmail.checked = configGeral.lembreteEmailAtivo;
+  configLembreteVisual.checked = configGeral.lembreteVisualAtivo;
+  configTemplate.value = configGeral.lembreteTemplate;
+  credencialAvisoDias.value = configGeral.asaasDiasAvisoAntesVencimento === null
+    ? ""
+    : String(configGeral.asaasDiasAvisoAntesVencimento);
+  // O <select> só é reposicionado aqui e no change; guardar o valor atual é o que permite
+  // desfazer a troca pra "pix" se o modal de credencial for fechado sem cadastro.
+  modoMensalidadeAnterior = configModo.value;
+  atualizarVisibilidadeCredencial();
+}
+
+function mostrarMsgConfig(texto, tipo) {
+  configMsg.textContent = texto;
+  configMsg.className = "msg show " + tipo;
+}
+
+// Mesma disciplina de salvarEvento: valida no cliente ANTES de gravar, com os mesmos
+// limites que firestore.rules aplica de verdade — aqui é só pra dar mensagem decente.
+// Devolve true quando gravou de verdade (o modal de credencial usa esse retorno pra
+// decidir se pode fechar); false em qualquer validação reprovada ou erro de gravação.
+async function salvarConfiguracoes() {
+  const modo = configModo.value;
+  if (MODOS_MENSALIDADE.indexOf(modo) === -1) {
+    mostrarMsgConfig("Selecione um modo de mensalidade válido.", "error");
+    return false;
   }
 
+  const payload = { mensalidadeModo: modo };
+
+  const valorTexto = configValor.value.trim();
+  if (valorTexto) {
+    const valor = parseFloat(valorTexto);
+    if (!isFinite(valor) || valor <= 0 || valor > 5000) {
+      mostrarMsgConfig("O valor padrão da mensalidade deve ficar entre R$ 0,01 e R$ 5.000.", "error");
+      return false;
+    }
+    payload.valorMensalidadePadrao = valor;
+  }
+
+  const academiaNome = configAcademia.value.trim();
+  if (academiaNome.length > 80) {
+    mostrarMsgConfig("O nome da academia deve ter até 80 caracteres.", "error");
+    return false;
+  }
+  if (academiaNome) payload.academiaNome = academiaNome;
+
+  const pixChave = configPix.value.trim();
+  if (pixChave.length > 200) {
+    mostrarMsgConfig("A chave Pix deve ter até 200 caracteres.", "error");
+    return false;
+  }
+  if (pixChave) payload.pixChaveManual = pixChave;
+
+  const diasTexto = configDias.value.trim();
+  if (diasTexto) {
+    const dias = parseInt(diasTexto, 10);
+    if (!isFinite(dias) || String(dias) !== diasTexto || dias < 1 || dias > 60) {
+      mostrarMsgConfig("Os dias para alerta devem ser um número inteiro de 1 a 60.", "error");
+      return false;
+    }
+    payload.lembreteDiasParaAlerta = dias;
+  }
+
+  // Campo que mora no modal de credencial do Asaas, mas é gravado no MESMO documento
+  // config/geral — por isso entra no payload aqui, e não numa gravação separada. Como o
+  // set() abaixo é sem merge, omitir o campo apaga o valor antigo, que é o comportamento
+  // desejado quando o professor limpa o campo.
+  const avisoDiasTexto = credencialAvisoDias.value.trim();
+  if (avisoDiasTexto) {
+    const avisoDias = parseInt(avisoDiasTexto, 10);
+    if (!isFinite(avisoDias) || String(avisoDias) !== avisoDiasTexto || avisoDias < 1 || avisoDias > 30) {
+      mostrarMsgConfig("O aviso antes do vencimento deve ser um número inteiro de 1 a 30 dias.", "error");
+      return false;
+    }
+    payload.asaasDiasAvisoAntesVencimento = avisoDias;
+  }
+
+  const template = configTemplate.value.trim();
+  if (template.length > 500) {
+    mostrarMsgConfig("O texto do lembrete deve ter até 500 caracteres.", "error");
+    return false;
+  }
+  if (template) payload.lembreteTemplate = template;
+
+  payload.lembreteWhatsappAtivo = configLembreteWhatsapp.checked;
+  payload.lembreteEmailAtivo = configLembreteEmail.checked;
+  payload.lembreteVisualAtivo = configLembreteVisual.checked;
+
+  configSalvar.disabled = true;
+  const textoOriginal = configSalvar.textContent;
+  configSalvar.textContent = "Salvando...";
+
+  try {
+    // set() sem merge: campos apagados no formulário somem do documento em vez de virar
+    // string vazia — o hasOnly das rules aceita ausência, e a tela já trata ausência
+    // como default.
+    await db.collection("config").doc("geral").set(payload);
+    configGeral = normalizarConfig(payload);
+    mensalidadeModo = configGeral.mensalidadeModo;
+    preencherFormularioConfig();
+    mostrarMsgConfig("Configurações salvas.", "success");
+    carregarAlunos();
+    return true;
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgConfig(
+      semPermissao
+        ? "Sua conta não tem permissão para alterar as configurações."
+        : "Não foi possível salvar as configurações. Tente novamente.",
+      "error"
+    );
+    return false;
+  } finally {
+    configSalvar.disabled = false;
+    configSalvar.textContent = textoOriginal;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Integração de pagamento: chave de API do Asaas da própria academia.
+//
+// A chave NUNCA passa pelo Firestore direto nem fica no cliente: vai por HTTPS pro
+// Worker (POST /config/credencial-asaas), que valida contra a API do Asaas e guarda
+// CIFRADA em config/credenciais — documento que as Firestore Rules negam pro cliente,
+// inclusive pro admin. O GET só devolve METADADOS (últimos 4 dígitos, ambiente, data);
+// por isso o campo de senha nunca é repreenchido, e é limpo assim que o salvamento dá
+// certo, pra chave não ficar parada no DOM.
+// ---------------------------------------------------------------------------
+
+const AMBIENTES_CREDENCIAL = { sandbox: "sandbox", producao: "produção" };
+
+function mostrarMsgCredencial(texto, tipo) {
+  credencialMsg.textContent = texto;
+  credencialMsg.className = "msg show " + tipo;
+}
+
+// "2026-09-04T12:00:00Z" -> "04/09". Qualquer coisa inesperada vira string vazia.
+function dataCurtaPtBr(iso) {
+  if (typeof iso !== "string") return "";
+  const data = new Date(iso);
+  if (isNaN(data.getTime())) return "";
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  return dia + "/" + mes;
+}
+
+// Texto de status em dois lugares: o resumo da tela de Configurações (só visível no modo
+// pix) e o mesmo aviso dentro do modal. textContent nos dois — nada de innerHTML.
+function escreverStatusCredencial(texto) {
+  credencialStatus.textContent = texto;
+  credencialStatusModal.textContent = texto;
+}
+
+function mostrarStatusCredencial(metadados) {
+  if (!metadados || !metadados.configurada) {
+    credencialConfigurada = false;
+    escreverStatusCredencial("Nenhuma chave configurada.");
+    atualizarVisibilidadeCredencial();
+    return;
+  }
+
+  const ambiente = AMBIENTES_CREDENCIAL[metadados.ambiente] || metadados.ambiente || "ambiente desconhecido";
+  const ultimos4 = typeof metadados.ultimos4 === "string" ? metadados.ultimos4 : "????";
+  const quando = dataCurtaPtBr(metadados.atualizadoEm);
+
+  credencialConfigurada = true;
+  escreverStatusCredencial(
+    "Configurada (" + ambiente + ", terminando em ****" + ultimos4 + ")" +
+    (quando ? ", atualizada em " + quando + "." : ".")
+  );
+
+  if (metadados.ambiente && AMBIENTES_CREDENCIAL[metadados.ambiente]) {
+    credencialAmbiente.value = metadados.ambiente;
+  }
+
+  atualizarVisibilidadeCredencial();
+}
+
+// O resumo (status + botão "Editar credencial Asaas") só faz sentido no modo "pix": nos
+// outros modos nenhuma cobrança passa pelo Asaas. Esconder é SÓ visual — a credencial
+// cifrada em config/credenciais continua intacta; nada de DELETE por troca de modo.
+function atualizarVisibilidadeCredencial() {
+  credencialResumo.style.display = configModo.value === "pix" ? "block" : "none";
+  credencialRemover.style.display = credencialConfigurada ? "block" : "none";
+}
+
+// Trocar o modo pra "pix" sem credencial nenhuma deixaria a academia num estado que não
+// funciona — então o modal abre na hora. Fechar sem salvar desfaz a troca.
+function aoTrocarModoMensalidade() {
+  atualizarVisibilidadeCredencial();
+  if (configModo.value === "pix") {
+    abrirModalCredencial();
+    return;
+  }
+  modoMensalidadeAnterior = configModo.value;
+}
+
+// ---- Link de convite --------------------------------------------------------------
+// Limites iguais aos de dadosAlunoValidos em firestore.rules: se o professor colar um
+// nome gigante aqui, o convite já sai truncado e o cadastro do aluno não bate na regra.
+const CONVITE_NOME_MAX = 99;
+const CONVITE_TELEFONE_MAX = 29;
+// Guarda quem abriu o modal pra devolver o foco quando ele fechar.
+let conviteAbertoPor = null;
+// Último link gerado. Fica aqui (e não só no input) porque o botão do WhatsApp precisa
+// do mesmo link que está na tela, e não do que possa ter sido digitado por cima.
+let conviteLinkAtual = "";
+let conviteTelefoneAtual = "";
+
+function mostrarMsgConvite(texto, tipo) {
+  conviteMsg.textContent = texto;
+  conviteMsg.className = texto ? "msg show " + tipo : "msg";
+}
+
+function abrirModalConvite() {
+  // document.activeElement pode ser o <body> (clique sem foco): nesse caso não adianta
+  // guardar, porque body.focus() não tira o foco de dentro do modal ao fechar.
+  const ativo = document.activeElement;
+  conviteAbertoPor = ativo && ativo !== document.body ? ativo : null;
+  conviteNome.value = "";
+  conviteTelefone.value = "";
+  conviteUrl.value = "";
+  conviteLinkAtual = "";
+  conviteTelefoneAtual = "";
+  conviteResultado.style.display = "none";
+  mostrarMsgConvite("", "");
+  conviteBackdrop.classList.add("show");
+  conviteNome.focus();
+}
+
+function fecharModalConvite() {
+  conviteBackdrop.classList.remove("show");
+  mostrarMsgConvite("", "");
+  const voltarPara = conviteAbertoPor;
+  conviteAbertoPor = null;
+  if (voltarPara && typeof voltarPara.focus === "function") {
+    voltarPara.focus();
+  } else {
+    btnConvite.focus();
+  }
+}
+
+// Resolve cadastro.html a partir da URL da própria página do admin — funciona tanto em
+// /app/admin.html quanto na raiz do Firebase Hosting, sem depender de replace no caminho.
+function urlBaseCadastro() {
+  return new URL("cadastro.html", window.location.href).href;
+}
+
+function gerarLinkConvite() {
+  const nome = conviteNome.value.trim().slice(0, CONVITE_NOME_MAX);
+  const telefone = conviteTelefone.value.trim().slice(0, CONVITE_TELEFONE_MAX);
+
+  if (!nome && !telefone) {
+    mostrarMsgConvite("Preencha ao menos o nome do aluno.", "error");
+    conviteNome.focus();
+    return;
+  }
+
+  const partes = [];
+  if (nome) partes.push("nome=" + encodeURIComponent(nome));
+  if (telefone) partes.push("telefone=" + encodeURIComponent(telefone));
+  const link = urlBaseCadastro() + (partes.length ? "?" + partes.join("&") : "");
+
+  conviteLinkAtual = link;
+  conviteTelefoneAtual = telefone;
+  conviteUrl.value = link;
+  conviteResultado.style.display = "block";
+
+  // O link de copiar funciona sempre; só o WhatsApp depende de um telefone que o
+  // montarLinkWhatsapp consiga transformar num número válido.
+  const linkWhats = telefone ? montarLinkWhatsapp(telefone, "teste") : null;
+  const whatsOk = Boolean(linkWhats);
+  conviteWhatsapp.disabled = !whatsOk;
+  conviteWhatsappAviso.style.display = whatsOk ? "none" : "block";
+
+  mostrarMsgConvite("Link gerado. Copie ou envie pelo WhatsApp.", "success");
+  conviteUrl.focus();
+  conviteUrl.select();
+}
+
+// Fallback pra navegador sem navigator.clipboard (ou com a permissão negada): textarea
+// temporário fora da tela + execCommand("copy"), que ainda funciona em contexto de clique.
+function copiarComExecCommand(texto) {
+  const area = document.createElement("textarea");
+  area.value = texto;
+  area.setAttribute("readonly", "readonly");
+  area.style.position = "fixed";
+  area.style.top = "-1000px";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  let copiou = false;
+  try {
+    area.select();
+    area.setSelectionRange(0, texto.length);
+    copiou = document.execCommand("copy");
+  } catch (erro) {
+    copiou = false;
+  }
+  document.body.removeChild(area);
+  return copiou;
+}
+
+async function copiarLinkConvite() {
+  if (!conviteLinkAtual) {
+    mostrarMsgConvite("Gere o link antes de copiar.", "error");
+    return;
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(conviteLinkAtual);
+      mostrarMsgConvite("Link copiado!", "success");
+      return;
+    } catch (erro) {
+      // Permissão negada / contexto não seguro: cai no fallback abaixo em vez de falhar.
+    }
+  }
+
+  if (copiarComExecCommand(conviteLinkAtual)) {
+    mostrarMsgConvite("Link copiado!", "success");
+  } else {
+    mostrarMsgConvite("Não foi possível copiar automaticamente. Selecione o link e copie à mão.", "error");
+    conviteUrl.focus();
+    conviteUrl.select();
+  }
+}
+
+function enviarConvitePorWhatsapp() {
+  if (!conviteLinkAtual) {
+    mostrarMsgConvite("Gere o link antes de enviar.", "error");
+    return;
+  }
+  const nome = conviteNome.value.trim().slice(0, CONVITE_NOME_MAX);
+  const saudacao = nome ? "Oi " + nome + "!" : "Oi!";
+  const texto = saudacao + " Aqui está o link pra você se cadastrar na academia: " + conviteLinkAtual;
+  const link = montarLinkWhatsapp(conviteTelefoneAtual, texto);
+  if (!link) {
+    mostrarMsgConvite("Telefone inválido para WhatsApp. Confira o número e gere o link de novo.", "error");
+    return;
+  }
+  window.open(link, "_blank", "noopener");
+}
+
+// ---- Cadastro de aluno pelo professor ---------------------------------------------
+// Quem cria a conta de verdade é o Worker (POST /criar-aluno) — pelo SDK, o
+// createUserWithEmailAndPassword trocaria a sessão do navegador pelo aluno recém-criado
+// e derrubaria o professor do próprio painel.
+//
+// Estes limites espelham dadosAlunoValidos (firestore.rules) e os validadores do Worker
+// (worker/src/validacao.js): a checagem daqui é só pra dar mensagem imediata; a que vale
+// é a do Worker.
+const NOVO_ALUNO_NOME_MAX = 99;
+const NOVO_ALUNO_TELEFONE_MAX = 29;
+const NOVO_ALUNO_SENHA_MIN = 6;
+// Guarda quem abriu o modal pra devolver o foco quando ele fechar.
+let novoAlunoAbertoPor = null;
+
+function mostrarMsgNovoAluno(texto, tipo) {
+  novoAlunoMsg.textContent = texto;
+  novoAlunoMsg.className = texto ? "msg show " + tipo : "msg";
+}
+
+// A senha NUNCA fica parada no DOM: some ao abrir, ao fechar e logo depois do sucesso.
+function limparSenhaNovoAluno() {
+  novoAlunoSenha.value = "";
+}
+
+function abrirModalNovoAluno() {
+  const ativo = document.activeElement;
+  novoAlunoAbertoPor = ativo && ativo !== document.body ? ativo : null;
+  novoAlunoNome.value = "";
+  novoAlunoEmail.value = "";
+  novoAlunoTelefone.value = "";
+  novoAlunoNascimento.value = "";
+  novoAlunoFaixa.value = "";
+  limparSenhaNovoAluno();
+  mostrarMsgNovoAluno("", "");
+  novoAlunoBackdrop.classList.add("show");
+  novoAlunoNome.focus();
+}
+
+function fecharModalNovoAluno() {
+  novoAlunoBackdrop.classList.remove("show");
+  limparSenhaNovoAluno();
+  mostrarMsgNovoAluno("", "");
+  const voltarPara = novoAlunoAbertoPor;
+  novoAlunoAbertoPor = null;
+  if (voltarPara && typeof voltarPara.focus === "function") {
+    voltarPara.focus();
+  } else {
+    btnNovoAluno.focus();
+  }
+}
+
+async function criarAlunoPeloProfessor() {
+  const nome = novoAlunoNome.value.trim();
+  const email = novoAlunoEmail.value.trim();
+  const senha = novoAlunoSenha.value;
+  const telefone = novoAlunoTelefone.value.trim();
+  const nascimento = novoAlunoNascimento.value;
+  const faixa = novoAlunoFaixa.value;
+
+  if (!nome || nome.length > NOVO_ALUNO_NOME_MAX) {
+    mostrarMsgNovoAluno("Informe o nome do aluno (até 99 caracteres).", "error");
+    novoAlunoNome.focus();
+    return;
+  }
+  if (!email || email.length >= 100 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    mostrarMsgNovoAluno("Informe um e-mail válido.", "error");
+    novoAlunoEmail.focus();
+    return;
+  }
+  if (senha.length < NOVO_ALUNO_SENHA_MIN) {
+    mostrarMsgNovoAluno("A senha precisa ter pelo menos 6 caracteres.", "error");
+    novoAlunoSenha.focus();
+    return;
+  }
+  if (telefone.length > NOVO_ALUNO_TELEFONE_MAX) {
+    mostrarMsgNovoAluno("Telefone muito longo (até 29 caracteres).", "error");
+    novoAlunoTelefone.focus();
+    return;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) {
+    mostrarMsgNovoAluno("Informe a data de nascimento.", "error");
+    novoAlunoNascimento.focus();
+    return;
+  }
+  if (!faixa) {
+    mostrarMsgNovoAluno("Escolha a faixa do aluno.", "error");
+    novoAlunoFaixa.focus();
+    return;
+  }
+
+  if (!WORKER_URL) {
+    mostrarMsgNovoAluno("O cadastro pelo painel ainda não foi configurado pra esta academia.", "error");
+    return;
+  }
+
+  // Confirmação repetindo o e-mail: uma conta criada com o endereço errado não dá pra
+  // desfazer pelo painel (o aluno nasce no Firebase Auth).
+  if (!window.confirm("Criar conta para " + email + "?")) return;
+
+  novoAlunoCriar.disabled = true;
+  novoAlunoCriar.textContent = "Criando...";
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/criar-aluno", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken
+      },
+      body: JSON.stringify({ nome, email, senha, telefone, nascimento, faixa })
+    });
+
+    // A senha já cumpriu o papel dela: sai do DOM antes mesmo de tratar a resposta.
+    limparSenhaNovoAluno();
+
+    if (resp.status === 401) {
+      mostrarMsgNovoAluno("Sua sessão expirou. Saia e entre de novo para cadastrar alunos.", "error");
+      return;
+    }
+    if (resp.status === 403) {
+      mostrarMsgNovoAluno("Sua conta não tem permissão de professor para cadastrar alunos.", "error");
+      return;
+    }
+    if (resp.status === 409) {
+      mostrarMsgNovoAluno("Este e-mail já está cadastrado.", "error");
+      novoAlunoEmail.focus();
+      return;
+    }
+    if (resp.status === 400) {
+      const dados = await resp.json().catch(() => ({}));
+      mostrarMsgNovoAluno(
+        typeof dados.erro === "string" && dados.erro ? dados.erro : "Confira os dados do cadastro.",
+        "error"
+      );
+      return;
+    }
+    if (!resp.ok) {
+      const dados = await resp.json().catch(() => ({}));
+      mostrarMsgNovoAluno(
+        typeof dados.erro === "string" && dados.erro
+          ? dados.erro
+          : "Não foi possível cadastrar o aluno agora. Tente de novo em instantes.",
+        "error"
+      );
+      return;
+    }
+
+    fecharModalNovoAluno();
+    await carregarAlunos();
+  } catch (erro) {
+    limparSenhaNovoAluno();
+    mostrarMsgNovoAluno("Falha de conexão. Tente de novo em instantes.", "error");
+  } finally {
+    novoAlunoCriar.disabled = false;
+    novoAlunoCriar.textContent = "Criar conta do aluno";
+  }
+}
+
+function abrirModalCredencial() {
+  credencialChave.value = "";
+  credencialMsg.textContent = "";
+  credencialMsg.className = "msg";
+  credencialAvisoDias.value = configGeral.asaasDiasAvisoAntesVencimento === null
+    ? ""
+    : String(configGeral.asaasDiasAvisoAntesVencimento);
+  atualizarVisibilidadeCredencial();
+  credencialBackdrop.classList.add("show");
+  credencialChave.focus();
+}
+
+// reverterSeSemCredencial: true quando o fechamento foi um "desistir" (Cancelar, X, Esc,
+// clique fora). Sem credencial cadastrada, o <select> volta pro modo anterior pra tela
+// não ficar anunciando "Pix automático" com a integração vazia.
+function fecharModalCredencial(reverterSeSemCredencial) {
+  credencialBackdrop.classList.remove("show");
+  // A chave nunca fica parada no DOM depois que o modal some.
+  credencialChave.value = "";
+
+  if (reverterSeSemCredencial && !credencialConfigurada && configModo.value !== modoMensalidadeAnterior) {
+    configModo.value = modoMensalidadeAnterior;
+    mostrarMsgConfig(
+      "Modo mantido em " + rotuloModo(modoMensalidadeAnterior) +
+      ": o Pix automático precisa de uma chave de API do Asaas cadastrada.",
+      "error"
+    );
+  } else if (credencialConfigurada) {
+    modoMensalidadeAnterior = configModo.value;
+  }
+
+  atualizarVisibilidadeCredencial();
+  configModo.focus();
+}
+
+function rotuloModo(modo) {
+  if (modo === "pix") return "Pix automático (Asaas)";
+  if (modo === "pixManual") return "Pix manual";
+  return "Manual";
+}
+
+// Salvar do modal: primeiro a credencial (quando o professor colou uma chave nova) e
+// SÓ ENTÃO as configurações — se a chave for recusada pelo Asaas, o modo "pix" não chega
+// a ser gravado em config/geral.
+async function salvarCredencialDoModal() {
+  const chave = credencialChave.value.trim();
+
+  if (!chave && !credencialConfigurada) {
+    mostrarMsgCredencial("Cole a chave de API do Asaas para ativar o Pix automático.", "error");
+    credencialChave.focus();
+    return;
+  }
+
+  if (chave) {
+    const ok = await salvarCredencialAsaas();
+    if (!ok) return;
+  }
+
+  const configSalva = await salvarConfiguracoes();
+  if (!configSalva) {
+    mostrarMsgCredencial(
+      "A credencial está guardada, mas não foi possível salvar as configurações. Confira a mensagem na tela de Configurações.",
+      "error"
+    );
+    return;
+  }
+
+  fecharModalCredencial(false);
+}
+
+async function carregarCredencialAsaas() {
+  if (!WORKER_URL) {
+    escreverStatusCredencial("Integração de pagamento ainda não configurada neste app.");
+    return;
+  }
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!resp.ok) {
+      escreverStatusCredencial("Não foi possível verificar o status da chave de API.");
+      return;
+    }
+
+    mostrarStatusCredencial(await resp.json());
+  } catch (err) {
+    escreverStatusCredencial("Não foi possível verificar o status da chave de API.");
+  }
+}
+
+// Devolve true só quando a chave foi aceita e guardada pelo Worker.
+async function salvarCredencialAsaas() {
+  if (!WORKER_URL) {
+    mostrarMsgCredencial("Integração de pagamento ainda não configurada neste app.", "error");
+    return false;
+  }
+
+  const chave = credencialChave.value.trim();
+  const ambiente = credencialAmbiente.value;
+
+  // Mesmos limites do Worker — aqui é só pra dar mensagem decente antes da viagem.
+  if (chave.length < 10 || chave.length > 200) {
+    mostrarMsgCredencial("Cole a chave de API do Asaas (entre 10 e 200 caracteres).", "error");
+    return false;
+  }
+  if (!Object.prototype.hasOwnProperty.call(AMBIENTES_CREDENCIAL, ambiente)) {
+    mostrarMsgCredencial("Selecione um ambiente válido.", "error");
+    return false;
+  }
+
+  credencialSalvar.disabled = true;
+  const textoOriginal = credencialSalvar.textContent;
+  credencialSalvar.textContent = "Validando...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify({ apiKey: chave, ambiente })
+    });
+
+    const dados = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      mostrarMsgCredencial(
+        typeof dados.erro === "string" && dados.erro
+          ? dados.erro
+          : "Não foi possível salvar a credencial. Tente novamente.",
+        "error"
+      );
+      return false;
+    }
+
+    // Limpa a chave do campo IMEDIATAMENTE: ela já está guardada (cifrada) no servidor e
+    // não tem por que continuar no DOM.
+    credencialChave.value = "";
+    mostrarStatusCredencial({
+      configurada: true,
+      ultimos4: dados.ultimos4,
+      ambiente: dados.ambiente,
+      atualizadoEm: new Date().toISOString()
+    });
+    mostrarMsgCredencial("Credencial salva e validada no Asaas.", "success");
+    return true;
+  } catch (err) {
+    mostrarMsgCredencial("Não foi possível salvar a credencial. Tente novamente.", "error");
+    return false;
+  } finally {
+    credencialSalvar.disabled = false;
+    credencialSalvar.textContent = textoOriginal;
+  }
+}
+
+async function removerCredencialAsaas() {
+  if (!WORKER_URL) {
+    mostrarMsgCredencial("Integração de pagamento ainda não configurada neste app.", "error");
+    return;
+  }
+
+  const confirmado = confirm(
+    "Remover a chave de API do Asaas? As cobranças Pix automáticas param de funcionar até você cadastrar outra."
+  );
+  if (!confirmado) return;
+
+  credencialRemover.disabled = true;
+  const textoOriginal = credencialRemover.textContent;
+  credencialRemover.textContent = "Removendo...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!resp.ok) {
+      mostrarMsgCredencial("Não foi possível remover a credencial. Tente novamente.", "error");
+      return;
+    }
+
+    credencialChave.value = "";
+    mostrarStatusCredencial({ configurada: false });
+    // Sem credencial, "Pix automático" deixa de ser um destino válido: o modo pra onde a
+    // tela volta ao fechar o modal passa a ser o manual.
+    if (modoMensalidadeAnterior === "pix") modoMensalidadeAnterior = "manual";
+    mostrarMsgCredencial(
+      "Credencial removida. Cadastre outra chave ou troque o modo de mensalidade para manual.",
+      "success"
+    );
+  } catch (err) {
+    mostrarMsgCredencial("Não foi possível remover a credencial. Tente novamente.", "error");
+  } finally {
+    credencialRemover.disabled = false;
+    credencialRemover.textContent = textoOriginal;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cobrança Pix manual (origem: 'manual') — gravada direto no Firestore pelo painel,
+// sem passar pelo Worker/Asaas. O ID é "<alunoId>_<mesReferencia>", igual ao do Asaas,
+// o que garante uma única cobrança por aluno/mês.
+// ---------------------------------------------------------------------------
+
+function mesAtualISO() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function mostrarMsgManual(texto, tipo) {
+  manualMsg.textContent = texto;
+  manualMsg.className = "msg show " + tipo;
+}
+
+function abrirModalManual(alunoId, alunoNome) {
+  manualAlunoAtual = { id: alunoId, nome: alunoNome };
+  manualTitulo.textContent = "Lançar cobrança Pix manual - " + alunoNome;
+  manualMes.value = mesAtualISO();
+  manualValor.value = configGeral.valorMensalidadePadrao === null
+    ? ""
+    : String(configGeral.valorMensalidadePadrao);
+  manualPix.value = configGeral.pixChaveManual;
+  manualPix.placeholder = configGeral.pixChaveManual
+    ? configGeral.pixChaveManual
+    : "Cole aqui o código Pix copia e cola";
+  manualMsg.className = "msg";
+  manualMsg.textContent = "";
+  manualBackdrop.classList.add("show");
+}
+
+function fecharModalManual() {
+  manualBackdrop.classList.remove("show");
+  manualAlunoAtual = null;
+}
+
+async function confirmarCobrancaManual() {
+  if (!manualAlunoAtual) return;
+
+  const mesReferencia = manualMes.value.trim();
+  if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(mesReferencia)) {
+    mostrarMsgManual("Informe o mês de referência no formato AAAA-MM.", "error");
+    return;
+  }
+
+  const valor = parseFloat(manualValor.value);
+  if (!isFinite(valor) || valor <= 0 || valor > 5000) {
+    mostrarMsgManual("Informe um valor entre R$ 0,01 e R$ 5.000.", "error");
+    return;
+  }
+
+  const pixCodigo = manualPix.value.trim();
+  if (pixCodigo.length > 500) {
+    mostrarMsgManual("O código Pix deve ter até 500 caracteres.", "error");
+    return;
+  }
+
+  const payload = {
+    alunoId: manualAlunoAtual.id,
+    alunoNome: manualAlunoAtual.nome,
+    valor,
+    mesReferencia,
+    status: "pendente",
+    origem: "manual",
+    criadoPorUid: auth.currentUser.uid,
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (pixCodigo) payload.pixCopiaECola = pixCodigo;
+
+  manualConfirmar.disabled = true;
+  const textoOriginal = manualConfirmar.textContent;
+  manualConfirmar.textContent = "Lançando...";
+
+  try {
+    const cobrancaId = manualAlunoAtual.id + "_" + mesReferencia;
+    const ref = db.collection("cobrancas").doc(cobrancaId);
+    const existente = await ref.get();
+
+    if (existente.exists) {
+      // Só cobrança manual pode ser editada pelo painel — a rule recusa qualquer
+      // update em cobrança de origem 'asaas' (essa é território exclusivo do Worker).
+      if ((existente.data().origem || "asaas") !== "manual") {
+        mostrarMsgManual(
+          "Já existe uma cobrança automática (Asaas) deste mês para este aluno. Ela só pode ser alterada pelo sistema de pagamentos.",
+          "error"
+        );
+        return;
+      }
+      const atualizacao = {
+        valor,
+        status: "pendente",
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (pixCodigo) atualizacao.pixCopiaECola = pixCodigo;
+      await ref.update(atualizacao);
+      mostrarMsgManual("Cobrança deste mês atualizada.", "success");
+    } else {
+      await ref.set(payload);
+      mostrarMsgManual("Cobrança lançada. O aluno já vê o código Pix na área dele.", "success");
+    }
+    carregarAlunos();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgManual(
+      semPermissao
+        ? "Sua conta não tem permissão para lançar cobranças."
+        : "Não foi possível lançar a cobrança. Tente novamente.",
+      "error"
+    );
+  } finally {
+    manualConfirmar.disabled = false;
+    manualConfirmar.textContent = textoOriginal;
+  }
+}
+
+// Carrega o histórico sob demanda (só quando o professor clica na linha) e limitado às
+// 50 presenças mais recentes — um aluno antigo pode ter centenas de check-ins.
+async function abrirHistorico(nome, alunoId) {
+  modalTitulo.textContent = "Histórico - " + nome;
+  modalLista.innerHTML = "<li>Carregando...</li>";
   modalBackdrop.classList.add("show");
+
+  let snap;
+  try {
+    snap = await db.collection("checkins")
+      .where("alunoId", "==", alunoId)
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+  } catch (err) {
+    modalLista.innerHTML = "<li>Não foi possível carregar o histórico.</li>";
+    return;
+  }
+
+  modalLista.innerHTML = "";
+
+  if (snap.empty) {
+    modalLista.innerHTML = "<li>Nenhuma presença registrada.</li>";
+    return;
+  }
+
+  snap.forEach((doc) => {
+    const li = document.createElement("li");
+    li.innerHTML = "<span>Treino</span><span>" + formatDateTime(doc.data().timestamp) + "</span>";
+    modalLista.appendChild(li);
+  });
+}
+
+// ===========================================================================
+// CONTEÚDO PÚBLICO DO SITE — turmas, equipe, grade de horários e perfil.
+//
+// São as quatro coleções que firestore.rules libera com `allow read: if true`
+// (leitura sem login). Escrita continua só de admin, com hasOnly/hasAll: os
+// nomes de campo usados aqui têm que bater EXATAMENTE com os das rules —
+// qualquer campo a mais derruba a gravação inteira com permission-denied.
+//
+// Tudo é renderizado com createElement/textContent. Nada aqui vira innerHTML:
+// mesmo sendo texto digitado pelo próprio professor, é conteúdo livre.
+// ===========================================================================
+
+const NIVEIS_TURMA = ["Infantil", "Juvenil", "Iniciante", "Intermediario", "Avancado",
+  "Competicao", "Misto", "Feminino", "Livre"];
+
+// O valor gravado é sem acento (é o enum da rule); o rótulo na tela é acentuado.
+const NIVEL_ROTULOS = {
+  Infantil: "Infantil", Juvenil: "Juvenil", Iniciante: "Iniciante",
+  Intermediario: "Intermediário", Avancado: "Avançado", Competicao: "Competição",
+  Misto: "Misto", Feminino: "Feminino", Livre: "Livre"
+};
+
+const CORES_TURMA = { red: "Vermelho", yellow: "Amarelo", pink: "Rosa", white: "Branco" };
+
+const TIPOS_EQUIPE = { professor: "Professor", instrutor: "Instrutor" };
+
+const FAIXAS_EQUIPE = ["Branca", "Cinza", "Amarela", "Laranja", "Verde", "Azul",
+  "Roxa", "Marrom", "Preta"];
+
+// 0 = domingo, igual ao Date.getDay() do JS e ao diaSemana das rules.
+const DIAS_SEMANA = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira",
+  "Quinta-feira", "Sexta-feira", "Sábado"];
+
+// As 6 chaves aceitas pelo map 'redes' (redesValidas em firestore.rules).
+const REDES_SOCIAIS = [
+  { chave: "instagram", rotulo: "Instagram" },
+  { chave: "facebook", rotulo: "Facebook" },
+  { chave: "youtube", rotulo: "YouTube" },
+  { chave: "tiktok", rotulo: "TikTok" },
+  { chave: "site", rotulo: "Site" },
+  { chave: "whatsapp", rotulo: "WhatsApp" }
+];
+
+const HORA_REGEX = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+const tabelaTurmas = document.querySelector("#tabela-turmas tbody");
+const turmaNome = document.getElementById("turma-nome");
+const turmaNivel = document.getElementById("turma-nivel");
+const turmaCor = document.getElementById("turma-cor");
+const turmaOrdem = document.getElementById("turma-ordem");
+const turmaDescricao = document.getElementById("turma-descricao");
+const turmaAtivo = document.getElementById("turma-ativo");
+const turmaSalvar = document.getElementById("turma-salvar");
+const turmaCancelar = document.getElementById("turma-cancelar");
+const turmaMsg = document.getElementById("turma-msg");
+
+const tabelaEquipe = document.querySelector("#tabela-equipe tbody");
+const equipeTipo = document.getElementById("equipe-tipo");
+const equipeNome = document.getElementById("equipe-nome");
+const equipeTelefone = document.getElementById("equipe-telefone");
+const equipeFaixa = document.getElementById("equipe-faixa");
+const equipeOrdem = document.getElementById("equipe-ordem");
+const equipeBio = document.getElementById("equipe-bio");
+const equipeAtivo = document.getElementById("equipe-ativo");
+const equipeSalvar = document.getElementById("equipe-salvar");
+const equipeCancelar = document.getElementById("equipe-cancelar");
+const equipeMsg = document.getElementById("equipe-msg");
+
+const tabelaHorarios = document.getElementById("tabela-horarios");
+const horarioDia = document.getElementById("horario-dia");
+const horarioTurma = document.getElementById("horario-turma");
+const horarioInicio = document.getElementById("horario-inicio");
+const horarioFim = document.getElementById("horario-fim");
+const horarioProfessor = document.getElementById("horario-professor");
+const horarioObservacao = document.getElementById("horario-observacao");
+const horarioAtivo = document.getElementById("horario-ativo");
+const horarioSalvar = document.getElementById("horario-salvar");
+const horarioCancelar = document.getElementById("horario-cancelar");
+const horarioMsg = document.getElementById("horario-msg");
+const horarioSemTurma = document.getElementById("horario-sem-turma");
+
+const perfilEndereco = document.getElementById("perfil-endereco");
+const perfilComplemento = document.getElementById("perfil-complemento");
+const perfilCidadeUf = document.getElementById("perfil-cidade-uf");
+const perfilCep = document.getElementById("perfil-cep");
+const perfilTelefone = document.getElementById("perfil-telefone");
+const perfilEmail = document.getElementById("perfil-email");
+const perfilHorario = document.getElementById("perfil-horario");
+const perfilSalvar = document.getElementById("perfil-salvar");
+const perfilMsg = document.getElementById("perfil-msg");
+
+function refsRedes(prefixo) {
+  const mapa = {};
+  REDES_SOCIAIS.forEach((rede) => {
+    mapa[rede.chave] = document.getElementById(prefixo + "-rede-" + rede.chave);
+  });
+  return mapa;
+}
+
+const equipeRedesInputs = refsRedes("equipe");
+const perfilRedesInputs = refsRedes("perfil");
+
+// Listas já carregadas, guardadas em memória: a grade de horários faz o "join" com
+// turmas e equipe aqui no cliente (nada de nome desnormalizado no documento do
+// horário, que ficaria desatualizado assim que a turma fosse renomeada).
+// null = ainda não carregou (a tabela continua mostrando "Carregando...").
+let turmasCache = [];
+let equipeCache = [];
+let horariosCache = null;
+
+// null = modo criação; string = id do documento em edição.
+let turmaEditandoId = null;
+let membroEditandoId = null;
+let horarioEditandoId = null;
+
+turmaSalvar.addEventListener("click", salvarTurma);
+turmaCancelar.addEventListener("click", limparFormularioTurma);
+equipeSalvar.addEventListener("click", salvarMembroEquipe);
+equipeCancelar.addEventListener("click", limparFormularioEquipe);
+horarioSalvar.addEventListener("click", salvarHorario);
+horarioCancelar.addEventListener("click", limparFormularioHorario);
+perfilSalvar.addEventListener("click", salvarPerfilAcademia);
+
+// ---- Utilitários compartilhados pelos quatro cards --------------------------------
+
+function mostrarMsgEm(elemento, texto, tipo) {
+  elemento.textContent = texto;
+  elemento.className = texto ? "msg show " + tipo : "msg";
+}
+
+function celula(texto) {
+  const td = document.createElement("td");
+  td.textContent = texto;
+  return td;
+}
+
+function linhaVazia(colunas, texto) {
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  td.colSpan = colunas;
+  td.textContent = texto;
+  tr.appendChild(td);
+  return tr;
+}
+
+// aria-label sempre com o nome do item: "Editar" sozinho não diz nada pra quem
+// navega pela lista de botões no leitor de tela.
+function botaoAcao(rotulo, ariaLabel, aoClicar) {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "mensalidade-btn";
+  botao.textContent = rotulo;
+  botao.setAttribute("aria-label", ariaLabel);
+  botao.addEventListener("click", aoClicar);
+  return botao;
+}
+
+// ordem é int 0..99 na rule. Campo vazio conta como 0 (primeiro da lista).
+function lerOrdem(campo) {
+  const texto = campo.value.trim();
+  if (!texto) return { valor: 0 };
+  const numero = Number(texto);
+  if (!Number.isInteger(numero) || numero < 0 || numero > 99) return { erro: true };
+  return { valor: numero };
+}
+
+function ordenarPorOrdemENome(a, b) {
+  const ordemA = typeof a.ordem === "number" ? a.ordem : 0;
+  const ordemB = typeof b.ordem === "number" ? b.ordem : 0;
+  if (ordemA !== ordemB) return ordemA - ordemB;
+  return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+}
+
+// Devolve { redes } (map só com as chaves preenchidas, ou null se nenhuma) ou
+// { erro, campo } quando algum link não é https://. A rule recusaria de qualquer
+// jeito — isto é só pra dar mensagem decente antes da viagem.
+function coletarRedes(inputs) {
+  const redes = {};
+  for (let i = 0; i < REDES_SOCIAIS.length; i++) {
+    const rede = REDES_SOCIAIS[i];
+    const campo = inputs[rede.chave];
+    const valor = campo.value.trim();
+    if (!valor) continue;
+    if (valor.length > 200) {
+      return { erro: "O link do " + rede.rotulo + " deve ter até 200 caracteres.", campo: campo };
+    }
+    if (!linkHttpsValido(valor)) {
+      return {
+        erro: "O link do " + rede.rotulo + " precisa começar com https:// e ser um endereço válido.",
+        campo: campo
+      };
+    }
+    redes[rede.chave] = valor;
+  }
+  // Map vazio passaria no hasOnly, mas grava um campo que não serve pra nada —
+  // melhor omitir 'redes' por completo.
+  return { redes: Object.keys(redes).length > 0 ? redes : null };
+}
+
+function preencherRedes(inputs, redes) {
+  const dados = redes && typeof redes === "object" ? redes : {};
+  REDES_SOCIAIS.forEach((rede) => {
+    inputs[rede.chave].value = typeof dados[rede.chave] === "string" ? dados[rede.chave] : "";
+  });
+}
+
+async function carregarConteudoPublico() {
+  await carregarTurmas();
+  await carregarEquipe();
+  await carregarHorarios();
+  carregarPerfilAcademia();
+}
+
+// ---- Turmas ------------------------------------------------------------------------
+
+async function carregarTurmas() {
+  let snap;
+  try {
+    snap = await db.collection("turmas").get();
+  } catch (err) {
+    turmasCache = [];
+    tabelaTurmas.innerHTML = "";
+    tabelaTurmas.appendChild(linhaVazia(6, "Não foi possível carregar as turmas."));
+    atualizarSelectTurmas();
+    return;
+  }
+
+  // Ordenação no cliente (e não com orderBy) porque a lista é curta e assim um
+  // documento antigo sem 'ordem' não some da tabela.
+  turmasCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  turmasCache.sort(ordenarPorOrdemENome);
+
+  renderTurmas();
+  atualizarSelectTurmas();
+  renderHorarios();
+}
+
+function renderTurmas() {
+  tabelaTurmas.innerHTML = "";
+
+  if (turmasCache.length === 0) {
+    tabelaTurmas.appendChild(linhaVazia(6, "Nenhuma turma cadastrada."));
+    return;
+  }
+
+  turmasCache.forEach((turma) => {
+    const nomeTurma = turma.nome || "sem nome";
+    const tr = document.createElement("tr");
+    tr.append(
+      celula(nomeTurma),
+      celula(NIVEL_ROTULOS[turma.nivel] || turma.nivel || "-"),
+      celula(CORES_TURMA[turma.cor] || turma.cor || "-"),
+      celula(typeof turma.ordem === "number" ? String(turma.ordem) : "-"),
+      celula(turma.ativo === false ? "Inativa" : "Ativa")
+    );
+
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(
+      botaoAcao("Editar", "Editar a turma " + nomeTurma, () => editarTurma(turma)),
+      " ",
+      botaoAcao("Apagar", "Apagar a turma " + nomeTurma, () => apagarTurma(turma.id, nomeTurma))
+    );
+    tr.appendChild(tdAcoes);
+
+    tabelaTurmas.appendChild(tr);
+  });
+}
+
+function limparFormularioTurma() {
+  turmaEditandoId = null;
+  turmaNome.value = "";
+  turmaDescricao.value = "";
+  turmaNivel.value = "Infantil";
+  turmaCor.value = "red";
+  turmaOrdem.value = "0";
+  turmaAtivo.checked = true;
+  turmaSalvar.textContent = "Cadastrar turma";
+  turmaCancelar.style.display = "none";
+  mostrarMsgEm(turmaMsg, "", "");
+}
+
+function editarTurma(turma) {
+  turmaEditandoId = turma.id;
+  turmaNome.value = turma.nome || "";
+  turmaDescricao.value = typeof turma.descricao === "string" ? turma.descricao : "";
+  turmaNivel.value = NIVEIS_TURMA.indexOf(turma.nivel) === -1 ? "Infantil" : turma.nivel;
+  turmaCor.value = Object.prototype.hasOwnProperty.call(CORES_TURMA, turma.cor) ? turma.cor : "red";
+  turmaOrdem.value = typeof turma.ordem === "number" ? String(turma.ordem) : "0";
+  turmaAtivo.checked = turma.ativo !== false;
+  turmaSalvar.textContent = "Salvar alterações";
+  turmaCancelar.style.display = "inline-block";
+  mostrarMsgEm(turmaMsg, "", "");
+  turmaNome.focus();
+}
+
+async function salvarTurma() {
+  const nome = turmaNome.value.trim();
+  const descricao = turmaDescricao.value.trim();
+  const nivel = turmaNivel.value;
+  const cor = turmaCor.value;
+
+  if (!nome || nome.length > 60) {
+    mostrarMsgEm(turmaMsg, "Informe o nome da turma (até 60 caracteres).", "error");
+    turmaNome.focus();
+    return;
+  }
+  if (descricao.length > 300) {
+    mostrarMsgEm(turmaMsg, "A descrição deve ter até 300 caracteres.", "error");
+    turmaDescricao.focus();
+    return;
+  }
+  if (NIVEIS_TURMA.indexOf(nivel) === -1) {
+    mostrarMsgEm(turmaMsg, "Selecione um nível válido.", "error");
+    turmaNivel.focus();
+    return;
+  }
+  if (!Object.prototype.hasOwnProperty.call(CORES_TURMA, cor)) {
+    mostrarMsgEm(turmaMsg, "Selecione uma cor válida.", "error");
+    turmaCor.focus();
+    return;
+  }
+
+  const ordem = lerOrdem(turmaOrdem);
+  if (ordem.erro) {
+    mostrarMsgEm(turmaMsg, "A ordem deve ser um número inteiro de 0 a 99.", "error");
+    turmaOrdem.focus();
+    return;
+  }
+
+  turmaSalvar.disabled = true;
+  const textoOriginal = turmaSalvar.textContent;
+  turmaSalvar.textContent = "Salvando...";
+
+  try {
+    if (turmaEditandoId) {
+      await db.collection("turmas").doc(turmaEditandoId).update({
+        nome: nome,
+        // Campo vazio some do documento em vez de virar "" — a rule aceita ausência
+        // de 'descricao', mesma lógica do 'link' do mural de eventos.
+        descricao: descricao ? descricao : firebase.firestore.FieldValue.delete(),
+        nivel: nivel,
+        cor: cor,
+        ativo: turmaAtivo.checked,
+        ordem: ordem.valor,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      limparFormularioTurma();
+      mostrarMsgEm(turmaMsg, "Turma atualizada.", "success");
+    } else {
+      const payload = {
+        nome: nome,
+        nivel: nivel,
+        cor: cor,
+        ativo: turmaAtivo.checked,
+        ordem: ordem.valor,
+        criadoPor: auth.currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (descricao) payload.descricao = descricao;
+
+      // ID automático, igual ao mural de eventos: não existe chave natural pra turma.
+      await db.collection("turmas").add(payload);
+      limparFormularioTurma();
+      mostrarMsgEm(turmaMsg, "Turma cadastrada.", "success");
+    }
+    await carregarTurmas();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEm(
+      turmaMsg,
+      semPermissao
+        ? "Sua conta não tem permissão para cadastrar turmas."
+        : "Não foi possível salvar a turma. Tente novamente.",
+      "error"
+    );
+  } finally {
+    turmaSalvar.disabled = false;
+    if (turmaSalvar.textContent === "Salvando...") turmaSalvar.textContent = textoOriginal;
+  }
+}
+
+async function apagarTurma(id, nome) {
+  // A rule exige que o turmaId de cada horário aponte pra uma turma existente, então
+  // apagar a turma deixa os horários dela impossíveis de editar até serem reapontados.
+  const usados = horariosCache
+    ? horariosCache.filter((horario) => horario.turmaId === id).length
+    : 0;
+  let pergunta = 'Apagar a turma "' + nome + '"?';
+  if (usados > 0) {
+    pergunta += "\n\n" + usados + " horário(s) da grade usam esta turma e vão ficar sem " +
+      "turma válida. Reaponte ou apague esses horários também.";
+  }
+  if (!confirm(pergunta)) return;
+
+  try {
+    await db.collection("turmas").doc(id).delete();
+    if (turmaEditandoId === id) limparFormularioTurma();
+    mostrarMsgEm(turmaMsg, "Turma apagada.", "success");
+    await carregarTurmas();
+  } catch (err) {
+    mostrarMsgEm(turmaMsg, "Não foi possível apagar a turma.", "error");
+  }
+}
+
+// ---- Equipe ------------------------------------------------------------------------
+
+async function carregarEquipe() {
+  let snap;
+  try {
+    snap = await db.collection("equipe").get();
+  } catch (err) {
+    equipeCache = [];
+    tabelaEquipe.innerHTML = "";
+    tabelaEquipe.appendChild(linhaVazia(6, "Não foi possível carregar a equipe."));
+    atualizarSelectProfessores();
+    return;
+  }
+
+  equipeCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  equipeCache.sort(ordenarPorOrdemENome);
+
+  renderEquipe();
+  atualizarSelectProfessores();
+  renderHorarios();
+}
+
+function renderEquipe() {
+  tabelaEquipe.innerHTML = "";
+
+  if (equipeCache.length === 0) {
+    tabelaEquipe.appendChild(linhaVazia(6, "Ninguém cadastrado na equipe."));
+    return;
+  }
+
+  equipeCache.forEach((membro) => {
+    const nomeMembro = membro.nome || "sem nome";
+    const tr = document.createElement("tr");
+    tr.append(
+      celula(nomeMembro),
+      celula(TIPOS_EQUIPE[membro.tipo] || membro.tipo || "-"),
+      celula(membro.telefone || "-"),
+      celula(typeof membro.ordem === "number" ? String(membro.ordem) : "-"),
+      celula(membro.ativo === false ? "Oculto" : "Visível")
+    );
+
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(
+      botaoAcao("Editar", "Editar " + nomeMembro + " na equipe", () => editarMembroEquipe(membro)),
+      " ",
+      botaoAcao("Apagar", "Apagar " + nomeMembro + " da equipe", () => apagarMembroEquipe(membro.id, nomeMembro))
+    );
+    tr.appendChild(tdAcoes);
+
+    tabelaEquipe.appendChild(tr);
+  });
+}
+
+function limparFormularioEquipe() {
+  membroEditandoId = null;
+  equipeTipo.value = "professor";
+  equipeNome.value = "";
+  equipeTelefone.value = "";
+  equipeFaixa.value = "";
+  equipeOrdem.value = "0";
+  equipeBio.value = "";
+  equipeAtivo.checked = true;
+  preencherRedes(equipeRedesInputs, null);
+  equipeSalvar.textContent = "Cadastrar na equipe";
+  equipeCancelar.style.display = "none";
+  mostrarMsgEm(equipeMsg, "", "");
+}
+
+function editarMembroEquipe(membro) {
+  membroEditandoId = membro.id;
+  equipeTipo.value = Object.prototype.hasOwnProperty.call(TIPOS_EQUIPE, membro.tipo)
+    ? membro.tipo
+    : "professor";
+  equipeNome.value = membro.nome || "";
+  equipeTelefone.value = typeof membro.telefone === "string" ? membro.telefone : "";
+  equipeFaixa.value = FAIXAS_EQUIPE.indexOf(membro.faixa) === -1 ? "" : membro.faixa;
+  equipeOrdem.value = typeof membro.ordem === "number" ? String(membro.ordem) : "0";
+  equipeBio.value = typeof membro.bio === "string" ? membro.bio : "";
+  equipeAtivo.checked = membro.ativo !== false;
+  preencherRedes(equipeRedesInputs, membro.redes);
+  equipeSalvar.textContent = "Salvar alterações";
+  equipeCancelar.style.display = "inline-block";
+  mostrarMsgEm(equipeMsg, "", "");
+  equipeNome.focus();
+}
+
+async function salvarMembroEquipe() {
+  const tipo = equipeTipo.value;
+  const nome = equipeNome.value.trim();
+  const telefone = equipeTelefone.value.trim();
+  const faixa = equipeFaixa.value;
+  const bio = equipeBio.value.trim();
+
+  if (!Object.prototype.hasOwnProperty.call(TIPOS_EQUIPE, tipo)) {
+    mostrarMsgEm(equipeMsg, "Selecione professor ou instrutor.", "error");
+    equipeTipo.focus();
+    return;
+  }
+  if (!nome || nome.length > 80) {
+    mostrarMsgEm(equipeMsg, "Informe o nome (até 80 caracteres).", "error");
+    equipeNome.focus();
+    return;
+  }
+  if (telefone.length > 30) {
+    mostrarMsgEm(equipeMsg, "O telefone deve ter até 30 caracteres.", "error");
+    equipeTelefone.focus();
+    return;
+  }
+  if (bio.length > 400) {
+    mostrarMsgEm(equipeMsg, "A bio deve ter até 400 caracteres.", "error");
+    equipeBio.focus();
+    return;
+  }
+  if (faixa && FAIXAS_EQUIPE.indexOf(faixa) === -1) {
+    mostrarMsgEm(equipeMsg, "Selecione uma faixa válida.", "error");
+    equipeFaixa.focus();
+    return;
+  }
+
+  const ordem = lerOrdem(equipeOrdem);
+  if (ordem.erro) {
+    mostrarMsgEm(equipeMsg, "A ordem deve ser um número inteiro de 0 a 99.", "error");
+    equipeOrdem.focus();
+    return;
+  }
+
+  const redesColetadas = coletarRedes(equipeRedesInputs);
+  if (redesColetadas.erro) {
+    mostrarMsgEm(equipeMsg, redesColetadas.erro, "error");
+    redesColetadas.campo.focus();
+    return;
+  }
+
+  equipeSalvar.disabled = true;
+  const textoOriginal = equipeSalvar.textContent;
+  equipeSalvar.textContent = "Salvando...";
+
+  try {
+    if (membroEditandoId) {
+      const apagar = firebase.firestore.FieldValue.delete();
+      await db.collection("equipe").doc(membroEditandoId).update({
+        tipo: tipo,
+        nome: nome,
+        telefone: telefone ? telefone : apagar,
+        bio: bio ? bio : apagar,
+        faixa: faixa ? faixa : apagar,
+        redes: redesColetadas.redes ? redesColetadas.redes : apagar,
+        ativo: equipeAtivo.checked,
+        ordem: ordem.valor,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      limparFormularioEquipe();
+      mostrarMsgEm(equipeMsg, "Cadastro da equipe atualizado.", "success");
+    } else {
+      const payload = {
+        tipo: tipo,
+        nome: nome,
+        ativo: equipeAtivo.checked,
+        ordem: ordem.valor,
+        criadoPor: auth.currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (telefone) payload.telefone = telefone;
+      if (bio) payload.bio = bio;
+      if (faixa) payload.faixa = faixa;
+      if (redesColetadas.redes) payload.redes = redesColetadas.redes;
+
+      await db.collection("equipe").add(payload);
+      limparFormularioEquipe();
+      mostrarMsgEm(equipeMsg, "Cadastrado na equipe.", "success");
+    }
+    await carregarEquipe();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEm(
+      equipeMsg,
+      semPermissao
+        ? "Sua conta não tem permissão para editar a equipe."
+        : "Não foi possível salvar o cadastro. Tente novamente.",
+      "error"
+    );
+  } finally {
+    equipeSalvar.disabled = false;
+    if (equipeSalvar.textContent === "Salvando...") equipeSalvar.textContent = textoOriginal;
+  }
+}
+
+async function apagarMembroEquipe(id, nome) {
+  const usados = horariosCache
+    ? horariosCache.filter((horario) => horario.professorId === id).length
+    : 0;
+  let pergunta = 'Apagar "' + nome + '" da equipe?';
+  if (usados > 0) {
+    pergunta += "\n\n" + usados + " horário(s) da grade apontam para esta pessoa e vão " +
+      "ficar sem professor válido. Reaponte esses horários também.";
+  }
+  if (!confirm(pergunta)) return;
+
+  try {
+    await db.collection("equipe").doc(id).delete();
+    if (membroEditandoId === id) limparFormularioEquipe();
+    mostrarMsgEm(equipeMsg, "Cadastro apagado.", "success");
+    await carregarEquipe();
+  } catch (err) {
+    mostrarMsgEm(equipeMsg, "Não foi possível apagar o cadastro.", "error");
+  }
+}
+
+// ---- Grade de horários --------------------------------------------------------------
+
+function atualizarSelectTurmas() {
+  const anterior = horarioTurma.value;
+  horarioTurma.innerHTML = "";
+
+  if (turmasCache.length === 0) {
+    const vazia = document.createElement("option");
+    vazia.value = "";
+    vazia.textContent = "Nenhuma turma cadastrada";
+    horarioTurma.appendChild(vazia);
+  } else {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecione...";
+    horarioTurma.appendChild(placeholder);
+
+    turmasCache.forEach((turma) => {
+      const opcao = document.createElement("option");
+      opcao.value = turma.id;
+      opcao.textContent = (turma.nome || "sem nome") + (turma.ativo === false ? " (inativa)" : "");
+      horarioTurma.appendChild(opcao);
+    });
+
+    if (anterior) horarioTurma.value = anterior;
+  }
+
+  atualizarDisponibilidadeHorario();
+}
+
+function atualizarSelectProfessores() {
+  const anterior = horarioProfessor.value;
+  horarioProfessor.innerHTML = "";
+
+  const nenhum = document.createElement("option");
+  nenhum.value = "";
+  nenhum.textContent = "Nenhum";
+  horarioProfessor.appendChild(nenhum);
+
+  equipeCache.forEach((membro) => {
+    const opcao = document.createElement("option");
+    opcao.value = membro.id;
+    opcao.textContent = (membro.nome || "sem nome") +
+      " (" + (TIPOS_EQUIPE[membro.tipo] || "equipe") + ")";
+    horarioProfessor.appendChild(opcao);
+  });
+
+  if (anterior) horarioProfessor.value = anterior;
+}
+
+// Sem turma cadastrada não dá pra criar horário nenhum: a rule exige que o turmaId
+// aponte pra um documento existente. Melhor bloquear o botão do que deixar o
+// professor apanhar de um permission-denied sem explicação.
+function atualizarDisponibilidadeHorario() {
+  const semTurma = turmasCache.length === 0;
+  horarioSalvar.disabled = semTurma;
+  horarioSemTurma.style.display = semTurma ? "block" : "none";
+}
+
+async function carregarHorarios() {
+  let snap;
+  try {
+    snap = await db.collection("horarios").get();
+  } catch (err) {
+    horariosCache = [];
+    renderHorarios();
+    mostrarMsgEm(horarioMsg, "Não foi possível carregar a grade de horários.", "error");
+    renderDashboard();
+    return;
+  }
+
+  horariosCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  horariosCache.sort((a, b) => {
+    const diaA = typeof a.diaSemana === "number" ? a.diaSemana : 0;
+    const diaB = typeof b.diaSemana === "number" ? b.diaSemana : 0;
+    if (diaA !== diaB) return diaA - diaB;
+    // 'HH:MM' zero-padded: comparar como string equivale a comparar o horário.
+    return String(a.horaInicio || "").localeCompare(String(b.horaInicio || ""));
+  });
+
+  renderHorarios();
+  renderDashboard();
+}
+
+function nomeDaTurma(turmaId) {
+  const turma = turmasCache.find((item) => item.id === turmaId);
+  return turma ? (turma.nome || "sem nome") : "Turma removida";
+}
+
+function nomeDoProfessor(professorId) {
+  if (!professorId) return "—";
+  const membro = equipeCache.find((item) => item.id === professorId);
+  return membro ? (membro.nome || "sem nome") : "Cadastro removido";
+}
+
+// A grade é montada com um <tbody> por dia da semana (os 7 sempre aparecem, mesmo
+// vazios) em vez de uma tabela por dia — assim o cabeçalho de colunas é único e o
+// leitor de tela mantém a associação célula/coluna.
+function renderHorarios() {
+  if (horariosCache === null) return;
+
+  Array.from(tabelaHorarios.querySelectorAll("tbody")).forEach((corpo) => corpo.remove());
+
+  DIAS_SEMANA.forEach((nomeDia, indice) => {
+    const corpo = document.createElement("tbody");
+
+    const trDia = document.createElement("tr");
+    const thDia = document.createElement("th");
+    thDia.colSpan = 6;
+    // rowgroup: o cabeçalho do dia vale para todas as linhas daquele <tbody>.
+    thDia.scope = "rowgroup";
+    thDia.className = "horario-dia";
+    thDia.textContent = nomeDia;
+    trDia.appendChild(thDia);
+    corpo.appendChild(trDia);
+
+    const doDia = horariosCache.filter((horario) => horario.diaSemana === indice);
+
+    if (doDia.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "horario-vazio";
+      td.textContent = "Nenhum horário neste dia.";
+      tr.appendChild(td);
+      corpo.appendChild(tr);
+    } else {
+      doDia.forEach((horario) => {
+        const faixaHoraria = (horario.horaInicio || "--:--") + " - " + (horario.horaFim || "--:--");
+        const nomeTurma = nomeDaTurma(horario.turmaId);
+        const descricao = nomeTurma + " em " + nomeDia + ", " + faixaHoraria;
+
+        const tr = document.createElement("tr");
+        tr.append(
+          celula(faixaHoraria),
+          celula(nomeTurma),
+          celula(nomeDoProfessor(horario.professorId)),
+          celula(typeof horario.observacao === "string" && horario.observacao ? horario.observacao : "—"),
+          celula(horario.ativo === false ? "Inativo" : "Ativo")
+        );
+
+        const tdAcoes = document.createElement("td");
+        tdAcoes.append(
+          botaoAcao("Editar", "Editar o horário de " + descricao, () => editarHorario(horario)),
+          " ",
+          botaoAcao("Apagar", "Apagar o horário de " + descricao, () => apagarHorario(horario.id, descricao))
+        );
+        tr.appendChild(tdAcoes);
+
+        corpo.appendChild(tr);
+      });
+    }
+
+    tabelaHorarios.appendChild(corpo);
+  });
+}
+
+function limparFormularioHorario() {
+  horarioEditandoId = null;
+  horarioDia.value = "0";
+  horarioTurma.value = "";
+  horarioProfessor.value = "";
+  horarioInicio.value = "";
+  horarioFim.value = "";
+  horarioObservacao.value = "";
+  horarioAtivo.checked = true;
+  horarioSalvar.textContent = "Cadastrar horário";
+  horarioCancelar.style.display = "none";
+  mostrarMsgEm(horarioMsg, "", "");
+  atualizarDisponibilidadeHorario();
+}
+
+function editarHorario(horario) {
+  horarioEditandoId = horario.id;
+  horarioDia.value = typeof horario.diaSemana === "number" ? String(horario.diaSemana) : "0";
+  horarioTurma.value = typeof horario.turmaId === "string" ? horario.turmaId : "";
+  horarioProfessor.value = typeof horario.professorId === "string" ? horario.professorId : "";
+  horarioInicio.value = typeof horario.horaInicio === "string" ? horario.horaInicio : "";
+  horarioFim.value = typeof horario.horaFim === "string" ? horario.horaFim : "";
+  horarioObservacao.value = typeof horario.observacao === "string" ? horario.observacao : "";
+  horarioAtivo.checked = horario.ativo !== false;
+  horarioSalvar.textContent = "Salvar alterações";
+  horarioCancelar.style.display = "inline-block";
+  mostrarMsgEm(horarioMsg, "", "");
+  horarioInicio.focus();
+}
+
+async function salvarHorario() {
+  if (turmasCache.length === 0) {
+    mostrarMsgEm(horarioMsg, "Cadastre ao menos uma turma antes de criar um horário.", "error");
+    return;
+  }
+
+  const diaSemana = parseInt(horarioDia.value, 10);
+  const inicio = horarioInicio.value.trim();
+  const fim = horarioFim.value.trim();
+  const turmaId = horarioTurma.value;
+  const professorId = horarioProfessor.value;
+  const observacao = horarioObservacao.value.trim();
+
+  if (!Number.isInteger(diaSemana) || diaSemana < 0 || diaSemana > 6) {
+    mostrarMsgEm(horarioMsg, "Selecione o dia da semana.", "error");
+    horarioDia.focus();
+    return;
+  }
+  if (!turmaId || !turmasCache.some((turma) => turma.id === turmaId)) {
+    mostrarMsgEm(horarioMsg, "Selecione uma turma cadastrada.", "error");
+    horarioTurma.focus();
+    return;
+  }
+  if (!HORA_REGEX.test(inicio)) {
+    mostrarMsgEm(horarioMsg, "Informe a hora de início no formato HH:MM.", "error");
+    horarioInicio.focus();
+    return;
+  }
+  if (!HORA_REGEX.test(fim)) {
+    mostrarMsgEm(horarioMsg, "Informe a hora de término no formato HH:MM.", "error");
+    horarioFim.focus();
+    return;
+  }
+  // 'HH:MM' zero-padded compara certo como string (mesma lógica da rule).
+  if (!(inicio < fim)) {
+    mostrarMsgEm(horarioMsg, "A hora de término precisa ser depois da hora de início.", "error");
+    horarioFim.focus();
+    return;
+  }
+  if (professorId && !equipeCache.some((membro) => membro.id === professorId)) {
+    mostrarMsgEm(horarioMsg, "Selecione um professor cadastrado (ou deixe em Nenhum).", "error");
+    horarioProfessor.focus();
+    return;
+  }
+  if (observacao.length > 120) {
+    mostrarMsgEm(horarioMsg, "A observação deve ter até 120 caracteres.", "error");
+    horarioObservacao.focus();
+    return;
+  }
+
+  horarioSalvar.disabled = true;
+  const textoOriginal = horarioSalvar.textContent;
+  horarioSalvar.textContent = "Salvando...";
+
+  try {
+    if (horarioEditandoId) {
+      const apagar = firebase.firestore.FieldValue.delete();
+      await db.collection("horarios").doc(horarioEditandoId).update({
+        diaSemana: diaSemana,
+        horaInicio: inicio,
+        horaFim: fim,
+        turmaId: turmaId,
+        // Sem professor escolhido, o campo some do documento: a rule só valida o
+        // exists() quando 'professorId' está presente.
+        professorId: professorId ? professorId : apagar,
+        observacao: observacao ? observacao : apagar,
+        ativo: horarioAtivo.checked,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      limparFormularioHorario();
+      mostrarMsgEm(horarioMsg, "Horário atualizado.", "success");
+    } else {
+      const payload = {
+        diaSemana: diaSemana,
+        horaInicio: inicio,
+        horaFim: fim,
+        turmaId: turmaId,
+        ativo: horarioAtivo.checked,
+        criadoPor: auth.currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (professorId) payload.professorId = professorId;
+      if (observacao) payload.observacao = observacao;
+
+      await db.collection("horarios").add(payload);
+      limparFormularioHorario();
+      mostrarMsgEm(horarioMsg, "Horário cadastrado.", "success");
+    }
+    await carregarHorarios();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEm(
+      horarioMsg,
+      semPermissao
+        ? "Sua conta não tem permissão para editar a grade de horários."
+        : "Não foi possível salvar o horário. Tente novamente.",
+      "error"
+    );
+  } finally {
+    horarioSalvar.disabled = false;
+    if (horarioSalvar.textContent === "Salvando...") horarioSalvar.textContent = textoOriginal;
+    atualizarDisponibilidadeHorario();
+  }
+}
+
+async function apagarHorario(id, descricao) {
+  if (!confirm("Apagar o horário de " + descricao + "?")) return;
+
+  try {
+    await db.collection("horarios").doc(id).delete();
+    if (horarioEditandoId === id) limparFormularioHorario();
+    mostrarMsgEm(horarioMsg, "Horário apagado.", "success");
+    await carregarHorarios();
+  } catch (err) {
+    mostrarMsgEm(horarioMsg, "Não foi possível apagar o horário.", "error");
+  }
+}
+
+// ---- Perfil da academia (documento único academia/perfil) ---------------------------
+
+async function carregarPerfilAcademia() {
+  let doc;
+  try {
+    doc = await db.collection("academia").doc("perfil").get();
+  } catch (err) {
+    mostrarMsgEm(perfilMsg, "Não foi possível carregar o perfil da academia.", "error");
+    return;
+  }
+  preencherFormularioPerfil(doc.exists ? doc.data() : {});
+}
+
+function preencherFormularioPerfil(dados) {
+  const perfil = dados && typeof dados === "object" ? dados : {};
+  perfilEndereco.value = typeof perfil.endereco === "string" ? perfil.endereco : "";
+  perfilComplemento.value = typeof perfil.complemento === "string" ? perfil.complemento : "";
+  perfilCidadeUf.value = typeof perfil.cidadeUf === "string" ? perfil.cidadeUf : "";
+  perfilCep.value = typeof perfil.cep === "string" ? perfil.cep : "";
+  perfilTelefone.value = typeof perfil.telefoneContato === "string" ? perfil.telefoneContato : "";
+  perfilEmail.value = typeof perfil.emailContato === "string" ? perfil.emailContato : "";
+  perfilHorario.value = typeof perfil.horarioFuncionamento === "string" ? perfil.horarioFuncionamento : "";
+  preencherRedes(perfilRedesInputs, perfil.redes);
+}
+
+async function salvarPerfilAcademia() {
+  const endereco = perfilEndereco.value.trim();
+  const complemento = perfilComplemento.value.trim();
+  const cidadeUf = perfilCidadeUf.value.trim();
+  const cep = perfilCep.value.trim();
+  const telefone = perfilTelefone.value.trim();
+  const email = perfilEmail.value.trim();
+  const horario = perfilHorario.value.trim();
+
+  if (!endereco || endereco.length > 200) {
+    mostrarMsgEm(perfilMsg, "Informe o endereço da academia (até 200 caracteres).", "error");
+    perfilEndereco.focus();
+    return;
+  }
+  if (complemento.length > 120) {
+    mostrarMsgEm(perfilMsg, "O complemento deve ter até 120 caracteres.", "error");
+    perfilComplemento.focus();
+    return;
+  }
+  if (cidadeUf.length > 80) {
+    mostrarMsgEm(perfilMsg, "A cidade/UF deve ter até 80 caracteres.", "error");
+    perfilCidadeUf.focus();
+    return;
+  }
+  if (cep && !/^[0-9]{5}-?[0-9]{3}$/.test(cep)) {
+    mostrarMsgEm(perfilMsg, "O CEP deve estar no formato 00000-000.", "error");
+    perfilCep.focus();
+    return;
+  }
+  if (telefone.length > 30) {
+    mostrarMsgEm(perfilMsg, "O telefone deve ter até 30 caracteres.", "error");
+    perfilTelefone.focus();
+    return;
+  }
+  if (email && (email.length >= 100 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+    mostrarMsgEm(perfilMsg, "Informe um e-mail de contato válido.", "error");
+    perfilEmail.focus();
+    return;
+  }
+  if (horario.length > 300) {
+    mostrarMsgEm(perfilMsg, "O horário de funcionamento deve ter até 300 caracteres.", "error");
+    perfilHorario.focus();
+    return;
+  }
+
+  const redesColetadas = coletarRedes(perfilRedesInputs);
+  if (redesColetadas.erro) {
+    mostrarMsgEm(perfilMsg, redesColetadas.erro, "error");
+    redesColetadas.campo.focus();
+    return;
+  }
+
+  const payload = {
+    endereco: endereco,
+    atualizadoPor: auth.currentUser.uid,
+    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (complemento) payload.complemento = complemento;
+  if (cidadeUf) payload.cidadeUf = cidadeUf;
+  if (cep) payload.cep = cep;
+  if (telefone) payload.telefoneContato = telefone;
+  if (email) payload.emailContato = email;
+  if (horario) payload.horarioFuncionamento = horario;
+  if (redesColetadas.redes) payload.redes = redesColetadas.redes;
+
+  perfilSalvar.disabled = true;
+  const textoOriginal = perfilSalvar.textContent;
+  perfilSalvar.textContent = "Salvando...";
+
+  try {
+    // set() sem merge (mesma escolha de config/geral): campo limpo no formulário some
+    // do documento em vez de virar string vazia — a rule aceita ausência, e a página
+    // pública já trata ausência como "não informado".
+    await db.collection("academia").doc("perfil").set(payload, { merge: false });
+    mostrarMsgEm(perfilMsg, "Perfil da academia salvo.", "success");
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEm(
+      perfilMsg,
+      semPermissao
+        ? "Sua conta não tem permissão para editar o perfil da academia."
+        : "Não foi possível salvar o perfil. Tente novamente.",
+      "error"
+    );
+  } finally {
+    perfilSalvar.disabled = false;
+    perfilSalvar.textContent = textoOriginal;
+  }
 }
 </script>
 </body>

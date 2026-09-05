@@ -2,15 +2,95 @@ name = "academiateste-financeiro"
 main = "src/index.js"
 compatibility_date = "2026-07-28"
 
+# Bucket R2 pros comprovantes de pagamento do modo Pix manual (Fase 3 — fallback ao
+# Firebase Storage, que exigiria upgrade pro plano Blaze). Binding acessível no Worker
+# como env.COMPROVANTES_BUCKET.
+[[r2_buckets]]
+binding = "COMPROVANTES_BUCKET"
+bucket_name = "dojopass-comprovantes"
+
 [vars]
 FIREBASE_PROJECT_ID = "academiateste-56922"
+# Lista branca de origens que podem chamar /criar-cobranca do navegador (separadas por
+# vírgula). O Worker só devolve Access-Control-Allow-Origin pra uma origem desta lista.
+# Ajustar aqui quando o app for servido de outro domínio.
+# Pra testar localmente com `python3 -m http.server 8000` na raiz do repo, adicionar
+# temporariamente ",http://localhost:8000" — sem isso, chamada ao Worker de localhost
+# falha com erro de CORS ("Falha de conexão" genérica no navegador). Tirar de novo antes
+# de deployar (não deve ficar em produção).
+ALLOWED_ORIGINS = "https://dojopassbr.github.io"
+
+# Base da API do Asaas. PRODUÇÃO — cobranças geradas aqui são reais e o Asaas cobra de
+# verdade. ASAAS_API_KEY (secret) já é a chave de produção correspondente.
+ASAAS_BASE_URL = "https://api.asaas.com/v3"
+# Dias entre a geração da cobrança e o vencimento (dueDate) enviado ao Asaas.
+# NÃO CONFUNDIR com config/geral.asaasDiasAvisoAntesVencimento (Firestore):
+# - ASAAS_DUE_DATE_DIAS (aqui)            -> PRAZO DE VENCIMENTO de verdade. Infra, fixo,
+#                                            igual pra todo mundo, só muda com deploy.
+# - asaasDiasAvisoAntesVencimento (config) -> GATILHO VISUAL do painel: com quantos dias de
+#                                            antecedência a cobrança aparece destacada.
+#                                            Por academia, editável pela UI do professor,
+#                                            e não dispara nada automaticamente.
+ASAAS_DUE_DATE_DIAS = "5"
+
+# Remetente dos lembretes de mensalidade por e-mail (POST /enviar-lembrete, via Resend).
+# Não é segredo — só o "From:" que o aluno vê.
+# "onboarding@resend.dev" é o remetente de TESTE do Resend: funciona sem domínio
+# verificado, mas o Resend só entrega e-mails dele para o endereço dono da conta.
+# Quando houver domínio verificado no painel do Resend (Domains), trocar para algo como
+# "DojoPass <mensalidade@seudominio.com.br>" — só então os alunos recebem de verdade.
+EMAIL_REMETENTE = "DojoPass <onboarding@resend.dev>"
 
 # Segredos (não vão pro código nem pro git) — configurar com:
-#   npx wrangler secret put MP_ACCESS_TOKEN
+#   npx wrangler secret put ASAAS_API_KEY
+#   npx wrangler secret put ASAAS_WEBHOOK_TOKEN
 #   npx wrangler secret put FIREBASE_CLIENT_EMAIL
 #   npx wrangler secret put FIREBASE_PRIVATE_KEY
+#   npx wrangler secret put RESEND_API_KEY
+#   npx wrangler secret put CREDENCIAL_CRYPTO_KEY
 #
-# MP_ACCESS_TOKEN         -> Mercado Pago Developers, credenciais de teste/produção do app
+# CREDENCIAL_CRYPTO_KEY   -> chave mestra AES-256 (base64 de 32 bytes) que cifra a chave
+#                            de API do Asaas cadastrada pelo professor no painel e
+#                            guardada no documento config/credenciais do Firestore
+#                            (worker/src/cripto.js + worker/src/credenciais.js).
+#                            Gerar com:
+#                              openssl rand -base64 32
+#                            AVISOS:
+#                            - PERDER esta secret = perder o acesso à credencial cifrada.
+#                              Nada é recuperável; o professor recadastra a chave do Asaas
+#                              pelo painel e pronto (o /criar-cobranca responde 501 até lá).
+#                            - VAZAR esta secret JUNTO com um dump do Firestore = vazar a
+#                              chave do Asaas da academia. Uma sozinha não serve pra nada:
+#                              a secret vive só na Cloudflare, o ciphertext só no Firebase.
+#                            - TROCAR esta secret invalida a credencial já gravada (o
+#                              AES-GCM é autenticado: a decifragem falha em vez de devolver
+#                              lixo). Trocou, recadastre a chave pelo painel.
+#                            Sem esta secret, o POST /config/credencial-asaas responde 501 e
+#                            o sistema segue usando a ASAAS_API_KEY legada abaixo.
+# ASAAS_API_KEY           -> LEGADO/FALLBACK. Painel do Asaas > Integrações > Chave de API.
+#                            Desde a Fase 5, a chave normalmente vem cifrada de
+#                            config/credenciais (cadastrada pelo professor); esta secret só
+#                            é usada quando NENHUMA credencial estiver cadastrada lá — é o
+#                            que mantém o piloto atual funcionando sem migração.
+#                            Vai no header "access_token" de toda chamada
+#                            (worker/src/asaas.js). Sandbox e produção têm chaves
+#                            diferentes — no modo fallback a chave TEM que corresponder à
+#                            ASAAS_BASE_URL configurada acima (quando a credencial vem do
+#                            painel, a URL é derivada do ambiente escolhido lá).
+# ASAAS_WEBHOOK_TOKEN     -> token que VOCÊ define ao cadastrar o webhook no painel do
+#                            Asaas (campo "token de autenticação"). Gerar aleatório com
+#                            pelo menos 32 caracteres, ex.:
+#                              openssl rand -base64 32
+#                            O Asaas devolve esse mesmo valor no header
+#                            "asaas-access-token" de cada notificação, e o Worker compara
+#                            em tempo constante (worker/src/webhook-token.js). Sem ele o
+#                            Worker responde 501 e o webhook fica inoperante de propósito.
 # FIREBASE_CLIENT_EMAIL   -> campo "client_email" da chave de service account (Firebase Console
 #                            > Configurações do projeto > Contas de serviço > Gerar nova chave privada)
 # FIREBASE_PRIVATE_KEY    -> campo "private_key" da mesma chave (inclui as linhas -----BEGIN/END-----)
+# RESEND_API_KEY          -> painel do Resend (resend.com) > API Keys > Create API Key
+#                            (permissão de envio basta). Usada só pelo endpoint
+#                            POST /enviar-lembrete (worker/src/email.js). Sem ela — ou sem
+#                            a var EMAIL_REMETENTE acima — esse endpoint responde 501 e o
+#                            painel mostra "ainda não configurado"; os demais endpoints
+#                            (/criar-cobranca, /webhook-asaas, /comprovante) seguem normais.

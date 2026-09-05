@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static-site",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-l", "8000", "/Users/tainavidal/Documents/DojoPass"],
+      "port": 8000
+    }
+  ]
+}

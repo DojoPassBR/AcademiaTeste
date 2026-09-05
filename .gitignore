@@ -1,0 +1,21 @@
+.feature-state.json
+.feature-state*.json
+
+# Dependências dos testes de rules (tests/ tem package.json próprio, isolado do app)
+node_modules/
+tests/node_modules/
+
+# Emulador do Firebase / Firebase CLI
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+
+# Cache local do wrangler (Cloudflare Worker)
+.wrangler/
+
+# Espelho local de skills gerado por ferramentas de agente (não é código do projeto)
+.agents/

@@ -8,6 +8,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Garante que [hidden] realmente esconda o elemento mesmo quando alguma classe do
+   próprio elemento define display (flex/grid/block) sem !important — é o caso de
+   .card e das <section> de abas do painel do professor. */
+[hidden] { display: none !important; }
+
 body {
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   color: var(--text);
@@ -100,6 +105,45 @@ input, select {
 input:focus, select:focus {
   outline: none;
   border-color: var(--red);
+}
+
+/* Wrapper do <input type="date"> + botão de calendário (ver comentário no JS de
+   cadastro.html/admin.html sobre por que não reimplementamos o avanço automático de
+   segmento dia/mês/ano do Safari). */
+.date-input-wrap {
+  position: relative;
+  display: flex;
+}
+
+.date-input-wrap input[type="date"] {
+  flex: 1;
+  padding-right: 44px;
+}
+
+.date-picker-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 0 8px 8px 0;
+}
+
+.date-picker-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.date-picker-btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
 }
 
 .btn {
@@ -294,6 +338,34 @@ table.admin-table tr:hover td {
   margin-bottom: 0;
 }
 
+/* Agrupa os botões de ação do cabeçalho do card (convite, relatório) para que quebrem
+   juntos em telas estreitas em vez de esticarem a linha do título. */
+.card-header-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Campo somente-leitura com o link de convite: fonte monoespaçada porque o professor
+   costuma conferir a URL caractere a caractere antes de enviar. */
+.convite-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.convite-link-row input {
+  flex: 1 1 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.convite-link-row .btn-secundario {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 .btn-secundario {
   border: 1px solid var(--black);
   background: var(--white);
@@ -307,6 +379,379 @@ table.admin-table tr:hover td {
 }
 
 .btn-secundario:hover { background: var(--gray); }
+
+/* ---------------------------------------------------------------------------
+   Navegação por âncoras do painel do professor.
+   O admin.html tem muitos cards; a barra abaixo é só um índice — cada link aponta
+   pro id do card correspondente, que ganha tabindex="-1" pra receber o foco.
+   --------------------------------------------------------------------------- */
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--white);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+.admin-nav a {
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.admin-nav a:hover { background: var(--gray); border-color: var(--black); }
+
+.admin-nav a:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Sub-navegação de âncoras dentro da aba "Configurações" (Alunos, Turmas, Equipe,
+   Grade de horários, Perfil da academia, Eventos, Configurações) — mesmo visual
+   da antiga .admin-nav, que virou o índice interno dessa aba. */
+.admin-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--white);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+.admin-subnav a {
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.admin-subnav a:hover { background: var(--gray); border-color: var(--black); }
+
+.admin-subnav a:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Tablist real com as duas abas do painel (Dashboard / Configurações). Visual
+   parecido com .admin-nav, mas os botões de aba precisam de um estado "selecionado"
+   marcado por mais do que cor (borda mais grossa + fundo), para não depender só de
+   contraste de cor. */
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--white);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+.admin-tab {
+  border: 2px solid #ddd;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--white);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-tab:hover { background: var(--gray); border-color: var(--black); }
+
+.admin-tab[aria-selected="true"] {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.admin-tab:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+}
+
+#tela-dashboard:focus-visible,
+#tela-configuracoes:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Dashboard (primeiro card do painel): KPIs numéricos + próximos eventos e
+   aulas de hoje, todos calculados a partir de dados já carregados por outras
+   seções (sem consultas novas ao Firestore).
+   --------------------------------------------------------------------------- */
+
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi {
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi .kpi-numero {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.kpi .kpi-rotulo {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.kpi.destaque {
+  border-color: var(--red);
+}
+
+.kpi.destaque .kpi-numero {
+  color: var(--red);
+}
+
+.dashboard-listas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 700px) {
+  .dashboard-listas { grid-template-columns: 1fr 1fr; }
+}
+
+.dashboard-listas h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+
+.dashboard-vazio { color: #777; font-style: italic; }
+
+/* Gráficos do dashboard (Chart.js via CDN, com fallback textual). Cada figure tem
+   um canvas de altura fixa (obrigatório para o Chart.js funcionar com
+   maintainAspectRatio:false) e, abaixo, a lista textual que serve de legenda
+   acessível e de fallback quando o Chart.js não carrega. */
+.dashboard-graficos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+@media (min-width: 700px) {
+  .dashboard-graficos { grid-template-columns: 1fr 1fr; }
+}
+
+@media (min-width: 1000px) {
+  .dashboard-graficos { grid-template-columns: repeat(3, 1fr); }
+}
+
+.grafico-figura {
+  background: var(--white);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.grafico-figura figcaption {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.grafico-box {
+  position: relative;
+  height: 220px;
+}
+
+.grafico-indisponivel {
+  color: #777;
+  font-style: italic;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.grafico-dados {
+  list-style: none;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #444;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Conteúdo público do site (turmas, equipe, grade de horários, perfil da academia).
+   O aviso abaixo é permanente em cada um desses cards: o professor precisa saber,
+   sem ambiguidade, que o que ele salva ali fica visível pra qualquer pessoa.
+   --------------------------------------------------------------------------- */
+
+.aviso-publico {
+  background: #fff6e5;
+  color: #7a4a00;
+  border: 1px solid #f0d29a;
+  border-left: 6px solid #e0a02a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* Cabeçalho de cada dia da semana dentro da tabela da grade de horários. */
+.horario-dia {
+  background: var(--gray) !important;
+  color: var(--text) !important;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.horario-vazio { color: #777; font-style: italic; }
+
+/* Estas tabelas não têm linha clicável (diferente da de alunos), então o cursor de
+   mão do .admin-table genérico só confundiria. */
+#tabela-turmas tr:hover td,
+#tabela-equipe tr:hover td,
+#tabela-horarios tr:hover td {
+  cursor: default;
+}
+
+.rede-link { color: var(--red); font-weight: 600; }
+.rede-link:hover { text-decoration: underline; }
+
+/* Mural de eventos e campeonatos */
+
+.evento-link {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.evento-link:hover { text-decoration: underline; }
+
+.evento-data {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* Esmaecimento é só reforço visual: o texto "Encerrado" na própria linha é a pista
+   principal, pra não depender de contraste/cor pra passar a informação. */
+.evento-encerrado td { opacity: 0.55; }
+
+.evento-tag-encerrado {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gray);
+  border: 1px solid #ccc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.evento-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 700px) {
+  .evento-form-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* Configurações da academia (painel do professor) */
+
+.config-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 700px) {
+  .config-form-row { grid-template-columns: 1fr 1fr; }
+}
+
+.config-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.config-textarea:focus {
+  outline: none;
+  border-color: var(--red);
+}
+
+.config-toggles {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 16px 16px;
+  margin-top: 24px;
+}
+
+.config-toggles legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #444;
+  padding: 0 6px;
+}
+
+.config-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.config-check input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--red);
+}
+
+.config-dica {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 8px;
+}
 
 .only-print { display: none; }
 
@@ -330,4 +775,290 @@ table.admin-table tr:hover td {
   }
   .only-print th { background: #eee; }
   .only-print .relatorio-pendente { color: #b10f0f; font-weight: 700; }
+}
+
+/* ---------------------------------------------------------------------------
+   Lembretes de mensalidade (Fase 2).
+   Todos os estados têm texto próprio no HTML — a cor aqui é reforço, nunca a
+   única informação (WCAG 1.4.1: não usar cor sozinha pra transmitir sentido).
+   --------------------------------------------------------------------------- */
+
+/* Mensalidade em dia: verde sutil, sem gritar. Sobrescreve o preenchido sólido
+   antigo mantendo a mesma classe .pago que o relatório impresso já procura. */
+.mensalidade-tag.pago {
+  background: #e7f4ec;
+  color: #14612a;
+  border: 1px solid #b7dfc4;
+}
+
+/* Pendente dentro do prazo de alerta: aviso discreto, ainda legível. */
+.mensalidade-tag.pendente {
+  background: #fdeaea;
+  color: #9c1010;
+  border: 1px solid #f2c2c2;
+}
+
+/* Pendente há muito tempo (>= lembreteDiasParaAlerta): alerta forte. */
+.mensalidade-tag.pendente.mensalidade-tag-alerta {
+  background: var(--red);
+  color: var(--white);
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(211, 21, 21, 0.18);
+}
+
+/* Botão de lembrete: mesmo desenho do .mensalidade-btn, com sotaque verde WhatsApp. */
+.mensalidade-btn-whats {
+  border-color: #1f8f4a;
+  color: #14612a;
+  margin-left: 6px;
+}
+
+.mensalidade-btn-whats:hover:not(:disabled) {
+  background: #e7f4ec;
+}
+
+.mensalidade-btn-whats:disabled {
+  border-color: #ddd;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Lembrete por e-mail: mesmo desenho, sotaque azul (e este SIM dispara envio). */
+.mensalidade-btn-email {
+  border-color: #2a5db0;
+  color: #1d4285;
+  margin-left: 6px;
+}
+
+.mensalidade-btn-email:hover:not(:disabled) {
+  background: #e8eef9;
+}
+
+.mensalidade-btn-email:disabled {
+  border-color: #ddd;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Área do aluno: box de status com atraso longo. */
+.status-box.status-box-alerta {
+  border: 2px solid var(--red);
+  background: #fff5f5;
+}
+
+/* Aviso de pendência reforçado (checkin.html). */
+.aviso-pendente.aviso-pendente-forte {
+  background: var(--red);
+  color: var(--white);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(211, 21, 21, 0.28);
+}
+
+/* ---------------------------------------------------------------------------
+   Comprovantes de pagamento (Fase 3 — modo Pix manual).
+   Mesma regra das fases anteriores: cor é reforço, o estado sempre tem texto.
+   --------------------------------------------------------------------------- */
+
+/* Área do aluno (checkin.html): bloco de upload dentro do card de Pix. */
+.comprovante-bloco {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e2e2;
+}
+
+.comprovante-titulo {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.comprovante-input {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px;
+  font-size: 0.9rem;
+  border: 1px dashed #bbb;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.comprovante-input:focus {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Confirmação de envio: some com o formulário e fica esta mensagem no lugar. */
+.comprovante-aguardando {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #fff6e5;
+  color: #7a4a00;
+  border: 1px solid #f0d29a;
+  font-weight: 600;
+}
+
+/* Painel do professor (admin.html): selo + botões na célula de mensalidade. */
+.comprovante-acoes {
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.comprovante-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #fff6e5;
+  color: #7a4a00;
+  border: 1px solid #f0d29a;
+}
+
+.comprovante-btn-confirmar {
+  border-color: #1f8f4a;
+  color: #14612a;
+}
+
+.comprovante-btn-confirmar:hover:not(:disabled) {
+  background: #e7f4ec;
+}
+
+/* ---------------------------------------------------------------------------
+   Área do aluno (checkin.html): grade de horários e equipe.
+   Mesmo conteúdo público do site, mas em cartão claro — por isso as cores das
+   turmas viram pílulas com fundo, e não texto colorido como no style.css do site
+   (texto amarelo sobre branco não teria contraste suficiente).
+   --------------------------------------------------------------------------- */
+
+.grade-aviso {
+  color: #777;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.grade-dias { list-style: none; }
+
+.grade-dia + .grade-dia { margin-top: 18px; }
+
+.grade-dia-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #555;
+  margin-bottom: 2px;
+}
+
+/* O destaque do dia de hoje é reforço: quem informa de verdade é o rótulo
+   "Hoje" em texto, ao lado do nome do dia. */
+.grade-dia-hoje {
+  border-left: 4px solid var(--red);
+  padding-left: 10px;
+}
+
+.grade-hoje-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.grade-hora {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.grade-turma {
+  text-align: right;
+  padding-left: 12px;
+}
+
+.grade-turma-detalhe {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.turma-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--gray);
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.turma-tag-red {
+  background: #b10f0f;
+  border-color: #b10f0f;
+  color: var(--white);
+}
+
+.turma-tag-yellow {
+  background: #f2c200;
+  border-color: #d8ad00;
+  color: #3a2f00;
+}
+
+.turma-tag-pink {
+  background: #d63384;
+  border-color: #d63384;
+  color: var(--white);
+}
+
+.turma-tag-white {
+  background: var(--white);
+  border-color: #bbb;
+  color: #333;
+}
+
+.equipe-lista { list-style: none; }
+
+.equipe-lista li {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+}
+
+.equipe-lista li:last-child { border-bottom: none; }
+
+.equipe-nome { display: block; }
+
+.equipe-tipo {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+.equipe-bio {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.equipe-telefone {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.equipe-redes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.85rem;
 }

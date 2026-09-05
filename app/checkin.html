@@ -30,9 +30,27 @@
 
   <div class="card" id="pix-pagamento" style="display:none;">
     <h2>Pagar mensalidade via Pix</h2>
-    <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
-    <textarea id="pix-copia-cola" readonly rows="3" style="width:100%;margin:12px 0;padding:10px;font-size:0.85rem;"></textarea>
-    <button type="button" class="btn btn-secondary" id="btn-copiar-pix">Copiar código Pix</button>
+
+    <div id="pix-bloco-codigo" style="display:none;">
+      <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
+      <textarea id="pix-copia-cola" readonly rows="3" style="width:100%;margin:12px 0;padding:10px;font-size:0.85rem;"></textarea>
+      <button type="button" class="btn btn-secondary" id="btn-copiar-pix">Copiar código Pix</button>
+    </div>
+
+    <!-- Só aparece em cobrança de origem 'manual': a cobrança do Asaas é confirmada
+         sozinha pelo webhook do provedor, sem comprovante nenhum. -->
+    <div class="comprovante-bloco" id="comprovante-bloco" style="display:none;">
+      <h3 class="comprovante-titulo">Já pagou? Envie o comprovante</h3>
+      <p>Anexe o comprovante (JPG, PNG, WebP ou PDF, até 5 MB) para o professor confirmar o pagamento.</p>
+      <input type="file" id="comprovante-arquivo" class="comprovante-input"
+             accept="image/jpeg,image/png,image/webp,application/pdf">
+      <button type="button" class="btn btn-secondary" id="btn-enviar-comprovante">Enviar comprovante</button>
+      <div class="msg" id="comprovante-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <p class="comprovante-aguardando" id="comprovante-aguardando" style="display:none;">
+      Comprovante enviado — aguardando confirmação do professor.
+    </p>
   </div>
 
   <div class="card">
@@ -43,6 +61,27 @@
     </p>
     <button class="btn" id="btn-checkin">Fazer Check-in</button>
     <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Próximos eventos</h2>
+    <ul class="checkin-list" id="lista-eventos">
+      <li>Carregando...</li>
+    </ul>
+  </div>
+
+  <div class="card" id="card-grade">
+    <h2>Grade de horários</h2>
+    <div id="grade-horarios">
+      <p class="grade-aviso">Carregando...</p>
+    </div>
+  </div>
+
+  <div class="card" id="card-equipe-app">
+    <h2>Nossa equipe</h2>
+    <ul class="equipe-lista" id="lista-equipe-app">
+      <li class="grade-aviso">Carregando...</li>
+    </ul>
   </div>
 
   <div class="card">
@@ -65,17 +104,49 @@ const saudacao = document.getElementById("saudacao");
 const statusHoje = document.getElementById("status-hoje");
 const statusSub = document.getElementById("status-sub");
 const listaCheckins = document.getElementById("lista-checkins");
+const listaEventos = document.getElementById("lista-eventos");
+const gradeHorarios = document.getElementById("grade-horarios");
+const listaEquipe = document.getElementById("lista-equipe-app");
 const mensalidadeStatusEl = document.getElementById("mensalidade-status");
 const mensalidadeMesEl = document.getElementById("mensalidade-mes");
 const avisoMensalidade = document.getElementById("aviso-mensalidade");
+const mensalidadeBox = document.getElementById("mensalidade-box");
+// Texto original do aviso (sem contagem de dias), restaurado quando não há atraso longo.
+const AVISO_MENSALIDADE_PADRAO =
+  "Sua mensalidade está pendente. Procure a recepção para regularizar e liberar o check-in.";
 const pixPagamento = document.getElementById("pix-pagamento");
+const pixBlocoCodigo = document.getElementById("pix-bloco-codigo");
 const pixCopiaCola = document.getElementById("pix-copia-cola");
 const btnCopiarPix = document.getElementById("btn-copiar-pix");
+const comprovanteBloco = document.getElementById("comprovante-bloco");
+const comprovanteArquivo = document.getElementById("comprovante-arquivo");
+const btnEnviarComprovante = document.getElementById("btn-enviar-comprovante");
+const comprovanteMsg = document.getElementById("comprovante-msg");
+const comprovanteAguardando = document.getElementById("comprovante-aguardando");
+
+// Mesma lista branca do Worker (worker/src/comprovante.js). A validação daqui é só
+// conveniência: quem decide de verdade é o Worker, que refaz tipo e tamanho.
+const COMPROVANTE_TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const COMPROVANTE_TAMANHO_MAXIMO = 5 * 1024 * 1024;
+
+// ID da cobrança pendente de origem 'manual' (null quando não há nenhuma).
+let cobrancaManualPendenteId = null;
 
 let alunoNome = "";
 let mensalidadeEmDia = false;
 let bloqueadoPorIntervalo = false;
 let mensalidadeModo = "manual";
+// Há quantos dias a mensalidade está pendente (null = nunca foi marcada, ou está em dia).
+let mensalidadeDiasPendente = null;
+// Aviso visual reforçado: ligado por padrão, só desliga se config/geral gravar false.
+let lembreteVisualAtivo = true;
+let lembreteDiasParaAlerta = 7;
+
+// "pix" = cobrança automática pelo Asaas; "pixManual" = o professor lança a cobrança e
+// cola a chave/copia-e-cola da própria academia. Do ponto de vista do aluno é igual.
+function modoUsaPix(modo) {
+  return modo === "pix" || modo === "pixManual";
+}
 
 function showMsg(text, type) {
   msg.textContent = text;
@@ -96,32 +167,496 @@ auth.onAuthStateChanged(async (user) => {
     alunoNome = alunoData.nome;
     saudacao.textContent = "Olá, " + alunoNome.split(" ")[0];
     mensalidadeEmDia = (alunoData.mensalidadeStatus || "pendente") === "pago";
+    mensalidadeDiasPendente = mensalidadeEmDia ? null : diasDesde(alunoData.mensalidadeAtualizadoEm);
   }
 
+  // Uma única leitura de config/geral serve pro modo de mensalidade E pro aviso visual.
   const configDoc = await db.collection("config").doc("geral").get();
-  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
+  const config = configDoc.exists ? configDoc.data() : {};
+  mensalidadeModo = config.mensalidadeModo || "manual";
+  lembreteVisualAtivo = config.lembreteVisualAtivo !== false;
+  if (typeof config.lembreteDiasParaAlerta === "number" && config.lembreteDiasParaAlerta > 0) {
+    lembreteDiasParaAlerta = config.lembreteDiasParaAlerta;
+  }
 
   atualizarMensalidadeBox();
-  if (mensalidadeModo === "pix" && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
+  // O card de Pix vale tanto pro Pix automático (Asaas, modo "pix") quanto pro Pix
+  // lançado na mão pelo professor (modo "pixManual") — nos dois casos o aluno lê a
+  // mesma cobrança pendente em cobrancas/ e copia o mesmo campo pixCopiaECola.
+  if (modoUsaPix(mensalidadeModo) && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
   carregarUltimoCheckin(user.uid);
   carregarHistorico(user.uid);
+  // Mural de eventos: carga independente e não bloqueante — se falhar (rules, rede,
+  // índice), o check-in em si continua funcionando normalmente.
+  carregarEventos();
+  // Grade e equipe também são conteúdo público (rules com `allow read: if true`):
+  // cada uma tem seu próprio try/catch, então uma falha ali não derruba o check-in.
+  carregarGrade();
+  carregarEquipe();
 });
 
-async function carregarCobrancaPendente(uid) {
-  const snap = await db.collection("cobrancas")
-    .where("alunoId", "==", uid)
-    .where("status", "==", "pendente")
-    .orderBy("criadoEm", "desc")
-    .limit(1)
-    .get();
+// ---------------------------------------------------------------------------
+// Grade de horários e equipe (mesmo conteúdo público do site, dentro do app)
+// ---------------------------------------------------------------------------
 
-  if (!snap.empty && snap.docs[0].data().pixCopiaECola) {
-    pixCopiaCola.value = snap.docs[0].data().pixCopiaECola;
-    pixPagamento.style.display = "block";
-  } else {
-    pixPagamento.style.display = "none";
+const DIAS_SEMANA = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado"
+];
+
+// Cores válidas de turma (mesmas do cadastro do professor). Qualquer outro valor
+// cai no estilo neutro — nunca monta uma classe CSS que não existe.
+const CORES_TURMA_TAG = { red: true, yellow: true, pink: true, white: true };
+
+// Ordem de exibição dos links de rede social e o rótulo humano de cada um,
+// igual ao site público (site-publico.js).
+const REDES_EQUIPE = [
+  { chave: "instagram", rotulo: "Instagram" },
+  { chave: "facebook", rotulo: "Facebook" },
+  { chave: "youtube", rotulo: "YouTube" },
+  { chave: "tiktok", rotulo: "TikTok" },
+  { chave: "whatsapp", rotulo: "WhatsApp" },
+  { chave: "site", rotulo: "Site" }
+];
+
+function textoNaoVazio(valor) {
+  return typeof valor === "string" && valor.trim().length > 0 ? valor.trim() : null;
+}
+
+// Esvazia um container removendo os filhos um a um. Nada de innerHTML.
+function limparNode(node) {
+  while (node.firstChild) {
+    node.removeChild(node.firstChild);
   }
 }
+
+function criarEl(tag, classe, texto) {
+  const node = document.createElement(tag);
+  if (classe) node.className = classe;
+  if (texto) node.textContent = texto;
+  return node;
+}
+
+// Troca todo o conteúdo do container por uma única linha de texto (erro ou vazio).
+function avisoNoContainer(container, tag, texto) {
+  limparNode(container);
+  container.appendChild(criarEl(tag, "grade-aviso", texto));
+}
+
+function faixaHorario(horario) {
+  const inicio = textoNaoVazio(horario.horaInicio);
+  const fim = textoNaoVazio(horario.horaFim);
+  if (inicio && fim) return inicio + " às " + fim;
+  return inicio || fim || "";
+}
+
+// Três consultas soltas + JOIN em memória: as coleções são pequenas (dezenas de
+// docs) e desnormalizar nome de turma/professor dentro de horarios só criaria dado
+// duplicado pra manter sincronizado. Os índices compostos usados aqui
+// (horarios: ativo+diaSemana+horaInicio) já existem em firestore.indexes.json;
+// turmas e equipe são consultadas só com um where, que não precisa de índice.
+async function carregarGrade() {
+  let turmasSnap;
+  let horariosSnap;
+  let equipeSnap;
+
+  try {
+    [turmasSnap, horariosSnap, equipeSnap] = await Promise.all([
+      db.collection("turmas").where("ativo", "==", true).limit(50).get(),
+      db.collection("horarios")
+        .where("ativo", "==", true)
+        .orderBy("diaSemana")
+        .orderBy("horaInicio")
+        .limit(200)
+        .get(),
+      db.collection("equipe").where("ativo", "==", true).limit(50).get()
+    ]);
+  } catch (err) {
+    avisoNoContainer(gradeHorarios, "p", "Não foi possível carregar a grade de horários.");
+    return;
+  }
+
+  const turmasPorId = {};
+  turmasSnap.forEach((doc) => { turmasPorId[doc.id] = doc.data() || {}; });
+
+  const equipePorId = {};
+  equipeSnap.forEach((doc) => { equipePorId[doc.id] = doc.data() || {}; });
+
+  const grupos = [];
+  for (let dia = 0; dia <= 6; dia++) {
+    grupos.push({ dia, nome: DIAS_SEMANA[dia], linhas: [] });
+  }
+
+  horariosSnap.forEach((doc) => {
+    const horario = doc.data() || {};
+    const dia = horario.diaSemana;
+    if (typeof dia !== "number" || dia < 0 || dia > 6) return;
+
+    const turma = turmasPorId[horario.turmaId] || null;
+    const nomeTurma = turma ? textoNaoVazio(turma.nome) : null;
+    // Horário órfão (turma inativa ou apagada): não tem o que mostrar pro aluno.
+    if (!nomeTurma) return;
+
+    const professor = horario.professorId ? equipePorId[horario.professorId] || null : null;
+    const nomeProfessor = professor ? textoNaoVazio(professor.nome) : null;
+
+    const detalhes = [];
+    if (nomeProfessor) detalhes.push("Prof. " + nomeProfessor);
+    const observacao = textoNaoVazio(horario.observacao);
+    if (observacao) detalhes.push(observacao);
+
+    grupos[dia].linhas.push({
+      faixa: faixaHorario(horario),
+      turma: nomeTurma,
+      // nivel/descricao vêm do cadastro da turma no painel do professor.
+      nivel: turma ? textoNaoVazio(turma.nivel) : null,
+      descricao: turma ? textoNaoVazio(turma.descricao) : null,
+      cor: turma && CORES_TURMA_TAG[turma.cor] ? turma.cor : null,
+      detalhe: detalhes.length > 0 ? detalhes.join(" · ") : null
+    });
+  });
+
+  const totalLinhas = grupos.reduce((soma, grupo) => soma + grupo.linhas.length, 0);
+  if (totalLinhas === 0) {
+    avisoNoContainer(gradeHorarios, "p", "Nenhum horário cadastrado ainda.");
+    return;
+  }
+
+  const hoje = new Date().getDay();
+  // Dias sem aula somem, exceto o de hoje: o aluno precisa ver, explicitamente,
+  // que hoje não tem treino em vez de ficar procurando o dia na lista.
+  const visiveis = grupos.filter((grupo) => grupo.linhas.length > 0 || grupo.dia === hoje);
+
+  const lista = criarEl("ul", "grade-dias");
+
+  visiveis.forEach((grupo) => {
+    const ehHoje = grupo.dia === hoje;
+    const itemDia = criarEl("li", ehHoje ? "grade-dia grade-dia-hoje" : "grade-dia");
+
+    // O destaque de "hoje" nunca é só cor/borda: tem o rótulo "Hoje" em texto.
+    const titulo = criarEl("h3", "grade-dia-titulo", grupo.nome);
+    if (ehHoje) titulo.appendChild(criarEl("span", "grade-hoje-tag", "Hoje"));
+    itemDia.appendChild(titulo);
+
+    const linhas = criarEl("ul", "checkin-list");
+
+    if (grupo.linhas.length === 0) {
+      linhas.appendChild(criarEl("li", "grade-aviso", "Sem aulas neste dia."));
+    } else {
+      grupo.linhas.forEach((linha) => {
+        const item = document.createElement("li");
+        item.appendChild(criarEl("span", "grade-hora", linha.faixa));
+
+        const direita = criarEl("span", "grade-turma");
+        direita.appendChild(criarEl(
+          "span",
+          linha.cor ? "turma-tag turma-tag-" + linha.cor : "turma-tag",
+          linha.turma
+        ));
+        // Nível como subtítulo curto do nome da turma; descrição abaixo, quando houver.
+        if (linha.nivel) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", "— " + linha.nivel));
+        }
+        if (linha.descricao) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", linha.descricao));
+        }
+        if (linha.detalhe) {
+          direita.appendChild(criarEl("span", "grade-turma-detalhe", linha.detalhe));
+        }
+
+        item.appendChild(direita);
+        linhas.appendChild(item);
+      });
+    }
+
+    itemDia.appendChild(linhas);
+    lista.appendChild(itemDia);
+  });
+
+  limparNode(gradeHorarios);
+  gradeHorarios.appendChild(lista);
+}
+
+// Links de rede social de um membro. Reaproveita linkHttpsValido(): só entra na
+// tela o que for https:// válido, com aria-label dizendo de quem é o perfil.
+function montarRedesEquipe(redes, nomeDono) {
+  if (!redes || typeof redes !== "object") return null;
+
+  const caixa = criarEl("span", "equipe-redes");
+  let algum = false;
+
+  REDES_EQUIPE.forEach((rede) => {
+    const href = linkHttpsValido(redes[rede.chave]);
+    if (!href) return;
+    const link = criarEl("a", "rede-link", rede.rotulo);
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", rede.rotulo + (nomeDono ? " de " + nomeDono : ""));
+    caixa.appendChild(link);
+    algum = true;
+  });
+
+  return algum ? caixa : null;
+}
+
+// Mesma ordenação do site público (ordem, depois nome). O índice composto
+// (ativo, ordem, nome) para 'equipe' já existe em firestore.indexes.json.
+async function carregarEquipe() {
+  let snap;
+  try {
+    snap = await db.collection("equipe")
+      .where("ativo", "==", true)
+      .orderBy("ordem")
+      .orderBy("nome")
+      .limit(50)
+      .get();
+  } catch (err) {
+    avisoNoContainer(listaEquipe, "li", "Não foi possível carregar a equipe.");
+    return;
+  }
+
+  const membros = [];
+  snap.forEach((doc) => {
+    const membro = doc.data() || {};
+    if (textoNaoVazio(membro.nome)) membros.push(membro);
+  });
+
+  if (membros.length === 0) {
+    avisoNoContainer(listaEquipe, "li", "Nenhum membro da equipe cadastrado ainda.");
+    return;
+  }
+
+  limparNode(listaEquipe);
+
+  membros.forEach((membro) => {
+    const nome = textoNaoVazio(membro.nome);
+    const item = document.createElement("li");
+
+    item.appendChild(criarEl("strong", "equipe-nome", nome));
+
+    const rotulos = [membro.tipo === "instrutor" ? "Instrutor" : "Professor"];
+    const faixa = textoNaoVazio(membro.faixa);
+    if (faixa) rotulos.push("Faixa " + faixa);
+    item.appendChild(criarEl("span", "equipe-tipo", rotulos.join(" · ")));
+
+    const bio = textoNaoVazio(membro.bio);
+    if (bio) item.appendChild(criarEl("p", "equipe-bio", bio));
+
+    // Telefone é opcional; texto simples (sem link), só quando cadastrado.
+    const telefoneMembro = textoNaoVazio(membro.telefone);
+    if (telefoneMembro) item.appendChild(criarEl("span", "equipe-telefone", telefoneMembro));
+
+    const redes = montarRedesEquipe(membro.redes, nome);
+    if (redes) item.appendChild(redes);
+
+    listaEquipe.appendChild(item);
+  });
+}
+
+// Só os eventos a partir de hoje: o filtro de data é feito no servidor (where + orderBy
+// no MESMO campo 'data', que o índice de campo único automático já atende — não precisa
+// de índice composto novo). Eventos passados continuam no Firestore, só não aparecem aqui.
+async function carregarEventos() {
+  let snap;
+  try {
+    snap = await db.collection("eventos")
+      .where("data", ">=", new Date().toISOString().slice(0, 10))
+      .orderBy("data", "asc")
+      .limit(10)
+      .get();
+  } catch (err) {
+    listaEventos.innerHTML = "<li>Não foi possível carregar os eventos.</li>";
+    return;
+  }
+
+  listaEventos.innerHTML = "";
+
+  if (snap.empty) {
+    const li = document.createElement("li");
+    li.textContent = "Nenhum evento agendado no momento.";
+    listaEventos.appendChild(li);
+    return;
+  }
+
+  snap.forEach((docEvento) => {
+    const evento = docEvento.data();
+    const li = document.createElement("li");
+
+    // Nome e local vêm do cadastro feito pelo professor (texto livre): sempre
+    // createElement/textContent, nunca innerHTML.
+    const bloco = document.createElement("span");
+    const nomeTexto = evento.nome || "Evento";
+    const href = linkHttpsValido(evento.link);
+
+    if (href) {
+      const a = document.createElement("a");
+      a.className = "evento-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = nomeTexto;
+      bloco.appendChild(a);
+    } else {
+      const forte = document.createElement("strong");
+      forte.textContent = nomeTexto;
+      bloco.appendChild(forte);
+    }
+
+    if (evento.local) {
+      const local = document.createElement("span");
+      local.className = "evento-data";
+      local.textContent = " - " + evento.local;
+      bloco.appendChild(local);
+    }
+
+    const dataEl = document.createElement("span");
+    dataEl.className = "evento-data";
+    // "T00:00:00" força a data a ser lida no fuso local: sem isso, uma string
+    // "YYYY-MM-DD" é tratada como UTC e o dia aparece um a menos no Brasil.
+    dataEl.textContent = typeof evento.data === "string"
+      ? new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR")
+      : "";
+
+    li.append(bloco, dataEl);
+    listaEventos.appendChild(li);
+  });
+}
+
+// Mesma checagem robusta do painel do professor: o href só é montado a partir de um
+// https:// que o parser de URL do navegador aceita. Qualquer outro esquema devolve null.
+function linkHttpsValido(valor) {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  if (!limpo.startsWith("https://")) return null;
+  try {
+    const url = new URL(limpo);
+    return url.protocol === "https:" ? limpo : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Busca a cobrança em aberto do aluno. "aguardando_confirmacao" entra junto de "pendente"
+// porque é o estado em que o comprovante já foi enviado e o professor ainda não confirmou —
+// o aluno precisa ver isso em vez de achar que o envio se perdeu. O índice composto
+// (alunoId, status, criadoEm) de firestore.indexes.json já atende o "in".
+async function carregarCobrancaPendente(uid) {
+  let snap;
+  try {
+    snap = await db.collection("cobrancas")
+      .where("alunoId", "==", uid)
+      .where("status", "in", ["pendente", "aguardando_confirmacao"])
+      .orderBy("criadoEm", "desc")
+      .limit(1)
+      .get();
+  } catch (err) {
+    pixPagamento.style.display = "none";
+    return;
+  }
+
+  cobrancaManualPendenteId = null;
+
+  if (snap.empty) {
+    pixPagamento.style.display = "none";
+    return;
+  }
+
+  const cobrancaDoc = snap.docs[0];
+  const cobranca = cobrancaDoc.data();
+  const ehManual = (cobranca.origem || "asaas") === "manual";
+  const aguardando = cobranca.status === "aguardando_confirmacao";
+  const temCodigo = typeof cobranca.pixCopiaECola === "string" && cobranca.pixCopiaECola.length > 0;
+
+  if (temCodigo) pixCopiaCola.value = cobranca.pixCopiaECola;
+  pixBlocoCodigo.style.display = temCodigo ? "block" : "none";
+
+  // Upload só em cobrança manual e ainda pendente. Cobrança do Asaas é confirmada pelo
+  // webhook do provedor — comprovante ali não serviria pra nada.
+  if (ehManual && !aguardando) cobrancaManualPendenteId = cobrancaDoc.id;
+  comprovanteBloco.style.display = cobrancaManualPendenteId ? "block" : "none";
+  comprovanteAguardando.style.display = ehManual && aguardando ? "block" : "none";
+
+  const temAlgoParaMostrar = temCodigo || cobrancaManualPendenteId || (ehManual && aguardando);
+  pixPagamento.style.display = temAlgoParaMostrar ? "block" : "none";
+}
+
+function mostrarMsgComprovante(texto, tipo) {
+  comprovanteMsg.textContent = texto;
+  comprovanteMsg.className = "msg show " + tipo;
+}
+
+// O arquivo vai pro bucket R2 pelo Worker (POST /comprovante) — o navegador não escreve
+// no R2 direto, e o aluno nunca escreve na coleção cobrancas. Quem muda o status para
+// "aguardando_confirmacao" é o Worker, com a service account.
+btnEnviarComprovante.addEventListener("click", async () => {
+  if (!cobrancaManualPendenteId) {
+    mostrarMsgComprovante("Nenhuma cobrança em aberto para anexar comprovante.", "error");
+    return;
+  }
+
+  const arquivo = comprovanteArquivo.files && comprovanteArquivo.files[0];
+  if (!arquivo) {
+    mostrarMsgComprovante("Escolha o arquivo do comprovante primeiro.", "error");
+    return;
+  }
+  if (COMPROVANTE_TIPOS.indexOf(arquivo.type) === -1) {
+    mostrarMsgComprovante("Formato não aceito. Envie uma imagem (JPG, PNG ou WebP) ou um PDF.", "error");
+    return;
+  }
+  if (arquivo.size > COMPROVANTE_TAMANHO_MAXIMO) {
+    mostrarMsgComprovante("Arquivo muito grande. O limite é 5 MB.", "error");
+    return;
+  }
+  if (!WORKER_URL) {
+    mostrarMsgComprovante("O envio de comprovantes ainda não foi configurado nesta academia.", "error");
+    return;
+  }
+
+  btnEnviarComprovante.disabled = true;
+  const textoOriginal = btnEnviarComprovante.textContent;
+  btnEnviarComprovante.textContent = "Enviando...";
+  mostrarMsgComprovante("Enviando...", "info");
+
+  try {
+    const formData = new FormData();
+    formData.append("cobrancaId", cobrancaManualPendenteId);
+    formData.append("arquivo", arquivo);
+
+    // Sem Content-Type manual: o navegador monta o boundary do multipart sozinho.
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/comprovante", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const dados = await resp.json().catch(() => ({}));
+      mostrarMsgComprovante(
+        dados.erro || "Não foi possível enviar o comprovante. Tente novamente.",
+        "error"
+      );
+      return;
+    }
+
+    comprovanteMsg.textContent = "";
+    comprovanteMsg.className = "msg";
+    comprovanteBloco.style.display = "none";
+    comprovanteAguardando.style.display = "block";
+    cobrancaManualPendenteId = null;
+  } catch (err) {
+    mostrarMsgComprovante("Não foi possível enviar o comprovante. Verifique sua conexão.", "error");
+  } finally {
+    btnEnviarComprovante.disabled = false;
+    btnEnviarComprovante.textContent = textoOriginal;
+  }
+});
 
 btnCopiarPix.addEventListener("click", async () => {
   await navigator.clipboard.writeText(pixCopiaCola.value);
@@ -142,6 +677,23 @@ function atualizarMensalidadeBox() {
   }
 
   avisoMensalidade.style.display = mensalidadeEmDia ? "none" : "block";
+
+  // Atraso longo (>= lembreteDiasParaAlerta) e aviso visual ligado em config/geral:
+  // o mesmo box ganha destaque e o texto passa a dizer há quantos dias está pendente.
+  // Dentro do prazo, fica exatamente o texto que já existia.
+  const atrasoForte = !mensalidadeEmDia
+    && lembreteVisualAtivo
+    && mensalidadeDiasPendente !== null
+    && mensalidadeDiasPendente >= lembreteDiasParaAlerta;
+
+  mensalidadeBox.classList.toggle("status-box-alerta", atrasoForte);
+  avisoMensalidade.classList.toggle("aviso-pendente-forte", atrasoForte);
+  avisoMensalidade.textContent = atrasoForte
+    ? "Sua mensalidade está pendente há " + mensalidadeDiasPendente
+      + (mensalidadeDiasPendente === 1 ? " dia" : " dias")
+      + " — regularize o quanto antes para liberar o check-in."
+    : AVISO_MENSALIDADE_PADRAO;
+
   atualizarBotaoCheckin();
 }
 
@@ -238,7 +790,14 @@ btnCheckin.addEventListener("click", () => {
       const user = auth.currentUser;
       // ID determinístico por janela de tempo: uma segunda tentativa na mesma janela
       // vira "update" de um doc que já existe, e a rule já bloqueia update em checkins.
-      const janela = Math.floor(Date.now() / (CHECKIN_INTERVALO_MINUTOS * 60 * 1000));
+      //
+      // O cooldown agora também é validado no servidor: a função checkinIdValido em
+      // firestore.rules recalcula esta mesma janela a partir de request.time e rejeita
+      // qualquer ID diferente. O divisor (CHECKIN_JANELA_MS = 5400000) TEM que ser o
+      // mesmo dos dois lados. Se o relógio do celular estiver muito adiantado/atrasado
+      // em relação ao servidor, o check-in é recusado — isso é esperado, e não tem
+      // retry automático de propósito (retry mascararia o cooldown).
+      const janela = Math.floor(Date.now() / CHECKIN_JANELA_MS);
       const checkinId = user.uid + "_" + janela;
 
       await db.collection("checkins").doc(checkinId).set({
