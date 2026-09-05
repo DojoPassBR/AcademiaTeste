@@ -40,6 +40,120 @@
         </table>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Eventos e campeonatos</h2>
+      <p>Cadastre aqui os eventos da escola. Todos os alunos veem os próximos eventos na área de check-in.</p>
+
+      <div class="evento-form-row">
+        <div>
+          <label for="evento-nome">Nome do evento</label>
+          <input type="text" id="evento-nome" maxlength="120" required placeholder="Ex.: Campeonato Paulista">
+        </div>
+        <div>
+          <label for="evento-data">Data</label>
+          <input type="date" id="evento-data" required>
+        </div>
+        <div>
+          <label for="evento-local">Local</label>
+          <input type="text" id="evento-local" maxlength="160" required placeholder="Ex.: Ginásio Municipal - Itapetininga/SP">
+        </div>
+        <div>
+          <label for="evento-link">Link (opcional)</label>
+          <input type="url" id="evento-link" maxlength="500" placeholder="https://... (opcional)">
+        </div>
+      </div>
+
+      <button type="button" class="btn" id="evento-salvar">Cadastrar evento</button>
+      <button type="button" class="btn-secundario" id="evento-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+      <div class="msg" id="evento-msg" role="status" aria-live="polite"></div>
+
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table" id="tabela-eventos">
+          <thead>
+            <tr><th>Nome</th><th>Data</th><th>Local</th><th>Link</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Configurações</h2>
+      <p>Ajustes gerais da academia: como a mensalidade é cobrada e como os alunos são lembrados do vencimento.</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="config-modo">Modo de mensalidade</label>
+          <select id="config-modo">
+            <option value="manual">Manual (professor marca pago/pendente)</option>
+            <option value="pix">Pix automático (Asaas)</option>
+            <option value="pixManual">Pix manual (professor lança a cobrança)</option>
+          </select>
+        </div>
+        <div>
+          <label for="config-valor">Valor padrão da mensalidade (R$)</label>
+          <input type="number" id="config-valor" min="0" max="5000" step="0.01" placeholder="Ex.: 150">
+        </div>
+        <div>
+          <label for="config-academia">Nome da academia</label>
+          <input type="text" id="config-academia" maxlength="80" placeholder="Ex.: Academia Exemplo">
+        </div>
+        <div>
+          <label for="config-pix">Chave Pix da academia</label>
+          <input type="text" id="config-pix" maxlength="200" placeholder="Chave Pix ou código copia e cola">
+        </div>
+        <div>
+          <label for="config-dias">Avisar quantos dias antes do vencimento</label>
+          <input type="number" id="config-dias" min="1" max="60" step="1" placeholder="Ex.: 5">
+        </div>
+      </div>
+
+      <fieldset class="config-toggles">
+        <legend>Lembretes de mensalidade</legend>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-whatsapp"> Lembrete por WhatsApp</label>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-email"> Lembrete por e-mail</label>
+        <label class="config-check"><input type="checkbox" id="config-lembrete-visual"> Aviso visual no app do aluno</label>
+      </fieldset>
+
+      <label for="config-template">Texto do lembrete</label>
+      <textarea id="config-template" class="config-textarea" maxlength="500" rows="4"
+        placeholder="Ex.: Olá {nome}, a mensalidade de {mes} da {academia} (R$ {valor}) está próxima do vencimento. Pix: {pix}"></textarea>
+      <p class="config-dica">Placeholders disponíveis: {nome}, {mes}, {valor}, {academia}, {pix}.</p>
+
+      <button type="button" class="btn" id="config-salvar">Salvar configurações</button>
+      <div class="msg" id="config-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="card">
+      <h2>Integração de pagamento</h2>
+      <p>Chave de API da sua conta no Asaas, usada para gerar as cobranças Pix automáticas.
+        Ela é guardada criptografada e nunca é exibida de volta aqui — se você perder a chave,
+        gere outra no painel do Asaas e cadastre novamente.</p>
+
+      <p class="config-dica" id="credencial-status" role="status" aria-live="polite">Carregando...</p>
+
+      <div class="config-form-row">
+        <div>
+          <label for="credencial-chave">Chave de API do Asaas</label>
+          <input type="password" id="credencial-chave" autocomplete="off" spellcheck="false"
+            maxlength="200" placeholder="Cole a chave aqui (ela não volta a aparecer)">
+        </div>
+        <div>
+          <label for="credencial-ambiente">Ambiente</label>
+          <select id="credencial-ambiente">
+            <option value="sandbox">Sandbox (testes)</option>
+            <option value="producao">Produção (cobranças reais)</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="btn" id="credencial-salvar">Salvar credencial</button>
+      <button type="button" class="btn-secundario" id="credencial-remover" style="margin-top:12px;">Remover credencial</button>
+      <div class="msg" id="credencial-msg" role="status" aria-live="polite"></div>
+    </div>
   </div>
 </main>
 
@@ -57,8 +171,31 @@
     <h2 id="cobranca-titulo">Gerar cobrança Pix</h2>
     <label for="cobranca-valor">Valor (R$)</label>
     <input type="number" id="cobranca-valor" min="0" step="0.01" value="150">
+    <!-- Só aparece quando o Worker responde 422 precisaCpf: o Asaas exige CPF pra criar o
+         pagador na PRIMEIRA cobrança de cada aluno. O valor é usado só nessa chamada e não
+         é salvo em lugar nenhum (nem no Firestore, nem aqui depois que o modal fecha). -->
+    <div id="cobranca-cpf-bloco" style="display:none;">
+      <label for="cobranca-cpf">CPF do aluno</label>
+      <input type="text" id="cobranca-cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+    </div>
     <button type="button" class="btn" id="cobranca-confirmar">Gerar cobrança</button>
     <div class="msg" id="cobranca-msg"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="manual-backdrop">
+  <div class="modal">
+    <span class="close" id="manual-close">&times;</span>
+    <h2 id="manual-titulo">Lançar cobrança Pix manual</h2>
+    <p class="config-dica">A cobrança é gravada direto no DojoPass (sem Asaas). O aluno vê o código Pix na área dele.</p>
+    <label for="manual-mes">Mês de referência</label>
+    <input type="month" id="manual-mes">
+    <label for="manual-valor">Valor (R$)</label>
+    <input type="number" id="manual-valor" min="0" max="5000" step="0.01">
+    <label for="manual-pix">Código Pix copia e cola (opcional)</label>
+    <textarea id="manual-pix" class="config-textarea" maxlength="500" rows="3"></textarea>
+    <button type="button" class="btn" id="manual-confirmar">Lançar cobrança</button>
+    <div class="msg" id="manual-msg" role="status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -85,10 +222,50 @@ const cobrancaTitulo = document.getElementById("cobranca-titulo");
 const cobrancaValor = document.getElementById("cobranca-valor");
 const cobrancaConfirmar = document.getElementById("cobranca-confirmar");
 const cobrancaMsg = document.getElementById("cobranca-msg");
+const cobrancaCpfBloco = document.getElementById("cobranca-cpf-bloco");
+const cobrancaCpf = document.getElementById("cobranca-cpf");
+const tabelaEventos = document.querySelector("#tabela-eventos tbody");
+const eventoNome = document.getElementById("evento-nome");
+const eventoData = document.getElementById("evento-data");
+const eventoLocal = document.getElementById("evento-local");
+const eventoLink = document.getElementById("evento-link");
+const eventoSalvar = document.getElementById("evento-salvar");
+const eventoCancelar = document.getElementById("evento-cancelar");
+const eventoMsg = document.getElementById("evento-msg");
+const configModo = document.getElementById("config-modo");
+const configValor = document.getElementById("config-valor");
+const configAcademia = document.getElementById("config-academia");
+const configPix = document.getElementById("config-pix");
+const configDias = document.getElementById("config-dias");
+const configLembreteWhatsapp = document.getElementById("config-lembrete-whatsapp");
+const configLembreteEmail = document.getElementById("config-lembrete-email");
+const configLembreteVisual = document.getElementById("config-lembrete-visual");
+const configTemplate = document.getElementById("config-template");
+const configSalvar = document.getElementById("config-salvar");
+const configMsg = document.getElementById("config-msg");
+const credencialStatus = document.getElementById("credencial-status");
+const credencialChave = document.getElementById("credencial-chave");
+const credencialAmbiente = document.getElementById("credencial-ambiente");
+const credencialSalvar = document.getElementById("credencial-salvar");
+const credencialRemover = document.getElementById("credencial-remover");
+const credencialMsg = document.getElementById("credencial-msg");
+const manualBackdrop = document.getElementById("manual-backdrop");
+const manualClose = document.getElementById("manual-close");
+const manualTitulo = document.getElementById("manual-titulo");
+const manualMes = document.getElementById("manual-mes");
+const manualValor = document.getElementById("manual-valor");
+const manualPix = document.getElementById("manual-pix");
+const manualConfirmar = document.getElementById("manual-confirmar");
+const manualMsg = document.getElementById("manual-msg");
 
 let cobrancaAlunoAtual = null;
-// "manual" (padrão) ou "pix" — lido de config/geral. Ver CONTEXT.md.
+let manualAlunoAtual = null;
+// null = modo criação; string = id do evento sendo editado.
+let eventoEditandoId = null;
+// "manual" (padrão), "pix" (Asaas) ou "pixManual" — lido de config/geral. Ver CONTEXT.md.
 let mensalidadeModo = "manual";
+// Cópia do documento config/geral já normalizada (com os defaults do cliente aplicados).
+let configGeral = configPadrao();
 
 const BELT_COLORS = {
   "Branca": "#999999", "Cinza": "#888888", "Amarela": "#e0b400", "Laranja": "#e07a00",
@@ -98,8 +275,15 @@ const BELT_COLORS = {
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
 btnRelatorio.addEventListener("click", gerarRelatorio);
-cobrancaClose.addEventListener("click", () => cobrancaBackdrop.classList.remove("show"));
+cobrancaClose.addEventListener("click", fecharModalCobranca);
 cobrancaConfirmar.addEventListener("click", confirmarGeracaoCobranca);
+eventoSalvar.addEventListener("click", salvarEvento);
+eventoCancelar.addEventListener("click", limparFormularioEvento);
+configSalvar.addEventListener("click", salvarConfiguracoes);
+credencialSalvar.addEventListener("click", salvarCredencialAsaas);
+credencialRemover.addEventListener("click", removerCredencialAsaas);
+manualClose.addEventListener("click", fecharModalManual);
+manualConfirmar.addEventListener("click", confirmarCobrancaManual);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -114,10 +298,14 @@ auth.onAuthStateChanged(async (user) => {
   }
 
   const configDoc = await db.collection("config").doc("geral").get();
-  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
+  configGeral = normalizarConfig(configDoc.exists ? configDoc.data() : {});
+  mensalidadeModo = configGeral.mensalidadeModo;
+  preencherFormularioConfig();
 
   conteudo.style.display = "block";
   carregarAlunos();
+  carregarEventos();
+  carregarCredencialAsaas();
 });
 
 async function carregarAlunos() {
@@ -130,9 +318,24 @@ async function carregarAlunos() {
 
   tabelaAlunos.innerHTML = "";
 
-  for (const doc of snap.docs) {
+  // Contagem de presenças por agregação (.count()) em vez de baixar todos os documentos
+  // de check-in de cada aluno — antes o painel lia N x (todos os check-ins do aluno) só
+  // pra mostrar um número. O histórico completo só é carregado quando a linha é clicada.
+  const contagens = await Promise.all(
+    snap.docs.map((doc) =>
+      db.collection("checkins").where("alunoId", "==", doc.id).count().get()
+        .then((agg) => agg.data().count)
+        .catch(() => null)
+    )
+  );
+
+  // Cobranças com comprovante anexado esperando o "ok" do professor. Uma única consulta
+  // pra tabela inteira (índice de campo único em status), em vez de uma por aluno.
+  const aguardandoPorAluno = await carregarComprovantesPendentes();
+
+  snap.docs.forEach((doc, indice) => {
     const aluno = doc.data();
-    const checkinsSnap = await db.collection("checkins").where("alunoId", "==", doc.id).get();
+    const totalCheckins = contagens[indice];
 
     const tr = document.createElement("tr");
     const cor = BELT_COLORS[aluno.faixa] || "#666";
@@ -159,13 +362,42 @@ async function carregarAlunos() {
       : "-";
 
     const tdPresencas = document.createElement("td");
-    tdPresencas.textContent = checkinsSnap.size;
+    tdPresencas.textContent = totalCheckins === null ? "-" : totalCheckins;
 
     const tdMensalidade = document.createElement("td");
+    // Dias de atraso: contados desde a última vez que o status foi mexido. Aluno que
+    // nunca foi marcado não tem mensalidadeAtualizadoEm — aí o badge fica sem contagem
+    // em vez de inventar um número. O badge SEMPRE tem texto (nunca informa só por cor).
+    const diasPendente = emDia ? null : diasDesde(aluno.mensalidadeAtualizadoEm);
+    const diasParaAlerta = configGeral.lembreteDiasParaAlerta === null
+      ? LEMBRETE_DIAS_PADRAO
+      : configGeral.lembreteDiasParaAlerta;
+    const atrasoForte = diasPendente !== null && diasPendente >= diasParaAlerta;
+
     const mensalidadeTag = document.createElement("span");
-    mensalidadeTag.className = "mensalidade-tag " + (emDia ? "pago" : "pendente");
-    mensalidadeTag.textContent = emDia ? "Pago" : "Pendente";
+    let classesTag = "mensalidade-tag " + (emDia ? "pago" : "pendente");
+    if (atrasoForte) classesTag += " mensalidade-tag-alerta";
+    mensalidadeTag.className = classesTag;
+    mensalidadeTag.textContent = emDia ? "Em dia" : textoPendencia(diasPendente);
     tdMensalidade.appendChild(mensalidadeTag);
+
+    if (!emDia && configGeral.lembreteWhatsappAtivo) {
+      tdMensalidade.appendChild(criarBotaoWhatsapp(aluno));
+    }
+
+    // E-mail é opt-in explícito (default false): diferente do WhatsApp, aqui o clique
+    // dispara um envio de verdade, com custo e reputação de remetente em jogo.
+    if (!emDia && configGeral.lembreteEmailAtivo) {
+      tdMensalidade.append(" ", criarBotaoEmail(doc.id, aluno));
+    }
+
+    // Comprovante enviado pelo aluno (modo Pix manual): o professor vê o arquivo e
+    // confirma. Aparece independente do modo configurado — uma cobrança manual antiga
+    // continua precisando de confirmação mesmo se a academia trocar de modo depois.
+    const cobrancaAguardando = aguardandoPorAluno[doc.id];
+    if (!emDia && cobrancaAguardando) {
+      tdMensalidade.appendChild(criarBlocoComprovante(cobrancaAguardando, doc.id));
+    }
 
     if (emDia) {
       // Correção manual sempre disponível, nos dois modos (o professor pode reverter
@@ -189,6 +421,28 @@ async function carregarAlunos() {
         abrirModalCobranca(doc.id, aluno.nome);
       });
       tdMensalidade.appendChild(btnCobranca);
+    } else if (mensalidadeModo === "pixManual") {
+      // Pix manual: não passa pelo Worker/Asaas — o documento em cobrancas/ é gravado
+      // direto pelo painel, com origem 'manual' (ver firestore.rules).
+      const btnManual = document.createElement("button");
+      btnManual.type = "button";
+      btnManual.className = "mensalidade-btn";
+      btnManual.textContent = "Lançar cobrança Pix manual";
+      btnManual.addEventListener("click", (e) => {
+        e.stopPropagation();
+        abrirModalManual(doc.id, aluno.nome);
+      });
+      tdMensalidade.appendChild(btnManual);
+
+      const btnPago = document.createElement("button");
+      btnPago.type = "button";
+      btnPago.className = "mensalidade-btn";
+      btnPago.textContent = "Marcar pago";
+      btnPago.addEventListener("click", (e) => {
+        e.stopPropagation();
+        alterarMensalidade(doc.id, "pago");
+      });
+      tdMensalidade.append(" ", btnPago);
     } else {
       const btnMensalidade = document.createElement("button");
       btnMensalidade.type = "button";
@@ -202,9 +456,497 @@ async function carregarAlunos() {
     }
 
     tr.append(tdNome, tdTelefone, tdFaixa, tdNascimento, tdPresencas, tdMensalidade);
-    tr.addEventListener("click", () => abrirHistorico(aluno.nome, checkinsSnap));
+    tr.addEventListener("click", () => abrirHistorico(aluno.nome, doc.id));
 
     tabelaAlunos.appendChild(tr);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Comprovantes de pagamento (modo Pix manual — Fase 3).
+//
+// O arquivo em si mora num bucket R2 da Cloudflare (o Firebase Storage exigiria o plano
+// Blaze) e é servido pelo Worker em GET /comprovante/<cobrancaId>, que só responde pra
+// quem é admin. Como abrir uma aba nova não permite mandar header Authorization, o token
+// vai na query string — ver a nota em worker/src/comprovante.js.
+// ---------------------------------------------------------------------------
+
+// { alunoId: cobrancaId } das cobranças com comprovante aguardando confirmação.
+// Se a consulta falhar, devolve {} — a tabela de alunos continua funcionando.
+async function carregarComprovantesPendentes() {
+  const mapa = {};
+  let snap;
+  try {
+    snap = await db.collection("cobrancas")
+      .where("status", "==", "aguardando_confirmacao")
+      .get();
+  } catch (err) {
+    return mapa;
+  }
+  snap.forEach((docCobranca) => {
+    const dados = docCobranca.data();
+    if (typeof dados.alunoId === "string") mapa[dados.alunoId] = docCobranca.id;
+  });
+  return mapa;
+}
+
+function criarBlocoComprovante(cobrancaId, alunoId) {
+  const bloco = document.createElement("span");
+  bloco.className = "comprovante-acoes";
+
+  const tag = document.createElement("span");
+  tag.className = "comprovante-tag";
+  tag.textContent = "Comprovante enviado";
+  bloco.appendChild(tag);
+
+  const btnVer = document.createElement("button");
+  btnVer.type = "button";
+  btnVer.className = "mensalidade-btn";
+  btnVer.textContent = "Ver comprovante";
+  btnVer.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    await abrirComprovante(cobrancaId, btnVer);
+  });
+  bloco.append(" ", btnVer);
+
+  const btnConfirmar = document.createElement("button");
+  btnConfirmar.type = "button";
+  btnConfirmar.className = "mensalidade-btn comprovante-btn-confirmar";
+  btnConfirmar.textContent = "Confirmar pagamento";
+  btnConfirmar.addEventListener("click", (e) => {
+    e.stopPropagation();
+    confirmarPagamentoComprovante(cobrancaId, alunoId, btnConfirmar);
+  });
+  bloco.append(" ", btnConfirmar);
+
+  return bloco;
+}
+
+// O ID token é curto (≈1h) e viaja na query string por falta de alternativa simples numa
+// navegação de aba. Ele é buscado na hora do clique pra nunca abrir uma aba com token
+// vencido, e a aba vai com noopener.
+async function abrirComprovante(cobrancaId, botao) {
+  if (!WORKER_URL) {
+    alert("O serviço de comprovantes ainda não foi configurado nesta academia.");
+    return;
+  }
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Abrindo...";
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const url = WORKER_URL + "/comprovante/" + encodeURIComponent(cobrancaId)
+      + "?token=" + encodeURIComponent(token);
+    window.open(url, "_blank", "noopener");
+  } catch (err) {
+    alert("Não foi possível abrir o comprovante. Tente novamente.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
+  }
+}
+
+// Duas escritas em coleções diferentes (cobrancas e alunos), na ordem em que importam:
+// primeiro a cobrança (é ela que carrega o rastro de quem confirmou), depois o aluno
+// (que é o que libera o check-in). Se a segunda falhar, a mensagem diz exatamente isso —
+// nada de "sucesso" com a mensalidade ainda pendente.
+async function confirmarPagamentoComprovante(cobrancaId, alunoId, botao) {
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Confirmando...";
+
+  try {
+    await db.collection("cobrancas").doc(cobrancaId).update({
+      status: "pago",
+      confirmadoPorUid: auth.currentUser.uid,
+      confirmadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
+    alert(err && err.code === "permission-denied"
+      ? "Sua conta não tem permissão para confirmar esta cobrança."
+      : "Não foi possível confirmar a cobrança. Tente novamente.");
+    return;
+  }
+
+  try {
+    await db.collection("alunos").doc(alunoId).update({
+      mensalidadeStatus: "pago",
+      mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    alert("A cobrança foi confirmada, mas a mensalidade do aluno não pôde ser atualizada. Marque como paga manualmente.");
+  }
+
+  carregarAlunos();
+}
+
+// ---------------------------------------------------------------------------
+// Lembrete de mensalidade (badge de atraso + botão de WhatsApp).
+// Nada é enviado automaticamente: o botão só abre o WhatsApp já com o texto pronto,
+// e quem aperta "enviar" é o professor, no próprio app do WhatsApp.
+// ---------------------------------------------------------------------------
+
+function textoPendencia(dias) {
+  if (dias === null) return "Pendente";
+  if (dias <= 0) return "Pendente desde hoje";
+  if (dias === 1) return "Pendente há 1 dia";
+  return "Pendente há " + dias + " dias";
+}
+
+function mesAtualPtBr() {
+  const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return mes.charAt(0).toUpperCase() + mes.slice(1);
+}
+
+function valorMensalidadeTexto() {
+  const valor = configGeral.valorMensalidadePadrao;
+  if (typeof valor !== "number" || !isFinite(valor) || valor <= 0) return "a combinar";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function montarTextoLembrete(aluno) {
+  const template = configGeral.lembreteTemplate || LEMBRETE_TEMPLATE_PADRAO;
+  return preencherTemplate(template, {
+    nome: aluno.nome || "",
+    mes: mesAtualPtBr(),
+    valor: valorMensalidadeTexto(),
+    academia: configGeral.academiaNome || "a academia",
+    pix: configGeral.pixChaveManual || ""
+  });
+}
+
+// O telefone vem do cadastro do aluno (conteúdo livre): montarLinkWhatsapp devolve null
+// quando não dá pra formar um número plausível, e aí o botão fica desabilitado com um
+// texto explicando o porquê — nunca abre um wa.me quebrado.
+function criarBotaoWhatsapp(aluno) {
+  const nome = aluno.nome || "aluno";
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "mensalidade-btn mensalidade-btn-whats";
+  const link = montarLinkWhatsapp(aluno.telefone, "");
+
+  if (!link) {
+    botao.textContent = "Sem telefone p/ WhatsApp";
+    botao.disabled = true;
+    botao.title = "Cadastre um telefone válido para " + nome + " para enviar o lembrete.";
+    botao.setAttribute("aria-label", "Lembrete por WhatsApp indisponível: " + nome + " não tem telefone válido cadastrado");
+    return botao;
+  }
+
+  botao.textContent = "Lembrar no WhatsApp";
+  botao.setAttribute("aria-label", "Lembrar " + nome + " no WhatsApp");
+  botao.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const url = montarLinkWhatsapp(aluno.telefone, montarTextoLembrete(aluno));
+    if (!url) return;
+    window.open(url, "_blank", "noopener");
+  });
+  return botao;
+}
+
+// Plausibilidade do e-mail cadastrado — mesma regra do firestore.rules e de
+// worker/src/validacao.js (emailValido). Só serve pra desabilitar o botão em vez de
+// disparar uma chamada que o Worker recusaria de qualquer jeito.
+function emailPlausivel(valor) {
+  return typeof valor === "string" && valor.length > 0 && valor.length < 100
+    && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(valor);
+}
+
+// Diferente do WhatsApp (que só abre um link), este botão manda o Worker enviar um
+// e-mail de verdade. Por isso só aparece com config/geral.lembreteEmailAtivo === true.
+// O texto é montado no servidor a partir do MESMO template de config/geral — o cliente
+// manda só o alunoId; o endereço de destino sai do documento do aluno no Firestore.
+function criarBotaoEmail(alunoId, aluno) {
+  const nome = aluno.nome || "aluno";
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "mensalidade-btn mensalidade-btn-email";
+
+  if (!emailPlausivel(aluno.email)) {
+    botao.textContent = "Sem e-mail cadastrado";
+    botao.disabled = true;
+    botao.title = "Cadastre um e-mail válido para " + nome + " para enviar o lembrete.";
+    botao.setAttribute("aria-label", "Lembrete por e-mail indisponível: " + nome + " não tem e-mail válido cadastrado");
+    return botao;
+  }
+
+  botao.textContent = "Enviar lembrete por e-mail";
+  botao.setAttribute("aria-label", "Enviar lembrete de mensalidade por e-mail para " + nome);
+  botao.addEventListener("click", (e) => {
+    e.stopPropagation();
+    enviarLembreteEmail(alunoId, botao);
+  });
+  return botao;
+}
+
+async function enviarLembreteEmail(alunoId, botao) {
+  if (!WORKER_URL) {
+    alert("O envio de lembretes por e-mail ainda não foi configurado nesta academia.");
+    return;
+  }
+
+  const textoOriginal = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Enviando...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/enviar-lembrete", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ alunoId: alunoId })
+    });
+
+    const dados = await resp.json().catch(() => null);
+
+    if (resp.ok && dados && dados.ok) {
+      botao.textContent = "Lembrete enviado";
+      // Fica desabilitado depois do sucesso: um segundo clique só mandaria o mesmo
+      // e-mail de novo. Volta ao normal na próxima recarga da lista.
+      return;
+    }
+
+    if (resp.status === 501) {
+      alert("O lembrete por e-mail ainda não foi configurado no servidor. Peça para configurar a chave do serviço de e-mail.");
+    } else if (resp.status === 429) {
+      alert("Limite diário de lembretes por e-mail atingido. Tente novamente amanhã.");
+    } else if (resp.status === 401 || resp.status === 403) {
+      alert("Sua conta não tem permissão para enviar lembretes por e-mail.");
+    } else {
+      alert((dados && dados.erro) || "Não foi possível enviar o lembrete. Tente novamente.");
+    }
+  } catch (err) {
+    alert("Não foi possível falar com o servidor de lembretes. Verifique a conexão e tente novamente.");
+  } finally {
+    if (botao.textContent === "Enviando...") {
+      botao.disabled = false;
+      botao.textContent = textoOriginal;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mural de eventos e campeonatos (cadastro manual do professor).
+// ---------------------------------------------------------------------------
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// O link vem do Firestore e, mesmo já validado pelas rules, é tratado como conteúdo
+// não confiável na hora de virar href: só https:// e só se o próprio parser de URL do
+// navegador aceitar. Qualquer outra coisa (javascript:, data:, lixo) devolve null e a
+// célula fica com travessão — nunca vira <a>.
+function linkHttpsValido(valor) {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  if (!limpo.startsWith("https://")) return null;
+  try {
+    const url = new URL(limpo);
+    return url.protocol === "https:" ? limpo : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function mostrarMsgEvento(texto, tipo) {
+  eventoMsg.textContent = texto;
+  eventoMsg.className = "msg show " + tipo;
+}
+
+function limparFormularioEvento() {
+  eventoEditandoId = null;
+  eventoNome.value = "";
+  eventoData.value = "";
+  eventoLocal.value = "";
+  eventoLink.value = "";
+  eventoSalvar.textContent = "Cadastrar evento";
+  eventoCancelar.style.display = "none";
+  eventoMsg.className = "msg";
+  eventoMsg.textContent = "";
+}
+
+async function carregarEventos() {
+  let snap;
+  try {
+    snap = await db.collection("eventos").orderBy("data", "desc").get();
+  } catch (err) {
+    tabelaEventos.innerHTML = "<tr><td colspan='5'>Não foi possível carregar os eventos.</td></tr>";
+    return;
+  }
+
+  if (snap.empty) {
+    tabelaEventos.innerHTML = "<tr><td colspan='5'>Nenhum evento cadastrado.</td></tr>";
+    return;
+  }
+
+  tabelaEventos.innerHTML = "";
+  const hoje = hojeISO();
+
+  snap.docs.forEach((docEvento) => {
+    const evento = docEvento.data();
+    const encerrado = typeof evento.data === "string" && evento.data < hoje;
+
+    const tr = document.createElement("tr");
+    if (encerrado) tr.classList.add("evento-encerrado");
+
+    // Nome e local são texto livre digitado pelo professor — sempre textContent.
+    const tdNome = document.createElement("td");
+    tdNome.textContent = evento.nome || "-";
+    if (encerrado) {
+      const tag = document.createElement("span");
+      tag.className = "evento-tag-encerrado";
+      tag.textContent = "Encerrado";
+      tdNome.append(" ", tag);
+    }
+
+    const tdData = document.createElement("td");
+    tdData.textContent = typeof evento.data === "string"
+      ? new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR")
+      : "-";
+
+    const tdLocal = document.createElement("td");
+    tdLocal.textContent = evento.local || "-";
+
+    const tdLink = document.createElement("td");
+    const href = linkHttpsValido(evento.link);
+    if (href) {
+      const a = document.createElement("a");
+      a.className = "evento-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "Abrir";
+      tdLink.appendChild(a);
+    } else {
+      tdLink.textContent = "-";
+    }
+
+    const tdAcoes = document.createElement("td");
+    const nomeEvento = evento.nome || "sem nome";
+
+    const btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.className = "mensalidade-btn";
+    btnEditar.textContent = "Editar";
+    btnEditar.setAttribute("aria-label", "Editar o evento " + nomeEvento);
+    btnEditar.addEventListener("click", () => editarEvento(docEvento.id, evento));
+
+    const btnApagar = document.createElement("button");
+    btnApagar.type = "button";
+    btnApagar.className = "mensalidade-btn";
+    btnApagar.textContent = "Apagar";
+    btnApagar.setAttribute("aria-label", "Apagar o evento " + nomeEvento);
+    btnApagar.addEventListener("click", () => apagarEvento(docEvento.id, nomeEvento));
+
+    tdAcoes.append(btnEditar, " ", btnApagar);
+
+    tr.append(tdNome, tdData, tdLocal, tdLink, tdAcoes);
+    tabelaEventos.appendChild(tr);
+  });
+}
+
+function editarEvento(id, evento) {
+  eventoEditandoId = id;
+  eventoNome.value = evento.nome || "";
+  eventoData.value = typeof evento.data === "string" ? evento.data : "";
+  eventoLocal.value = evento.local || "";
+  eventoLink.value = typeof evento.link === "string" ? evento.link : "";
+  eventoSalvar.textContent = "Salvar alterações";
+  eventoCancelar.style.display = "inline-block";
+  eventoMsg.className = "msg";
+  eventoMsg.textContent = "";
+  eventoNome.focus();
+}
+
+// Valida no cliente ANTES de gravar — as mesmas checagens vivem em firestore.rules
+// (que é quem realmente manda); aqui é só pra dar mensagem de erro decente em vez de
+// um permission-denied seco.
+async function salvarEvento() {
+  const nome = eventoNome.value.trim();
+  const data = eventoData.value.trim();
+  const local = eventoLocal.value.trim();
+  const link = eventoLink.value.trim();
+
+  if (!nome || nome.length > 120) {
+    mostrarMsgEvento("Informe o nome do evento (até 120 caracteres).", "error");
+    return;
+  }
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(data)) {
+    mostrarMsgEvento("Informe a data do evento.", "error");
+    return;
+  }
+  if (!local || local.length > 160) {
+    mostrarMsgEvento("Informe o local do evento (até 160 caracteres).", "error");
+    return;
+  }
+  if (link && (link.length > 500 || !linkHttpsValido(link))) {
+    mostrarMsgEvento("O link precisa começar com https:// e ser um endereço válido.", "error");
+    return;
+  }
+
+  eventoSalvar.disabled = true;
+  const textoOriginal = eventoSalvar.textContent;
+  eventoSalvar.textContent = "Salvando...";
+
+  try {
+    if (eventoEditandoId) {
+      await db.collection("eventos").doc(eventoEditandoId).update({
+        nome,
+        data,
+        local,
+        // Campo vazio some do documento em vez de virar string "" (a rule aceita link
+        // ausente, mas não uma string que não casa com o regex de https).
+        link: link ? link : firebase.firestore.FieldValue.delete(),
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      limparFormularioEvento();
+      mostrarMsgEvento("Evento atualizado.", "success");
+    } else {
+      const payload = {
+        nome,
+        data,
+        local,
+        criadoPor: auth.currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (link) payload.link = link;
+
+      await db.collection("eventos").add(payload);
+      limparFormularioEvento();
+      mostrarMsgEvento("Evento cadastrado.", "success");
+    }
+    carregarEventos();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgEvento(
+      semPermissao
+        ? "Sua conta não tem permissão para cadastrar eventos."
+        : "Não foi possível salvar o evento. Tente novamente.",
+      "error"
+    );
+  } finally {
+    eventoSalvar.disabled = false;
+    if (eventoSalvar.textContent === "Salvando...") eventoSalvar.textContent = textoOriginal;
+  }
+}
+
+async function apagarEvento(id, nome) {
+  if (!confirm('Apagar o evento "' + nome + '"?')) return;
+
+  try {
+    await db.collection("eventos").doc(id).delete();
+    if (eventoEditandoId === id) limparFormularioEvento();
+    mostrarMsgEvento("Evento apagado.", "success");
+    carregarEventos();
+  } catch (err) {
+    mostrarMsgEvento("Não foi possível apagar o evento.", "error");
   }
 }
 
@@ -270,9 +1012,23 @@ async function alterarMensalidade(alunoId, novoStatus) {
 function abrirModalCobranca(alunoId, alunoNome) {
   cobrancaAlunoAtual = { id: alunoId, nome: alunoNome };
   cobrancaTitulo.textContent = "Gerar cobrança Pix - " + alunoNome;
-  cobrancaValor.value = "150";
+  cobrancaValor.value = configGeral.valorMensalidadePadrao === null
+    ? "150"
+    : String(configGeral.valorMensalidadePadrao);
   cobrancaMsg.className = "msg";
+  esconderCampoCpf();
   cobrancaBackdrop.classList.add("show");
+}
+
+// O CPF nunca fica guardado: some do input assim que o modal fecha ou a cobrança sai.
+function esconderCampoCpf() {
+  cobrancaCpf.value = "";
+  cobrancaCpfBloco.style.display = "none";
+}
+
+function fecharModalCobranca() {
+  cobrancaBackdrop.classList.remove("show");
+  esconderCampoCpf();
 }
 
 async function confirmarGeracaoCobranca() {
@@ -293,20 +1049,80 @@ async function confirmarGeracaoCobranca() {
   cobrancaConfirmar.textContent = "Gerando...";
 
   try {
+    // O Worker exige um ID token do Firebase e confere se o UID está na coleção admins —
+    // sem esse header a chamada volta 401.
+    const idToken = await auth.currentUser.getIdToken();
+
+    const corpo = {
+      alunoId: cobrancaAlunoAtual.id,
+      alunoNome: cobrancaAlunoAtual.nome,
+      valor,
+      mesReferencia: new Date().toISOString().slice(0, 7)
+    };
+
+    // Só vai junto quando o Worker pediu (422 precisaCpf) e o professor digitou.
+    const cpfDigitado = cobrancaCpf.value.trim();
+    if (cpfDigitado) corpo.cpfCnpj = cpfDigitado;
+
     const resp = await fetch(WORKER_URL + "/criar-cobranca", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        alunoId: cobrancaAlunoAtual.id,
-        alunoNome: cobrancaAlunoAtual.nome,
-        valor,
-        mesReferencia: new Date().toISOString().slice(0, 7)
-      })
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken
+      },
+      body: JSON.stringify(corpo)
     });
+
+    if (resp.status === 401) {
+      cobrancaMsg.textContent = "Sua sessão expirou. Saia e entre de novo para gerar a cobrança.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    if (resp.status === 403) {
+      cobrancaMsg.textContent = "Sua conta não tem permissão de professor para gerar cobranças.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    // Primeira cobrança deste aluno: o Asaas precisa do CPF pra criar o pagador.
+    if (resp.status === 422) {
+      const dados = await resp.json().catch(() => ({}));
+      if (dados.precisaCpf) {
+        cobrancaCpfBloco.style.display = "block";
+        cobrancaCpf.focus();
+        cobrancaMsg.textContent =
+          "Para gerar a primeira cobrança Pix deste aluno, informe o CPF dele — usado só " +
+          "para emitir a cobrança no Asaas, não fica salvo no DojoPass.";
+        cobrancaMsg.className = "msg show error";
+        return;
+      }
+      throw new Error("Falha ao gerar cobrança");
+    }
+
+    if (resp.status === 400 && cpfDigitado) {
+      cobrancaMsg.textContent = "CPF inválido. Confira os números e tente de novo.";
+      cobrancaMsg.className = "msg show error";
+      return;
+    }
+
+    if (resp.status === 409) {
+      cobrancaMsg.textContent = "Este mês já está pago.";
+      cobrancaMsg.className = "msg show error";
+      esconderCampoCpf();
+      return;
+    }
 
     if (!resp.ok) throw new Error("Falha ao gerar cobrança");
 
-    cobrancaMsg.textContent = "Cobrança Pix gerada! O aluno já pode pagar pela área dele.";
+    const dados = await resp.json().catch(() => ({}));
+
+    // O CPF já cumpriu o papel dele nesta chamada — apaga antes de qualquer outra coisa.
+    esconderCampoCpf();
+
+    cobrancaMsg.textContent = dados.jaExistia
+      ? "Já havia uma cobrança pendente deste mês — o aluno continua com o mesmo código Pix."
+      : "Cobrança Pix gerada! O aluno já pode pagar pela área dele.";
     cobrancaMsg.className = "msg show success";
     carregarAlunos();
   } catch (err) {
@@ -318,27 +1134,490 @@ async function confirmarGeracaoCobranca() {
   }
 }
 
-function abrirHistorico(nome, checkinsSnap) {
-  modalTitulo.textContent = "Histórico - " + nome;
-  modalLista.innerHTML = "";
+// ---------------------------------------------------------------------------
+// Configurações da academia (documento config/geral).
+// Todos os campos novos são opcionais no Firestore — os defaults abaixo são do cliente,
+// pra tela nunca depender de um documento completo. Ver firestore.rules: só admin grava,
+// só no documento "geral", e cada campo tem tipo/tamanho conferido no servidor.
+// ---------------------------------------------------------------------------
 
-  const docs = checkinsSnap.docs.slice().sort((a, b) => {
-    const ta = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
-    const tb = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
-    return tb - ta;
-  });
+function configPadrao() {
+  return {
+    mensalidadeModo: "manual",
+    valorMensalidadePadrao: null,
+    academiaNome: "",
+    pixChaveManual: "",
+    // WhatsApp e aviso visual vêm LIGADOS por padrão: não custam nada, não disparam
+    // nada sozinhos (o professor é quem clica) e academia recém-configurada, sem o
+    // documento config/geral, já ganha o lembrete. Só desligam se o campo estiver
+    // gravado explicitamente como false. E-mail continua desligado por padrão porque
+    // depende de infra de envio que ainda não existe.
+    lembreteWhatsappAtivo: true,
+    lembreteEmailAtivo: false,
+    lembreteVisualAtivo: true,
+    lembreteDiasParaAlerta: null,
+    lembreteTemplate: ""
+  };
+}
 
-  if (docs.length === 0) {
-    modalLista.innerHTML = "<li>Nenhuma presença registrada.</li>";
-  } else {
-    docs.forEach((doc) => {
-      const li = document.createElement("li");
-      li.innerHTML = "<span>Treino</span><span>" + formatDateTime(doc.data().timestamp) + "</span>";
-      modalLista.appendChild(li);
-    });
+// Dias de atraso a partir dos quais o alerta vira "forte" quando config/geral não
+// define lembreteDiasParaAlerta. Usado no painel e espelhado em checkin.html.
+const LEMBRETE_DIAS_PADRAO = 7;
+
+// Texto usado quando o professor não escreveu nenhum template em config/geral.
+const LEMBRETE_TEMPLATE_PADRAO =
+  "Olá {nome}, tudo bem? Passando pra lembrar da mensalidade de {mes} da {academia}. " +
+  "Valor: {valor}. Pix: {pix}";
+
+const MODOS_MENSALIDADE = ["manual", "pix", "pixManual"];
+
+function normalizarConfig(dados) {
+  const base = configPadrao();
+  if (!dados || typeof dados !== "object") return base;
+
+  if (MODOS_MENSALIDADE.indexOf(dados.mensalidadeModo) !== -1) {
+    base.mensalidadeModo = dados.mensalidadeModo;
+  }
+  if (typeof dados.valorMensalidadePadrao === "number" && dados.valorMensalidadePadrao > 0) {
+    base.valorMensalidadePadrao = dados.valorMensalidadePadrao;
+  }
+  if (typeof dados.academiaNome === "string") base.academiaNome = dados.academiaNome;
+  if (typeof dados.pixChaveManual === "string") base.pixChaveManual = dados.pixChaveManual;
+  // !== false: campo ausente mantém o default (ligado); só um false gravado desliga.
+  base.lembreteWhatsappAtivo = dados.lembreteWhatsappAtivo !== false;
+  base.lembreteEmailAtivo = dados.lembreteEmailAtivo === true;
+  base.lembreteVisualAtivo = dados.lembreteVisualAtivo !== false;
+  if (typeof dados.lembreteDiasParaAlerta === "number") {
+    base.lembreteDiasParaAlerta = dados.lembreteDiasParaAlerta;
+  }
+  if (typeof dados.lembreteTemplate === "string") base.lembreteTemplate = dados.lembreteTemplate;
+  return base;
+}
+
+// value é sempre string aqui (é atributo de input) — nada de innerHTML em lugar nenhum.
+function preencherFormularioConfig() {
+  configModo.value = configGeral.mensalidadeModo;
+  configValor.value = configGeral.valorMensalidadePadrao === null
+    ? ""
+    : String(configGeral.valorMensalidadePadrao);
+  configAcademia.value = configGeral.academiaNome;
+  configPix.value = configGeral.pixChaveManual;
+  configDias.value = configGeral.lembreteDiasParaAlerta === null
+    ? ""
+    : String(configGeral.lembreteDiasParaAlerta);
+  configLembreteWhatsapp.checked = configGeral.lembreteWhatsappAtivo;
+  configLembreteEmail.checked = configGeral.lembreteEmailAtivo;
+  configLembreteVisual.checked = configGeral.lembreteVisualAtivo;
+  configTemplate.value = configGeral.lembreteTemplate;
+}
+
+function mostrarMsgConfig(texto, tipo) {
+  configMsg.textContent = texto;
+  configMsg.className = "msg show " + tipo;
+}
+
+// Mesma disciplina de salvarEvento: valida no cliente ANTES de gravar, com os mesmos
+// limites que firestore.rules aplica de verdade — aqui é só pra dar mensagem decente.
+async function salvarConfiguracoes() {
+  const modo = configModo.value;
+  if (MODOS_MENSALIDADE.indexOf(modo) === -1) {
+    mostrarMsgConfig("Selecione um modo de mensalidade válido.", "error");
+    return;
   }
 
+  const payload = { mensalidadeModo: modo };
+
+  const valorTexto = configValor.value.trim();
+  if (valorTexto) {
+    const valor = parseFloat(valorTexto);
+    if (!isFinite(valor) || valor <= 0 || valor > 5000) {
+      mostrarMsgConfig("O valor padrão da mensalidade deve ficar entre R$ 0,01 e R$ 5.000.", "error");
+      return;
+    }
+    payload.valorMensalidadePadrao = valor;
+  }
+
+  const academiaNome = configAcademia.value.trim();
+  if (academiaNome.length > 80) {
+    mostrarMsgConfig("O nome da academia deve ter até 80 caracteres.", "error");
+    return;
+  }
+  if (academiaNome) payload.academiaNome = academiaNome;
+
+  const pixChave = configPix.value.trim();
+  if (pixChave.length > 200) {
+    mostrarMsgConfig("A chave Pix deve ter até 200 caracteres.", "error");
+    return;
+  }
+  if (pixChave) payload.pixChaveManual = pixChave;
+
+  const diasTexto = configDias.value.trim();
+  if (diasTexto) {
+    const dias = parseInt(diasTexto, 10);
+    if (!isFinite(dias) || String(dias) !== diasTexto || dias < 1 || dias > 60) {
+      mostrarMsgConfig("Os dias para alerta devem ser um número inteiro de 1 a 60.", "error");
+      return;
+    }
+    payload.lembreteDiasParaAlerta = dias;
+  }
+
+  const template = configTemplate.value.trim();
+  if (template.length > 500) {
+    mostrarMsgConfig("O texto do lembrete deve ter até 500 caracteres.", "error");
+    return;
+  }
+  if (template) payload.lembreteTemplate = template;
+
+  payload.lembreteWhatsappAtivo = configLembreteWhatsapp.checked;
+  payload.lembreteEmailAtivo = configLembreteEmail.checked;
+  payload.lembreteVisualAtivo = configLembreteVisual.checked;
+
+  configSalvar.disabled = true;
+  const textoOriginal = configSalvar.textContent;
+  configSalvar.textContent = "Salvando...";
+
+  try {
+    // set() sem merge: campos apagados no formulário somem do documento em vez de virar
+    // string vazia — o hasOnly das rules aceita ausência, e a tela já trata ausência
+    // como default.
+    await db.collection("config").doc("geral").set(payload);
+    configGeral = normalizarConfig(payload);
+    mensalidadeModo = configGeral.mensalidadeModo;
+    preencherFormularioConfig();
+    mostrarMsgConfig("Configurações salvas.", "success");
+    carregarAlunos();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgConfig(
+      semPermissao
+        ? "Sua conta não tem permissão para alterar as configurações."
+        : "Não foi possível salvar as configurações. Tente novamente.",
+      "error"
+    );
+  } finally {
+    configSalvar.disabled = false;
+    configSalvar.textContent = textoOriginal;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Integração de pagamento: chave de API do Asaas da própria academia.
+//
+// A chave NUNCA passa pelo Firestore direto nem fica no cliente: vai por HTTPS pro
+// Worker (POST /config/credencial-asaas), que valida contra a API do Asaas e guarda
+// CIFRADA em config/credenciais — documento que as Firestore Rules negam pro cliente,
+// inclusive pro admin. O GET só devolve METADADOS (últimos 4 dígitos, ambiente, data);
+// por isso o campo de senha nunca é repreenchido, e é limpo assim que o salvamento dá
+// certo, pra chave não ficar parada no DOM.
+// ---------------------------------------------------------------------------
+
+const AMBIENTES_CREDENCIAL = { sandbox: "sandbox", producao: "produção" };
+
+function mostrarMsgCredencial(texto, tipo) {
+  credencialMsg.textContent = texto;
+  credencialMsg.className = "msg show " + tipo;
+}
+
+// "2026-09-04T12:00:00Z" -> "04/09". Qualquer coisa inesperada vira string vazia.
+function dataCurtaPtBr(iso) {
+  if (typeof iso !== "string") return "";
+  const data = new Date(iso);
+  if (isNaN(data.getTime())) return "";
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  return dia + "/" + mes;
+}
+
+function mostrarStatusCredencial(metadados) {
+  if (!metadados || !metadados.configurada) {
+    credencialStatus.textContent = "Nenhuma chave configurada.";
+    return;
+  }
+
+  const ambiente = AMBIENTES_CREDENCIAL[metadados.ambiente] || metadados.ambiente || "ambiente desconhecido";
+  const ultimos4 = typeof metadados.ultimos4 === "string" ? metadados.ultimos4 : "????";
+  const quando = dataCurtaPtBr(metadados.atualizadoEm);
+
+  credencialStatus.textContent =
+    "Configurada (" + ambiente + ", terminando em ****" + ultimos4 + ")" +
+    (quando ? ", atualizada em " + quando + "." : ".");
+
+  if (metadados.ambiente && AMBIENTES_CREDENCIAL[metadados.ambiente]) {
+    credencialAmbiente.value = metadados.ambiente;
+  }
+}
+
+async function carregarCredencialAsaas() {
+  if (!WORKER_URL) {
+    credencialStatus.textContent = "Integração de pagamento ainda não configurada neste app.";
+    return;
+  }
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!resp.ok) {
+      credencialStatus.textContent = "Não foi possível verificar o status da chave de API.";
+      return;
+    }
+
+    mostrarStatusCredencial(await resp.json());
+  } catch (err) {
+    credencialStatus.textContent = "Não foi possível verificar o status da chave de API.";
+  }
+}
+
+async function salvarCredencialAsaas() {
+  if (!WORKER_URL) {
+    mostrarMsgCredencial("Integração de pagamento ainda não configurada neste app.", "error");
+    return;
+  }
+
+  const chave = credencialChave.value.trim();
+  const ambiente = credencialAmbiente.value;
+
+  // Mesmos limites do Worker — aqui é só pra dar mensagem decente antes da viagem.
+  if (chave.length < 10 || chave.length > 200) {
+    mostrarMsgCredencial("Cole a chave de API do Asaas (entre 10 e 200 caracteres).", "error");
+    return;
+  }
+  if (!Object.prototype.hasOwnProperty.call(AMBIENTES_CREDENCIAL, ambiente)) {
+    mostrarMsgCredencial("Selecione um ambiente válido.", "error");
+    return;
+  }
+
+  credencialSalvar.disabled = true;
+  const textoOriginal = credencialSalvar.textContent;
+  credencialSalvar.textContent = "Validando...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify({ apiKey: chave, ambiente })
+    });
+
+    const dados = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      mostrarMsgCredencial(
+        typeof dados.erro === "string" && dados.erro
+          ? dados.erro
+          : "Não foi possível salvar a credencial. Tente novamente.",
+        "error"
+      );
+      return;
+    }
+
+    // Limpa a chave do campo IMEDIATAMENTE: ela já está guardada (cifrada) no servidor e
+    // não tem por que continuar no DOM.
+    credencialChave.value = "";
+    mostrarStatusCredencial({
+      configurada: true,
+      ultimos4: dados.ultimos4,
+      ambiente: dados.ambiente,
+      atualizadoEm: new Date().toISOString()
+    });
+    mostrarMsgCredencial("Credencial salva e validada no Asaas.", "success");
+  } catch (err) {
+    mostrarMsgCredencial("Não foi possível salvar a credencial. Tente novamente.", "error");
+  } finally {
+    credencialSalvar.disabled = false;
+    credencialSalvar.textContent = textoOriginal;
+  }
+}
+
+async function removerCredencialAsaas() {
+  if (!WORKER_URL) {
+    mostrarMsgCredencial("Integração de pagamento ainda não configurada neste app.", "error");
+    return;
+  }
+
+  const confirmado = confirm(
+    "Remover a chave de API do Asaas? As cobranças Pix automáticas param de funcionar até você cadastrar outra."
+  );
+  if (!confirmado) return;
+
+  credencialRemover.disabled = true;
+  const textoOriginal = credencialRemover.textContent;
+  credencialRemover.textContent = "Removendo...";
+
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!resp.ok) {
+      mostrarMsgCredencial("Não foi possível remover a credencial. Tente novamente.", "error");
+      return;
+    }
+
+    credencialChave.value = "";
+    mostrarStatusCredencial({ configurada: false });
+    mostrarMsgCredencial("Credencial removida.", "success");
+  } catch (err) {
+    mostrarMsgCredencial("Não foi possível remover a credencial. Tente novamente.", "error");
+  } finally {
+    credencialRemover.disabled = false;
+    credencialRemover.textContent = textoOriginal;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cobrança Pix manual (origem: 'manual') — gravada direto no Firestore pelo painel,
+// sem passar pelo Worker/Asaas. O ID é "<alunoId>_<mesReferencia>", igual ao do Asaas,
+// o que garante uma única cobrança por aluno/mês.
+// ---------------------------------------------------------------------------
+
+function mesAtualISO() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function mostrarMsgManual(texto, tipo) {
+  manualMsg.textContent = texto;
+  manualMsg.className = "msg show " + tipo;
+}
+
+function abrirModalManual(alunoId, alunoNome) {
+  manualAlunoAtual = { id: alunoId, nome: alunoNome };
+  manualTitulo.textContent = "Lançar cobrança Pix manual - " + alunoNome;
+  manualMes.value = mesAtualISO();
+  manualValor.value = configGeral.valorMensalidadePadrao === null
+    ? ""
+    : String(configGeral.valorMensalidadePadrao);
+  manualPix.value = configGeral.pixChaveManual;
+  manualPix.placeholder = configGeral.pixChaveManual
+    ? configGeral.pixChaveManual
+    : "Cole aqui o código Pix copia e cola";
+  manualMsg.className = "msg";
+  manualMsg.textContent = "";
+  manualBackdrop.classList.add("show");
+}
+
+function fecharModalManual() {
+  manualBackdrop.classList.remove("show");
+  manualAlunoAtual = null;
+}
+
+async function confirmarCobrancaManual() {
+  if (!manualAlunoAtual) return;
+
+  const mesReferencia = manualMes.value.trim();
+  if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(mesReferencia)) {
+    mostrarMsgManual("Informe o mês de referência no formato AAAA-MM.", "error");
+    return;
+  }
+
+  const valor = parseFloat(manualValor.value);
+  if (!isFinite(valor) || valor <= 0 || valor > 5000) {
+    mostrarMsgManual("Informe um valor entre R$ 0,01 e R$ 5.000.", "error");
+    return;
+  }
+
+  const pixCodigo = manualPix.value.trim();
+  if (pixCodigo.length > 500) {
+    mostrarMsgManual("O código Pix deve ter até 500 caracteres.", "error");
+    return;
+  }
+
+  const payload = {
+    alunoId: manualAlunoAtual.id,
+    alunoNome: manualAlunoAtual.nome,
+    valor,
+    mesReferencia,
+    status: "pendente",
+    origem: "manual",
+    criadoPorUid: auth.currentUser.uid,
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (pixCodigo) payload.pixCopiaECola = pixCodigo;
+
+  manualConfirmar.disabled = true;
+  const textoOriginal = manualConfirmar.textContent;
+  manualConfirmar.textContent = "Lançando...";
+
+  try {
+    const cobrancaId = manualAlunoAtual.id + "_" + mesReferencia;
+    const ref = db.collection("cobrancas").doc(cobrancaId);
+    const existente = await ref.get();
+
+    if (existente.exists) {
+      // Só cobrança manual pode ser editada pelo painel — a rule recusa qualquer
+      // update em cobrança de origem 'asaas' (essa é território exclusivo do Worker).
+      if ((existente.data().origem || "asaas") !== "manual") {
+        mostrarMsgManual(
+          "Já existe uma cobrança automática (Asaas) deste mês para este aluno. Ela só pode ser alterada pelo sistema de pagamentos.",
+          "error"
+        );
+        return;
+      }
+      const atualizacao = {
+        valor,
+        status: "pendente",
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (pixCodigo) atualizacao.pixCopiaECola = pixCodigo;
+      await ref.update(atualizacao);
+      mostrarMsgManual("Cobrança deste mês atualizada.", "success");
+    } else {
+      await ref.set(payload);
+      mostrarMsgManual("Cobrança lançada. O aluno já vê o código Pix na área dele.", "success");
+    }
+    carregarAlunos();
+  } catch (err) {
+    const semPermissao = err && err.code === "permission-denied";
+    mostrarMsgManual(
+      semPermissao
+        ? "Sua conta não tem permissão para lançar cobranças."
+        : "Não foi possível lançar a cobrança. Tente novamente.",
+      "error"
+    );
+  } finally {
+    manualConfirmar.disabled = false;
+    manualConfirmar.textContent = textoOriginal;
+  }
+}
+
+// Carrega o histórico sob demanda (só quando o professor clica na linha) e limitado às
+// 50 presenças mais recentes — um aluno antigo pode ter centenas de check-ins.
+async function abrirHistorico(nome, alunoId) {
+  modalTitulo.textContent = "Histórico - " + nome;
+  modalLista.innerHTML = "<li>Carregando...</li>";
   modalBackdrop.classList.add("show");
+
+  let snap;
+  try {
+    snap = await db.collection("checkins")
+      .where("alunoId", "==", alunoId)
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+  } catch (err) {
+    modalLista.innerHTML = "<li>Não foi possível carregar o histórico.</li>";
+    return;
+  }
+
+  modalLista.innerHTML = "";
+
+  if (snap.empty) {
+    modalLista.innerHTML = "<li>Nenhuma presença registrada.</li>";
+    return;
+  }
+
+  snap.forEach((doc) => {
+    const li = document.createElement("li");
+    li.innerHTML = "<span>Treino</span><span>" + formatDateTime(doc.data().timestamp) + "</span>";
+    modalLista.appendChild(li);
+  });
 }
 </script>
 </body>

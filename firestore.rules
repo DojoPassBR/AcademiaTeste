@@ -22,16 +22,65 @@ service cloud.firestore {
     // reais do formulário — sem isso, qualquer chamada direta ao SDK (fora do cadastro.html)
     // conseguia gravar qualquer string em nome/telefone/faixa, o que também abria XSS
     // no painel do professor (que exibia esses campos sem tratamento).
+    // Formato de nascimento (YYYY-MM-DD) e de e-mail também são validados aqui, pra não
+    // depender do <input type="date"/type="email"> do formulário.
     function dadosAlunoValidos(dados) {
       return dados.nome is string && dados.nome.size() > 0 && dados.nome.size() < 100
         && dados.telefone is string && dados.telefone.size() < 30
         && dados.email is string && dados.email.size() < 100
+        && dados.email.matches('^[^@]+@[^@]+[.][^@]+$')
         && dados.nascimento is string
+        && dados.nascimento.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
+    }
+
+    // Valida os campos do mural de eventos/campeonatos (cadastro manual do professor).
+    // Mesma lógica do cadastro do aluno: tipo, tamanho e formato conferidos aqui, pra não
+    // depender do <input maxlength/type="date"/type="url"> do formulário do admin.
+    // A data é string 'YYYY-MM-DD' (vem do <input type="date">) — esse formato é comparável
+    // lexicograficamente, o que permite o filtro de "eventos futuros" no check-in.
+    // O link é opcional e só pode ser https:// — nada de http:// nem javascript:, que
+    // viraria XSS na hora de montar o <a> no painel e na área do aluno.
+    function dadosEventoValidos(dados) {
+      return dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 120
+        && dados.local is string && dados.local.size() > 0 && dados.local.size() <= 160
+        && dados.data is string
+        && dados.data.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('link' in dados) || (dados.link is string
+              && dados.link.size() <= 500
+              && dados.link.matches('^https://[^ ]+[.][^ ]+$')));
+    }
+
+    // Valida os campos de config/geral. Todos são OPCIONAIS (o documento pode ter só
+    // mensalidadeModo, como sempre teve), mas se estiverem presentes têm que ter o tipo,
+    // tamanho e faixa certos — mesma disciplina de dadosAlunoValidos/dadosEventoValidos.
+    // O lembreteTemplate guarda só TEXTO com placeholders ({nome}, {mes}, {valor},
+    // {academia}, {pix}); o envio em si (WhatsApp/e-mail) não é feito aqui.
+    function dadosConfigValidos(dados) {
+      return (!('mensalidadeModo' in dados) || dados.mensalidadeModo in ['manual', 'pix', 'pixManual'])
+        && (!('valorMensalidadePadrao' in dados) || (dados.valorMensalidadePadrao is number
+              && dados.valorMensalidadePadrao > 0
+              && dados.valorMensalidadePadrao <= 5000))
+        && (!('academiaNome' in dados) || (dados.academiaNome is string && dados.academiaNome.size() <= 80))
+        && (!('pixChaveManual' in dados) || (dados.pixChaveManual is string && dados.pixChaveManual.size() <= 200))
+        && (!('lembreteWhatsappAtivo' in dados) || dados.lembreteWhatsappAtivo is bool)
+        && (!('lembreteEmailAtivo' in dados) || dados.lembreteEmailAtivo is bool)
+        && (!('lembreteVisualAtivo' in dados) || dados.lembreteVisualAtivo is bool)
+        && (!('lembreteDiasParaAlerta' in dados) || (dados.lembreteDiasParaAlerta is int
+              && dados.lembreteDiasParaAlerta >= 1
+              && dados.lembreteDiasParaAlerta <= 60))
+        && (!('lembreteTemplate' in dados) || (dados.lembreteTemplate is string
+              && dados.lembreteTemplate.size() <= 500));
     }
 
     // Distância aproximada (em metros) até a escola, sem usar sqrt (não suportado nas rules).
     // Compara o quadrado da distância com o quadrado do raio permitido.
+    //
+    // Estes valores são replicados em app/firebase-init.js e conferidos no CI por
+    // scripts/check-geo-drift.mjs — os marcadores GEO-SYNC abaixo são o que o script parseia.
+    // GEO-SYNC: schoolLat = -23.58810289825024
+    // GEO-SYNC: schoolLng = -48.067638301537485
+    // GEO-SYNC: raioMetros = 150
     function dentroDoRaioDaEscola(lat, lng) {
       let schoolLat = -23.58810289825024;
       let schoolLng = -48.067638301537485;
@@ -43,16 +92,39 @@ service cloud.firestore {
       return (dLat * dLat + dLng * dLng) <= (raioMetros * raioMetros);
     }
 
+    // Cooldown de check-in validado no servidor. O ID do documento tem que ser
+    // "<uid>_<janela>", onde janela = floor(agora_ms / 5400000) — janelas fixas de 90
+    // minutos. Como update/delete em checkins são sempre negados, a segunda tentativa
+    // dentro da mesma janela cai num create de documento que já existe e falha.
+    // O cliente monta o mesmo ID em app/checkin.html: o divisor TEM que ser igual.
+    // GEO-SYNC: janelaCheckinMs = 5400000
+    function checkinIdValido(checkinId) {
+      // toMillis() devolve inteiro e divisão de inteiros nas rules trunca (não vira float),
+      // então string() aqui produz "12345" e não "12345.0" — igual ao Math.floor do cliente.
+      return checkinId == request.auth.uid + '_' + string(request.time.toMillis() / 5400000);
+    }
+
     match /alunos/{alunoId} {
-      // Cadastro não pode vir com mensalidadeStatus setado (aluno não pode se auto-declarar "pago").
+      // Cadastro só pode conter os campos do formulário (hasOnly) e precisa trazer todos
+      // os obrigatórios (hasAll). Nunca pode vir com mensalidadeStatus setado — isso já é
+      // consequência do hasOnly, mas fica explícito porque é a regra de negócio central
+      // (aluno não pode se auto-declarar "pago").
       allow create: if isSignedIn() && request.auth.uid == alunoId
+        && request.resource.data.keys().hasOnly(['nome', 'telefone', 'nascimento', 'faixa', 'email', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'telefone', 'nascimento', 'faixa', 'email'])
         && !('mensalidadeStatus' in request.resource.data)
+        && (!('criadoEm' in request.resource.data) || request.resource.data.criadoEm == request.time)
         && dadosAlunoValidos(request.resource.data);
 
       allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
 
       // Aluno só edita seus próprios dados de cadastro (nunca a própria mensalidade).
-      // Professor (admin) só edita o status da mensalidade (nunca os dados de cadastro do aluno).
+      // Professor (admin) só edita o status da mensalidade (nunca os dados de cadastro do
+      // aluno), com valor dentro do enum e carimbo de tempo do servidor.
+      // Os hasOnly abaixo (e o do create) também são o que impede qualquer cliente —
+      // aluno OU admin — de escrever asaasCustomerId/customerCriadoEm: esses campos não
+      // aparecem em nenhuma das listas, então só o Worker (service account) os grava.
+      // O CPF do aluno nunca é gravado aqui nem em lugar nenhum do Firestore.
       allow update: if isSignedIn() && (
         (request.auth.uid == alunoId
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -61,7 +133,9 @@ service cloud.firestore {
         ||
         (isAdmin()
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['mensalidadeStatus', 'mensalidadeAtualizadoEm']))
+               .hasOnly(['mensalidadeStatus', 'mensalidadeAtualizadoEm'])
+          && request.resource.data.mensalidadeStatus in ['pago', 'pendente']
+          && request.resource.data.mensalidadeAtualizadoEm == request.time)
       );
 
       allow delete: if false;
@@ -74,30 +148,165 @@ service cloud.firestore {
 
     match /checkins/{checkinId} {
       allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['alunoId', 'nome', 'lat', 'lng', 'timestamp'])
+        && request.resource.data.keys().hasAll(['alunoId', 'nome', 'lat', 'lng', 'timestamp'])
         && request.resource.data.alunoId == request.auth.uid
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() > 0
+        && request.resource.data.nome.size() < 100
         && request.resource.data.lat is number
         && request.resource.data.lng is number
         && dentroDoRaioDaEscola(request.resource.data.lat, request.resource.data.lng)
         && request.resource.data.timestamp == request.time
+        && checkinIdValido(checkinId)
         && mensalidadeEmDia(request.auth.uid);
       allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
       allow update, delete: if false;
     }
 
-    // Cobranças Pix: só o Worker (Cloudflare + service account) cria/atualiza,
-    // usando credenciais de admin que passam por cima destas rules. Do cliente,
-    // só dá pra ler — nunca escrever — pra ninguém conseguir forjar um "pago".
-    match /cobrancas/{cobrancaId} {
-      allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
-      allow write: if false;
+    // Mural de eventos e campeonatos. Cadastro 100% manual pelo professor (admin) —
+    // não há integração com federação/terceiros, é o professor quem digita cada evento.
+    // Todo aluno autenticado lê (a lista é a mesma pra escola inteira, não tem dado
+    // pessoal de ninguém aqui); só admin escreve.
+    // Eventos passados nunca são apagados automaticamente: quem filtra o que é "próximo"
+    // é a consulta do app/checkin.html (where data >= hoje), e o painel do professor
+    // continua mostrando o histórico completo.
+    match /eventos/{eventoId} {
+      allow read: if isSignedIn();
+
+      // hasOnly trava a lista de campos (ninguém injeta campo novo por chamada direta ao
+      // SDK) e hasAll exige os obrigatórios — 'link' fica de fora do hasAll porque é
+      // opcional. criadoPor/criadoEm são carimbados no create e nunca mais mudam.
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['nome', 'data', 'local', 'link', 'criadoPor', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'data', 'local', 'criadoPor', 'criadoEm'])
+        && request.resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoEm == request.time
+        && dadosEventoValidos(request.resource.data);
+
+      // Na edição só os campos editáveis podem mudar (+ o carimbo atualizadoEm), e a
+      // autoria original (criadoPor/criadoEm) é conferida contra o documento existente —
+      // nem um admin consegue reescrever quem criou o evento.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nome', 'data', 'local', 'link', 'atualizadoEm'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && dadosEventoValidos(request.resource.data);
+
+      allow delete: if isAdmin();
     }
 
-    // Configuração geral do sistema (hoje só o modo de mensalidade: "manual" ou "pix").
-    // Ausência do campo mensalidadeModo conta como "manual" (mesmo padrão de default
-    // já usado em mensalidadeStatus ausente = "pendente"). Só admin muda, via Console.
+    // Cobranças Pix. Duas origens, com regras bem diferentes:
+    //
+    // - origem 'asaas'  → criada/atualizada SÓ pelo Worker (Cloudflare + service account),
+    //   que usa credenciais de admin e passa por cima destas rules. Nenhum cliente
+    //   (nem admin) cria nem edita uma cobrança dessas daqui — é o que impede alguém de
+    //   forjar um "pago" numa cobrança que o provedor ainda não confirmou.
+    // - origem 'manual' → a academia cobra Pix "na mão" (chave própria, sem Asaas). Aqui o
+    //   admin cria e edita direto do painel, sem Worker nenhum.
+    //
+    // Documentos antigos não têm o campo 'origem' — contam como 'asaas' via
+    // resource.data.get('origem', 'asaas'), então continuam intocáveis pelo cliente.
+    //
+    // O ID do documento é "<alunoId>_<mesReferencia>" nas duas origens, o que dá
+    // idempotência à criação (o Asaas não tem chave de idempotência nativa como o
+    // Mercado Pago tinha) e impede duas cobranças do mesmo mês pro mesmo aluno.
+    match /cobrancas/{cobrancaId} {
+      allow read: if isSignedIn() && (resource.data.alunoId == request.auth.uid || isAdmin());
+
+      // Só admin, só origem 'manual', só nascendo 'pendente' (ninguém cria já-pago), e
+      // com o aluno tendo que existir de verdade.
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['alunoId', 'alunoNome', 'valor', 'mesReferencia',
+             'status', 'origem', 'pixCopiaECola', 'dueDate', 'criadoPorUid', 'criadoEm', 'atualizadoEm'])
+        && request.resource.data.keys().hasAll(['alunoId', 'alunoNome', 'valor', 'mesReferencia',
+             'status', 'origem', 'criadoPorUid', 'criadoEm'])
+        && request.resource.data.origem == 'manual'
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.alunoId is string
+        && request.resource.data.alunoNome is string
+        && request.resource.data.alunoNome.size() > 0
+        && request.resource.data.alunoNome.size() < 100
+        && request.resource.data.valor is number
+        && request.resource.data.valor > 0
+        && request.resource.data.valor <= 5000
+        && request.resource.data.mesReferencia is string
+        && request.resource.data.mesReferencia.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+        && cobrancaId == request.resource.data.alunoId + '_' + request.resource.data.mesReferencia
+        && exists(/databases/$(database)/documents/alunos/$(request.resource.data.alunoId))
+        && request.resource.data.criadoPorUid == request.auth.uid
+        && request.resource.data.criadoEm == request.time
+        && (!('pixCopiaECola' in request.resource.data) || (request.resource.data.pixCopiaECola is string
+              && request.resource.data.pixCopiaECola.size() <= 500))
+        && (!('dueDate' in request.resource.data) || (request.resource.data.dueDate is string
+              && request.resource.data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
+
+      // Edição só de cobrança MANUAL, e só dos campos que o professor de fato mexe.
+      // O hasOnly abaixo é o que impede trocar alunoId/mesReferencia/origem/criadoPorUid
+      // de uma cobrança já existente (inclusive "converter" uma manual em asaas).
+      //
+      // Comprovante (Fase 3): quem grava 'aguardando_confirmacao' + comprovantePath é o
+      // WORKER, via service account, que não passa por estas rules — o aluno NUNCA escreve
+      // em cobrancas pelo SDK, nem pra anexar comprovante. O que o admin faz pelo cliente
+      // é a transição 'aguardando_confirmacao' -> 'pago' (ou 'cancelado'), carimbando
+      // confirmadoPorUid/confirmadoEm. Os campos comprovante* ficam FORA do hasOnly de
+      // propósito: nem o professor pode reescrever o rastro do upload.
+      allow update: if isAdmin()
+        && resource.data.get('origem', 'asaas') == 'manual'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'valor', 'pixCopiaECola', 'atualizadoEm',
+                       'confirmadoPorUid', 'confirmadoEm'])
+        && request.resource.data.atualizadoEm == request.time
+        && request.resource.data.status in ['pendente', 'pago', 'cancelado', 'aguardando_confirmacao']
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['confirmadoPorUid', 'confirmadoEm'])
+            || (request.resource.data.confirmadoPorUid == request.auth.uid
+                && request.resource.data.confirmadoEm == request.time))
+        && request.resource.data.valor is number
+        && request.resource.data.valor > 0
+        && request.resource.data.valor <= 5000
+        && (!('pixCopiaECola' in request.resource.data) || (request.resource.data.pixCopiaECola is string
+              && request.resource.data.pixCopiaECola.size() <= 500));
+
+      allow delete: if false;
+    }
+
+    // Configuração geral do sistema: modo de mensalidade ("manual", "pix" ou "pixManual"),
+    // valor padrão sugerido, identidade da academia (nome + chave Pix usada nas cobranças
+    // manuais) e as preferências de lembrete de vencimento. Ausência do campo
+    // mensalidadeModo conta como "manual" (mesmo padrão de default já usado em
+    // mensalidadeStatus ausente = "pendente"). Só admin escreve, só no documento "geral",
+    // só esses campos — pra ninguém conseguir criar documentos arbitrários dentro de config/.
+    //
+    // EXCEÇÃO CRÍTICA — config/credenciais (Fase 5):
+    // Esse documento guarda a chave de API do Asaas do professor, CIFRADA (AES-GCM, ver
+    // worker/src/cripto.js). NINGUÉM lê nem escreve nele pelo cliente — nem o admin. Quem
+    // acessa é só o Worker, via service account, que passa por cima destas rules.
+    // Por isso 'credenciais' está excluído explicitamente TANTO do read QUANTO do write
+    // abaixo (o write já era restrito a docId == 'geral'; a negação explícita fica pra não
+    // depender de uma condição que alguém pode afrouxar sem perceber).
+    //
+    // Por que não um bloco separado `match /config/credenciais { allow read, write: if false; }`:
+    // nas Firestore Rules os matches são UNIÃO permissiva — um `if false` num bloco não
+    // cancela um `allow` concedido por outro bloco que também casa com o caminho. A única
+    // forma de negar de verdade é a condição do próprio match /config/{docId}, que é o
+    // que está feito aqui.
+    function ehDocCredenciais(docId) {
+      return docId == 'credenciais';
+    }
+
     match /config/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read: if isSignedIn() && !ehDocCredenciais(docId);
+      allow write: if isAdmin()
+        && !ehDocCredenciais(docId)
+        && docId == 'geral'
+        && request.resource.data.keys().hasOnly(['mensalidadeModo', 'valorMensalidadePadrao',
+             'academiaNome', 'pixChaveManual', 'lembreteWhatsappAtivo', 'lembreteEmailAtivo',
+             'lembreteVisualAtivo', 'lembreteDiasParaAlerta', 'lembreteTemplate'])
+        && 'mensalidadeModo' in request.resource.data
+        && dadosConfigValidos(request.resource.data);
     }
   }
 }

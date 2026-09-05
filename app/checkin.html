@@ -30,9 +30,27 @@
 
   <div class="card" id="pix-pagamento" style="display:none;">
     <h2>Pagar mensalidade via Pix</h2>
-    <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
-    <textarea id="pix-copia-cola" readonly rows="3" style="width:100%;margin:12px 0;padding:10px;font-size:0.85rem;"></textarea>
-    <button type="button" class="btn btn-secondary" id="btn-copiar-pix">Copiar código Pix</button>
+
+    <div id="pix-bloco-codigo" style="display:none;">
+      <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
+      <textarea id="pix-copia-cola" readonly rows="3" style="width:100%;margin:12px 0;padding:10px;font-size:0.85rem;"></textarea>
+      <button type="button" class="btn btn-secondary" id="btn-copiar-pix">Copiar código Pix</button>
+    </div>
+
+    <!-- Só aparece em cobrança de origem 'manual': a cobrança do Asaas é confirmada
+         sozinha pelo webhook do provedor, sem comprovante nenhum. -->
+    <div class="comprovante-bloco" id="comprovante-bloco" style="display:none;">
+      <h3 class="comprovante-titulo">Já pagou? Envie o comprovante</h3>
+      <p>Anexe o comprovante (JPG, PNG, WebP ou PDF, até 5 MB) para o professor confirmar o pagamento.</p>
+      <input type="file" id="comprovante-arquivo" class="comprovante-input"
+             accept="image/jpeg,image/png,image/webp,application/pdf">
+      <button type="button" class="btn btn-secondary" id="btn-enviar-comprovante">Enviar comprovante</button>
+      <div class="msg" id="comprovante-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <p class="comprovante-aguardando" id="comprovante-aguardando" style="display:none;">
+      Comprovante enviado — aguardando confirmação do professor.
+    </p>
   </div>
 
   <div class="card">
@@ -43,6 +61,13 @@
     </p>
     <button class="btn" id="btn-checkin">Fazer Check-in</button>
     <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Próximos eventos</h2>
+    <ul class="checkin-list" id="lista-eventos">
+      <li>Carregando...</li>
+    </ul>
   </div>
 
   <div class="card">
@@ -65,17 +90,47 @@ const saudacao = document.getElementById("saudacao");
 const statusHoje = document.getElementById("status-hoje");
 const statusSub = document.getElementById("status-sub");
 const listaCheckins = document.getElementById("lista-checkins");
+const listaEventos = document.getElementById("lista-eventos");
 const mensalidadeStatusEl = document.getElementById("mensalidade-status");
 const mensalidadeMesEl = document.getElementById("mensalidade-mes");
 const avisoMensalidade = document.getElementById("aviso-mensalidade");
+const mensalidadeBox = document.getElementById("mensalidade-box");
+// Texto original do aviso (sem contagem de dias), restaurado quando não há atraso longo.
+const AVISO_MENSALIDADE_PADRAO =
+  "Sua mensalidade está pendente. Procure a recepção para regularizar e liberar o check-in.";
 const pixPagamento = document.getElementById("pix-pagamento");
+const pixBlocoCodigo = document.getElementById("pix-bloco-codigo");
 const pixCopiaCola = document.getElementById("pix-copia-cola");
 const btnCopiarPix = document.getElementById("btn-copiar-pix");
+const comprovanteBloco = document.getElementById("comprovante-bloco");
+const comprovanteArquivo = document.getElementById("comprovante-arquivo");
+const btnEnviarComprovante = document.getElementById("btn-enviar-comprovante");
+const comprovanteMsg = document.getElementById("comprovante-msg");
+const comprovanteAguardando = document.getElementById("comprovante-aguardando");
+
+// Mesma lista branca do Worker (worker/src/comprovante.js). A validação daqui é só
+// conveniência: quem decide de verdade é o Worker, que refaz tipo e tamanho.
+const COMPROVANTE_TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const COMPROVANTE_TAMANHO_MAXIMO = 5 * 1024 * 1024;
+
+// ID da cobrança pendente de origem 'manual' (null quando não há nenhuma).
+let cobrancaManualPendenteId = null;
 
 let alunoNome = "";
 let mensalidadeEmDia = false;
 let bloqueadoPorIntervalo = false;
 let mensalidadeModo = "manual";
+// Há quantos dias a mensalidade está pendente (null = nunca foi marcada, ou está em dia).
+let mensalidadeDiasPendente = null;
+// Aviso visual reforçado: ligado por padrão, só desliga se config/geral gravar false.
+let lembreteVisualAtivo = true;
+let lembreteDiasParaAlerta = 7;
+
+// "pix" = cobrança automática pelo Asaas; "pixManual" = o professor lança a cobrança e
+// cola a chave/copia-e-cola da própria academia. Do ponto de vista do aluno é igual.
+function modoUsaPix(modo) {
+  return modo === "pix" || modo === "pixManual";
+}
 
 function showMsg(text, type) {
   msg.textContent = text;
@@ -96,32 +151,228 @@ auth.onAuthStateChanged(async (user) => {
     alunoNome = alunoData.nome;
     saudacao.textContent = "Olá, " + alunoNome.split(" ")[0];
     mensalidadeEmDia = (alunoData.mensalidadeStatus || "pendente") === "pago";
+    mensalidadeDiasPendente = mensalidadeEmDia ? null : diasDesde(alunoData.mensalidadeAtualizadoEm);
   }
 
+  // Uma única leitura de config/geral serve pro modo de mensalidade E pro aviso visual.
   const configDoc = await db.collection("config").doc("geral").get();
-  mensalidadeModo = configDoc.exists ? (configDoc.data().mensalidadeModo || "manual") : "manual";
+  const config = configDoc.exists ? configDoc.data() : {};
+  mensalidadeModo = config.mensalidadeModo || "manual";
+  lembreteVisualAtivo = config.lembreteVisualAtivo !== false;
+  if (typeof config.lembreteDiasParaAlerta === "number" && config.lembreteDiasParaAlerta > 0) {
+    lembreteDiasParaAlerta = config.lembreteDiasParaAlerta;
+  }
 
   atualizarMensalidadeBox();
-  if (mensalidadeModo === "pix" && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
+  // O card de Pix vale tanto pro Pix automático (Asaas, modo "pix") quanto pro Pix
+  // lançado na mão pelo professor (modo "pixManual") — nos dois casos o aluno lê a
+  // mesma cobrança pendente em cobrancas/ e copia o mesmo campo pixCopiaECola.
+  if (modoUsaPix(mensalidadeModo) && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
   carregarUltimoCheckin(user.uid);
   carregarHistorico(user.uid);
+  // Mural de eventos: carga independente e não bloqueante — se falhar (rules, rede,
+  // índice), o check-in em si continua funcionando normalmente.
+  carregarEventos();
 });
 
-async function carregarCobrancaPendente(uid) {
-  const snap = await db.collection("cobrancas")
-    .where("alunoId", "==", uid)
-    .where("status", "==", "pendente")
-    .orderBy("criadoEm", "desc")
-    .limit(1)
-    .get();
+// Só os eventos a partir de hoje: o filtro de data é feito no servidor (where + orderBy
+// no MESMO campo 'data', que o índice de campo único automático já atende — não precisa
+// de índice composto novo). Eventos passados continuam no Firestore, só não aparecem aqui.
+async function carregarEventos() {
+  let snap;
+  try {
+    snap = await db.collection("eventos")
+      .where("data", ">=", new Date().toISOString().slice(0, 10))
+      .orderBy("data", "asc")
+      .limit(10)
+      .get();
+  } catch (err) {
+    listaEventos.innerHTML = "<li>Não foi possível carregar os eventos.</li>";
+    return;
+  }
 
-  if (!snap.empty && snap.docs[0].data().pixCopiaECola) {
-    pixCopiaCola.value = snap.docs[0].data().pixCopiaECola;
-    pixPagamento.style.display = "block";
-  } else {
-    pixPagamento.style.display = "none";
+  listaEventos.innerHTML = "";
+
+  if (snap.empty) {
+    const li = document.createElement("li");
+    li.textContent = "Nenhum evento agendado no momento.";
+    listaEventos.appendChild(li);
+    return;
+  }
+
+  snap.forEach((docEvento) => {
+    const evento = docEvento.data();
+    const li = document.createElement("li");
+
+    // Nome e local vêm do cadastro feito pelo professor (texto livre): sempre
+    // createElement/textContent, nunca innerHTML.
+    const bloco = document.createElement("span");
+    const nomeTexto = evento.nome || "Evento";
+    const href = linkHttpsValido(evento.link);
+
+    if (href) {
+      const a = document.createElement("a");
+      a.className = "evento-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = nomeTexto;
+      bloco.appendChild(a);
+    } else {
+      const forte = document.createElement("strong");
+      forte.textContent = nomeTexto;
+      bloco.appendChild(forte);
+    }
+
+    if (evento.local) {
+      const local = document.createElement("span");
+      local.className = "evento-data";
+      local.textContent = " - " + evento.local;
+      bloco.appendChild(local);
+    }
+
+    const dataEl = document.createElement("span");
+    dataEl.className = "evento-data";
+    // "T00:00:00" força a data a ser lida no fuso local: sem isso, uma string
+    // "YYYY-MM-DD" é tratada como UTC e o dia aparece um a menos no Brasil.
+    dataEl.textContent = typeof evento.data === "string"
+      ? new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR")
+      : "";
+
+    li.append(bloco, dataEl);
+    listaEventos.appendChild(li);
+  });
+}
+
+// Mesma checagem robusta do painel do professor: o href só é montado a partir de um
+// https:// que o parser de URL do navegador aceita. Qualquer outro esquema devolve null.
+function linkHttpsValido(valor) {
+  if (typeof valor !== "string") return null;
+  const limpo = valor.trim();
+  if (!limpo.startsWith("https://")) return null;
+  try {
+    const url = new URL(limpo);
+    return url.protocol === "https:" ? limpo : null;
+  } catch (err) {
+    return null;
   }
 }
+
+// Busca a cobrança em aberto do aluno. "aguardando_confirmacao" entra junto de "pendente"
+// porque é o estado em que o comprovante já foi enviado e o professor ainda não confirmou —
+// o aluno precisa ver isso em vez de achar que o envio se perdeu. O índice composto
+// (alunoId, status, criadoEm) de firestore.indexes.json já atende o "in".
+async function carregarCobrancaPendente(uid) {
+  let snap;
+  try {
+    snap = await db.collection("cobrancas")
+      .where("alunoId", "==", uid)
+      .where("status", "in", ["pendente", "aguardando_confirmacao"])
+      .orderBy("criadoEm", "desc")
+      .limit(1)
+      .get();
+  } catch (err) {
+    pixPagamento.style.display = "none";
+    return;
+  }
+
+  cobrancaManualPendenteId = null;
+
+  if (snap.empty) {
+    pixPagamento.style.display = "none";
+    return;
+  }
+
+  const cobrancaDoc = snap.docs[0];
+  const cobranca = cobrancaDoc.data();
+  const ehManual = (cobranca.origem || "asaas") === "manual";
+  const aguardando = cobranca.status === "aguardando_confirmacao";
+  const temCodigo = typeof cobranca.pixCopiaECola === "string" && cobranca.pixCopiaECola.length > 0;
+
+  if (temCodigo) pixCopiaCola.value = cobranca.pixCopiaECola;
+  pixBlocoCodigo.style.display = temCodigo ? "block" : "none";
+
+  // Upload só em cobrança manual e ainda pendente. Cobrança do Asaas é confirmada pelo
+  // webhook do provedor — comprovante ali não serviria pra nada.
+  if (ehManual && !aguardando) cobrancaManualPendenteId = cobrancaDoc.id;
+  comprovanteBloco.style.display = cobrancaManualPendenteId ? "block" : "none";
+  comprovanteAguardando.style.display = ehManual && aguardando ? "block" : "none";
+
+  const temAlgoParaMostrar = temCodigo || cobrancaManualPendenteId || (ehManual && aguardando);
+  pixPagamento.style.display = temAlgoParaMostrar ? "block" : "none";
+}
+
+function mostrarMsgComprovante(texto, tipo) {
+  comprovanteMsg.textContent = texto;
+  comprovanteMsg.className = "msg show " + tipo;
+}
+
+// O arquivo vai pro bucket R2 pelo Worker (POST /comprovante) — o navegador não escreve
+// no R2 direto, e o aluno nunca escreve na coleção cobrancas. Quem muda o status para
+// "aguardando_confirmacao" é o Worker, com a service account.
+btnEnviarComprovante.addEventListener("click", async () => {
+  if (!cobrancaManualPendenteId) {
+    mostrarMsgComprovante("Nenhuma cobrança em aberto para anexar comprovante.", "error");
+    return;
+  }
+
+  const arquivo = comprovanteArquivo.files && comprovanteArquivo.files[0];
+  if (!arquivo) {
+    mostrarMsgComprovante("Escolha o arquivo do comprovante primeiro.", "error");
+    return;
+  }
+  if (COMPROVANTE_TIPOS.indexOf(arquivo.type) === -1) {
+    mostrarMsgComprovante("Formato não aceito. Envie uma imagem (JPG, PNG ou WebP) ou um PDF.", "error");
+    return;
+  }
+  if (arquivo.size > COMPROVANTE_TAMANHO_MAXIMO) {
+    mostrarMsgComprovante("Arquivo muito grande. O limite é 5 MB.", "error");
+    return;
+  }
+  if (!WORKER_URL) {
+    mostrarMsgComprovante("O envio de comprovantes ainda não foi configurado nesta academia.", "error");
+    return;
+  }
+
+  btnEnviarComprovante.disabled = true;
+  const textoOriginal = btnEnviarComprovante.textContent;
+  btnEnviarComprovante.textContent = "Enviando...";
+  mostrarMsgComprovante("Enviando...", "info");
+
+  try {
+    const formData = new FormData();
+    formData.append("cobrancaId", cobrancaManualPendenteId);
+    formData.append("arquivo", arquivo);
+
+    // Sem Content-Type manual: o navegador monta o boundary do multipart sozinho.
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/comprovante", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const dados = await resp.json().catch(() => ({}));
+      mostrarMsgComprovante(
+        dados.erro || "Não foi possível enviar o comprovante. Tente novamente.",
+        "error"
+      );
+      return;
+    }
+
+    comprovanteMsg.textContent = "";
+    comprovanteMsg.className = "msg";
+    comprovanteBloco.style.display = "none";
+    comprovanteAguardando.style.display = "block";
+    cobrancaManualPendenteId = null;
+  } catch (err) {
+    mostrarMsgComprovante("Não foi possível enviar o comprovante. Verifique sua conexão.", "error");
+  } finally {
+    btnEnviarComprovante.disabled = false;
+    btnEnviarComprovante.textContent = textoOriginal;
+  }
+});
 
 btnCopiarPix.addEventListener("click", async () => {
   await navigator.clipboard.writeText(pixCopiaCola.value);
@@ -142,6 +393,23 @@ function atualizarMensalidadeBox() {
   }
 
   avisoMensalidade.style.display = mensalidadeEmDia ? "none" : "block";
+
+  // Atraso longo (>= lembreteDiasParaAlerta) e aviso visual ligado em config/geral:
+  // o mesmo box ganha destaque e o texto passa a dizer há quantos dias está pendente.
+  // Dentro do prazo, fica exatamente o texto que já existia.
+  const atrasoForte = !mensalidadeEmDia
+    && lembreteVisualAtivo
+    && mensalidadeDiasPendente !== null
+    && mensalidadeDiasPendente >= lembreteDiasParaAlerta;
+
+  mensalidadeBox.classList.toggle("status-box-alerta", atrasoForte);
+  avisoMensalidade.classList.toggle("aviso-pendente-forte", atrasoForte);
+  avisoMensalidade.textContent = atrasoForte
+    ? "Sua mensalidade está pendente há " + mensalidadeDiasPendente
+      + (mensalidadeDiasPendente === 1 ? " dia" : " dias")
+      + " — regularize o quanto antes para liberar o check-in."
+    : AVISO_MENSALIDADE_PADRAO;
+
   atualizarBotaoCheckin();
 }
 
@@ -238,7 +506,14 @@ btnCheckin.addEventListener("click", () => {
       const user = auth.currentUser;
       // ID determinístico por janela de tempo: uma segunda tentativa na mesma janela
       // vira "update" de um doc que já existe, e a rule já bloqueia update em checkins.
-      const janela = Math.floor(Date.now() / (CHECKIN_INTERVALO_MINUTOS * 60 * 1000));
+      //
+      // O cooldown agora também é validado no servidor: a função checkinIdValido em
+      // firestore.rules recalcula esta mesma janela a partir de request.time e rejeita
+      // qualquer ID diferente. O divisor (CHECKIN_JANELA_MS = 5400000) TEM que ser o
+      // mesmo dos dois lados. Se o relógio do celular estiver muito adiantado/atrasado
+      // em relação ao servidor, o check-in é recusado — isso é esperado, e não tem
+      // retry automático de propósito (retry mascararia o cooldown).
+      const janela = Math.floor(Date.now() / CHECKIN_JANELA_MS);
       const checkinId = user.uid + "_" + janela;
 
       await db.collection("checkins").doc(checkinId).set({
