@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  geo-drift:
+    name: Coordenadas da escola em sincronia
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # Compara os marcadores GEO-SYNC de firestore.rules e app/firebase-init.js.
+      # Sem dependências: roda direto com node.
+      - run: node scripts/check-geo-drift.mjs
+
+  rules-tests:
+    name: Testes das Firestore Rules (emulador)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # O emulador do Firestore roda em Java — sem isso o emulators:exec falha.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Instalar dependências dos testes
+        working-directory: tests
+        run: npm install
+      # O script "test" faz `cd ..` porque o firebase.json (com o bloco emulators e o
+      # caminho de firestore.rules) vive na raiz do repositório, enquanto as dependências
+      # ficam isoladas em tests/node_modules — por isso ele chama os binários por caminho
+      # explícito (./tests/node_modules/.bin/...) e passa --root tests pro vitest.
+      - name: Rodar testes de rules
+        working-directory: tests
+        run: npm test
