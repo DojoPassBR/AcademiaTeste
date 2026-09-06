@@ -18,7 +18,7 @@ FIREBASE_PROJECT_ID = "academiateste-56922"
 # temporariamente ",http://localhost:8000" — sem isso, chamada ao Worker de localhost
 # falha com erro de CORS ("Falha de conexão" genérica no navegador). Tirar de novo antes
 # de deployar (não deve ficar em produção).
-ALLOWED_ORIGINS = "https://dojopassbr.github.io"
+ALLOWED_ORIGINS = "https://dojopassbr.github.io,https://dojopass.com.br,https://www.dojopass.com.br"
 
 # Base da API do Asaas. PRODUÇÃO — cobranças geradas aqui são reais e o Asaas cobra de
 # verdade. ASAAS_API_KEY (secret) já é a chave de produção correspondente.
@@ -39,7 +39,7 @@ ASAAS_DUE_DATE_DIAS = "5"
 # verificado, mas o Resend só entrega e-mails dele para o endereço dono da conta.
 # Quando houver domínio verificado no painel do Resend (Domains), trocar para algo como
 # "DojoPass <mensalidade@seudominio.com.br>" — só então os alunos recebem de verdade.
-EMAIL_REMETENTE = "DojoPass <onboarding@resend.dev>"
+EMAIL_REMETENTE = "DojoPass <mensalidade@dojopass.com.br>"
 
 # Segredos (não vão pro código nem pro git) — configurar com:
 #   npx wrangler secret put ASAAS_API_KEY
