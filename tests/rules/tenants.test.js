@@ -103,6 +103,69 @@ describe("tenant resolver público", () => {
   });
 });
 
+// REGRESSÃO DA CORREÇÃO 5 (scripts/migrate-global-to-tenant.mjs).
+//
+// A migração para tenants/{id}/... carimbava tenantId + migradoDeGlobal em TODOS os
+// documentos copiados. Nas coleções lidas sem login pelo site institucional (turmas,
+// equipe, horarios, academia/perfil) a rule valida o documento com keys().hasOnly([...])
+// na LEITURA — e esses dois campos não estão na lista. Resultado: o documento migrado
+// ficava ilegível pro visitante e o site da academia aparecia vazio.
+//
+// O script agora não grava esses campos nessas 4 coleções (o tenant já está no path).
+// Se alguém reintroduzir o carimbo lá, o segundo teste abaixo quebra.
+describe("leitura pública tenantizada (regressão da migração)", () => {
+  const TURMA_PUBLICA = {
+    nome: "Turma Infantil",
+    nivel: "Infantil",
+    cor: "white",
+    ativo: true,
+    ordem: 0,
+    criadoPor: ADMIN_A,
+    criadoEm: new Date()
+  };
+
+  it("visitante lê turma pública do tenant quando ela tem só os campos previstos", async () => {
+    await semear(ambiente, async (db) => {
+      await setDoc(doc(db, "tenants", TENANT_A, "turmas", "turma-ok"), TURMA_PUBLICA);
+    });
+
+    const db = ambiente.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(db, "tenants", TENANT_A, "turmas", "turma-ok")));
+  });
+
+  it("visitante NÃO lê turma com os campos extras tenantId/migradoDeGlobal", async () => {
+    await semear(ambiente, async (db) => {
+      await setDoc(doc(db, "tenants", TENANT_A, "turmas", "turma-migrada"), {
+        ...TURMA_PUBLICA,
+        tenantId: TENANT_A,
+        migradoDeGlobal: true
+      });
+      await setDoc(doc(db, "tenants", TENANT_A, "equipe", "professor-migrado"), {
+        tipo: "professor",
+        nome: "Jairo",
+        ativo: true,
+        ordem: 0,
+        criadoPor: ADMIN_A,
+        criadoEm: new Date(),
+        tenantId: TENANT_A,
+        migradoDeGlobal: true
+      });
+      await setDoc(doc(db, "tenants", TENANT_A, "academia", "perfil"), {
+        endereco: "Rua Teste, 100",
+        atualizadoPor: ADMIN_A,
+        atualizadoEm: new Date(),
+        tenantId: TENANT_A,
+        migradoDeGlobal: true
+      });
+    });
+
+    const db = ambiente.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "turmas", "turma-migrada")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "equipe", "professor-migrado")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "academia", "perfil")));
+  });
+});
+
 describe("isolamento por tenant", () => {
   it("aluno lê o próprio cadastro no tenant A, mas não no tenant B", async () => {
     const db = dbAuth(ALUNO_A);
@@ -227,6 +290,91 @@ describe("isolamento por tenant", () => {
       timestamp: serverTimestamp(),
       tenantId: TENANT_A
     }));
+  });
+
+  // Os testes de "lista" acima cobrem list; estes cobrem GET de documento específico, que
+  // é o caminho realmente perigoso: quem já sabe (ou adivinha) o ID de um documento não
+  // precisa de permissão de list pra ler o conteúdo.
+  it("admin do tenant B não LÊ documentos específicos do tenant A", async () => {
+    const cobrancaId = ALUNO_A + "_2026-09";
+    const janela = Math.floor(Date.now() / 5400000);
+    const checkinId = ALUNO_A + "_" + janela;
+
+    await semear(ambiente, async (db) => {
+      await setDoc(doc(db, "tenants", TENANT_A, "config", "geral"), {
+        mensalidadeModo: "manual",
+        checkinLat: -22.0,
+        checkinLng: -47.0,
+        checkinRaioMetros: 120
+      });
+      await setDoc(doc(db, "tenants", TENANT_A, "eventos", "evento-a"), {
+        nome: "Campeonato",
+        data: "2026-10-01",
+        local: "Ginásio",
+        criadoPor: ADMIN_A,
+        criadoEm: new Date()
+      });
+      await setDoc(doc(db, "tenants", TENANT_A, "checkins", checkinId), {
+        alunoId: ALUNO_A,
+        nome: ALUNO_VALIDO.nome,
+        lat: -22.0,
+        lng: -47.0,
+        timestamp: new Date(),
+        tenantId: TENANT_A
+      });
+      await setDoc(doc(db, "tenants", TENANT_A, "cobrancas", cobrancaId), {
+        alunoId: ALUNO_A,
+        alunoNome: ALUNO_VALIDO.nome,
+        valor: 120,
+        mesReferencia: "2026-09",
+        status: "pendente",
+        origem: "manual",
+        criadoPorUid: ADMIN_A,
+        criadoEm: new Date()
+      });
+    });
+
+    const db = dbAuth(ADMIN_B);
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "alunos", ALUNO_A)));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "config", "geral")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "eventos", "evento-a")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "checkins", checkinId)));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_A, "cobrancas", cobrancaId)));
+  });
+
+  it("aluno do tenant A não lê nada do tenant B", async () => {
+    const cobrancaId = ALUNO_A + "_2026-09";
+
+    await semear(ambiente, async (db) => {
+      await setDoc(doc(db, "tenants", TENANT_B, "alunos", ALUNO_A), { ...ALUNO_VALIDO, email: "b@example.com" });
+      await setDoc(doc(db, "tenants", TENANT_B, "config", "geral"), { mensalidadeModo: "manual" });
+      await setDoc(doc(db, "tenants", TENANT_B, "eventos", "evento-b"), {
+        nome: "Interno B",
+        data: "2026-11-01",
+        local: "Tatame",
+        criadoPor: ADMIN_B,
+        criadoEm: new Date()
+      });
+      await setDoc(doc(db, "tenants", TENANT_B, "cobrancas", cobrancaId), {
+        alunoId: ALUNO_A,
+        alunoNome: ALUNO_VALIDO.nome,
+        valor: 120,
+        mesReferencia: "2026-09",
+        status: "pendente",
+        origem: "manual",
+        criadoPorUid: ADMIN_B,
+        criadoEm: new Date()
+      });
+    });
+
+    // Existe até um documento tenants/B/alunos/{ALUNO_A} com o MESMO uid — o que barra a
+    // leitura não é o ID do documento, é a ausência de membership ativa no tenant B.
+    const db = dbAuth(ALUNO_A);
+    await assertFails(getDoc(doc(db, "tenants", TENANT_B, "alunos", ALUNO_A)));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_B, "config", "geral")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_B, "eventos", "evento-b")));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_B, "cobrancas", cobrancaId)));
+    await assertFails(getDoc(doc(db, "tenants", TENANT_B, "memberships", ALUNO_A)));
   });
 
   it("check-in tenantizado falha se a academia não configurou geofence", async () => {

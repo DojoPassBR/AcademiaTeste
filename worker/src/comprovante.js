@@ -18,7 +18,10 @@
 import { getDocument, patchDocument, tenantPath } from "./firestore.js";
 import { verificarIdToken } from "./auth.js";
 import { cobrancaIdValido, tenantIdValido } from "./validacao.js";
-import { json, corsHeaders, campoString, origensPermitidas } from "./http.js";
+// fixarCorsOrigin é usado por origemAutorizaTenant logo abaixo; sem ele no import o
+// módulo lançava ReferenceError em runtime (mascarado como 500 genérico pelo catch do
+// index.js), derrubando 100% do upload/download de comprovante.
+import { json, corsHeaders, campoString, origensPermitidas, fixarCorsOrigin } from "./http.js";
 
 // Tipos aceitos → extensão do objeto no bucket. A extensão vem SEMPRE daqui, nunca do
 // nome do arquivo enviado pelo navegador (que é texto livre e controlado pelo cliente).
@@ -70,9 +73,12 @@ function origemHost(request) {
   }
 }
 
+// Mesma função (e mesma correção) de worker/src/index.js: FAIL-CLOSED quando não há
+// header Origin. Sem isso, qualquer chamada sem Origin passava direto pela checagem de
+// pertencimento ao tenant.
 async function origemAutorizaTenant(request, env, tenantId) {
   const info = origemHost(request);
-  if (!info) return true;
+  if (!info) return false;
 
   const permitidoExato = origensPermitidas(env).includes(info.origin);
   if (permitidoExato && (info.host === "localhost" || info.host === "127.0.0.1")) {

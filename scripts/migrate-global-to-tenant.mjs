@@ -11,7 +11,23 @@ import { readFile } from "node:fs/promises";
 import { createSign } from "node:crypto";
 
 const COLECOES = ["alunos", "admins", "checkins", "cobrancas", "eventos", "turmas", "equipe", "horarios"];
-const DOCS_UNICOS = [{ origem: "academia/perfil", destino: "academia/perfil" }, { origem: "config/geral", destino: "config/geral" }];
+const DOCS_UNICOS = [
+  { origem: "academia/perfil", destino: "academia/perfil" },
+  { origem: "config/geral", destino: "config/geral" },
+  // Credencial do Asaas da academia (chave cifrada). Fica fora de qualquer leitura de
+  // cliente por firestore.rules; migra como está, sem tocar nos campos cifrados.
+  { origem: "config/credenciais", destino: "config/credenciais" }
+];
+
+// Coleções/documentos LIDOS PUBLICAMENTE (sem login) pelo site institucional. As rules
+// desses caminhos validam o documento com keys().hasOnly([...]) na LEITURA — um campo a
+// mais no corpo torna o documento ilegível pro visitante, quebrando o site da academia.
+//
+// Por isso a migração NÃO carimba tenantId/migradoDeGlobal aqui: o pertencimento ao tenant
+// já está no PATH (tenants/{tenantId}/turmas/{id}), não precisa estar no corpo.
+// Ver tests/rules/tenants.test.js — há um teste que quebra se alguém reintroduzir isso.
+const COLECOES_PUBLICAS_SEM_EXTRAS = new Set(["turmas", "equipe", "horarios"]);
+const DOCS_PUBLICOS_SEM_EXTRAS = new Set(["academia/perfil"]);
 
 function arg(nome, fallback = null) {
   const idx = process.argv.indexOf("--" + nome);
@@ -138,11 +154,12 @@ async function main() {
   for (const colecao of COLECOES) {
     const docs = await listarColecao(token, projectId, colecao);
     contagens[colecao] = docs.length;
+    const extrasColecao = COLECOES_PUBLICAS_SEM_EXTRAS.has(colecao) ? {} : { tenantId, migradoDeGlobal: true };
     for (const doc of docs) {
       const id = idDoDoc(doc);
       await requestJson(token, docUrl(projectId, `tenants/${tenantId}/${colecao}/${id}`), {
         method: "PATCH",
-        body: JSON.stringify({ fields: { ...(doc.fields || {}), ...fields({ tenantId, migradoDeGlobal: true }) } })
+        body: JSON.stringify({ fields: { ...(doc.fields || {}), ...fields(extrasColecao) } })
       });
       if (colecao === "admins") {
         const dadosMembership = { role: "admin", status: "ativo", tenantSlug: slug, tenantNome: slug, atualizadoEm: agora };
@@ -158,9 +175,19 @@ async function main() {
   }
 
   for (const item of DOCS_UNICOS) {
-    const extras = item.destino === "config/geral"
-      ? { tenantId, migradoDeGlobal: true, checkinLat, checkinLng, checkinRaioMetros }
-      : { tenantId, migradoDeGlobal: true };
+    let extras;
+    if (DOCS_PUBLICOS_SEM_EXTRAS.has(item.destino)) {
+      // academia/perfil é lido pelo visitante do site com hasOnly na leitura: nada de
+      // campo extra aqui (ver COLECOES_PUBLICAS_SEM_EXTRAS lá em cima).
+      extras = {};
+    } else if (item.destino === "config/geral") {
+      extras = { tenantId, migradoDeGlobal: true, checkinLat, checkinLng, checkinRaioMetros };
+    } else if (item.destino === "config/credenciais") {
+      // Só o carimbo de tenant; os campos cifrados vêm intactos do documento de origem.
+      extras = { tenantId, migradoDeGlobal: true };
+    } else {
+      extras = { tenantId, migradoDeGlobal: true };
+    }
     contagens[item.origem] = await copiarDoc(token, projectId, item.origem, `tenants/${tenantId}/${item.destino}`, extras) ? 1 : 0;
     if (item.destino === "config/geral" && contagens[item.origem] === 0) {
       await requestJson(token, docUrl(projectId, `tenants/${tenantId}/config/geral`), {
@@ -170,6 +197,23 @@ async function main() {
       contagens[item.origem] = 1;
     }
   }
+
+  // Backfill do índice asaasPayments (coleção RAIZ, nunca tenantizada por path — ver
+  // firestore.rules, onde ela é read/write:false pra todo cliente). O webhook do Asaas usa
+  // asaasPayments/{paymentId}.tenantId pra descobrir de qual academia é o pagamento; os
+  // documentos criados ANTES da migração não têm esse campo, e sem ele o webhook cai nos
+  // fallbacks (query string / externalReference). Aqui eles apontam pro tenant de destino.
+  const pagamentos = await listarColecao(token, projectId, "asaasPayments");
+  let pagamentosBackfill = 0;
+  for (const doc of pagamentos) {
+    if (doc.fields?.tenantId?.stringValue) continue; // já tenantizado: não sobrescreve
+    await requestJson(token, docUrl(projectId, `asaasPayments/${idDoDoc(doc)}`), {
+      method: "PATCH",
+      body: JSON.stringify({ fields: { ...(doc.fields || {}), ...fields({ tenantId }) } })
+    });
+    pagamentosBackfill += 1;
+  }
+  contagens["asaasPayments (backfill tenantId)"] = pagamentosBackfill;
 
   if (adminUid) {
     await requestJson(token, docUrl(projectId, `tenants/${tenantId}/memberships/${adminUid}`), {

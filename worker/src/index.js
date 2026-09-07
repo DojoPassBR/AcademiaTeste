@@ -96,9 +96,18 @@ async function usuarioEhAdminTenant(env, uid, tenantId) {
   return false;
 }
 
+// Confere se a ORIGEM da requisição pertence de fato à academia (tenantId) que o corpo/URL
+// diz. É o único vínculo que o Worker tem entre "de onde veio a chamada" e "de qual
+// academia é o dado" — a service account passa por cima das rules do Firestore, então
+// nenhuma outra camada faz essa checagem.
+//
+// FAIL-CLOSED: sem header Origin (curl, script, app não-browser) a resposta é NÃO.
+// Antes isto devolvia `true` quando não havia Origin, o que anulava a checagem inteira pra
+// qualquer cliente que simplesmente não mandasse o header — inclusive no /completar-cadastro,
+// onde o tenantId vem do corpo da requisição.
 async function origemAutorizaTenant(request, env, tenantId) {
   const info = origemHost(request);
-  if (!info) return true;
+  if (!info) return false;
 
   const permitidoExato = origensPermitidas(env).includes(info.origin);
   if (permitidoExato && (info.host === "localhost" || info.host === "127.0.0.1")) {
@@ -910,6 +919,22 @@ async function handleCompletarCadastroAluno(request, env) {
     return json({ erro: "Academia inválida ou inativa." }, 400, request, env);
   }
 
+  // O tenantId chega no CORPO da requisição, ou seja: é texto escolhido pelo cliente.
+  // Sozinho ele não vale nada — este handler concede membership de aluno (e cria o
+  // documento em tenants/{tenantId}/alunos/{uid}) usando a service account, que passa por
+  // cima das rules. Sem a checagem abaixo, qualquer usuário autenticado do projeto viraria
+  // aluno de QUALQUER academia só trocando um campo do JSON.
+  //
+  // A validação é a origem da requisição: exigirOrigemTenant resolve o Origin contra
+  // tenantDomains/{host} e tenantSlugs/{slug} e só libera se o tenant resolvido for
+  // exatamente o tenantId do corpo. Sem header Origin, origemAutorizaTenant é fail-closed
+  // (ver comentário lá em cima) — então curl/script também não passa.
+  //
+  // Exige-se o Origin explicitamente antes, só pra devolver 400 com motivo claro em vez de
+  // um 403 genérico: chamada sem Origin nunca é um navegador legítimo neste endpoint.
+  if (!origemHost(request)) {
+    return json({ erro: "Requisição sem origem identificável." }, 400, request, env);
+  }
   const origemNegada = await exigirOrigemTenant(request, env, tenantId);
   if (origemNegada) return origemNegada;
 
