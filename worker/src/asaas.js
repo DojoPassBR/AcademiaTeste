@@ -91,6 +91,81 @@ async function criarPagamentoPix(env, apiKey, { customerId, valor, dueDate, desc
 }
 
 /**
+ * POST /subscriptions — cria assinatura mensal do plano DojoPass.
+ * billingType usa os valores aceitos pelo Asaas para assinaturas neste fluxo:
+ * PIX ou CREDIT_CARD. Dados de cartão, quando enviados, só passam em trânsito.
+ */
+async function criarAssinatura(env, apiKey, {
+  customerId,
+  valor,
+  nextDueDate,
+  descricao,
+  externalReference,
+  billingType,
+  creditCard,
+  creditCardHolderInfo,
+  remoteIp
+}) {
+  const corpo = {
+    customer: customerId,
+    billingType,
+    value: valor,
+    nextDueDate,
+    cycle: "MONTHLY",
+    description: descricao,
+    externalReference
+  };
+
+  if (billingType === "CREDIT_CARD") {
+    corpo.creditCard = creditCard;
+    corpo.creditCardHolderInfo = creditCardHolderInfo;
+    if (remoteIp) corpo.remoteIp = remoteIp;
+  }
+
+  const resp = await fetch(baseUrl(env) + "/subscriptions", {
+    method: "POST",
+    headers: headersAsaas(apiKey, true),
+    body: JSON.stringify(corpo)
+  });
+
+  if (!resp.ok) await falhar(resp, "criar assinatura");
+
+  const assinatura = await resp.json();
+  if (!assinatura || !assinatura.id) {
+    console.error("Asaas devolveu assinatura sem id.");
+    throw new Error("Falha ao criar assinatura no Asaas.");
+  }
+  return {
+    id: String(assinatura.id),
+    status: assinatura.status || null,
+    nextDueDate: assinatura.nextDueDate || nextDueDate
+  };
+}
+
+/**
+ * GET /subscriptions/{id}/payments — localiza a cobrança inicial da assinatura.
+ */
+async function listarPagamentosAssinatura(env, apiKey, subscriptionId) {
+  const resp = await fetch(
+    baseUrl(env) + "/subscriptions/" + encodeURIComponent(subscriptionId) + "/payments?limit=10&offset=0",
+    { headers: headersAsaas(apiKey, false) }
+  );
+
+  if (!resp.ok) await falhar(resp, "listar pagamentos da assinatura");
+
+  const dados = await resp.json();
+  const lista = Array.isArray(dados?.data) ? dados.data : [];
+  return lista
+    .filter((pagamento) => pagamento && pagamento.id)
+    .map((pagamento) => ({
+      id: String(pagamento.id),
+      status: pagamento.status || null,
+      dueDate: pagamento.dueDate || null,
+      externalReference: pagamento.externalReference || null
+    }));
+}
+
+/**
  * GET /payments/{id}/pixQrCode — o copia-e-cola (payload) e o QR em base64 (encodedImage).
  * @returns {Promise<{payload: string|null, encodedImage: string|null, expirationDate: string|null}>}
  */
@@ -123,4 +198,11 @@ async function consultarPagamento(env, apiKey, paymentId) {
   return resp.json();
 }
 
-export { criarCustomer, criarPagamentoPix, obterQrCodePix, consultarPagamento };
+export {
+  criarCustomer,
+  criarPagamentoPix,
+  criarAssinatura,
+  listarPagamentosAssinatura,
+  obterQrCodePix,
+  consultarPagamento
+};

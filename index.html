@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Academia Exemplo - Jiu-Jitsu | Sistema de Check-in</title>
-<meta name="description" content="Academia Exemplo - Aulas de Jiu-Jitsu para todas as idades. Venha treinar com a gente!">
+<title>Academia - DojoPass</title>
+<meta name="description" content="Página pública da academia cliente DojoPass.">
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,7 +12,7 @@
 
 <header class="header">
   <div class="container header-inner">
-    <img src="assets/logo.svg" alt="Logo Academia Exemplo" class="logo">
+    <img src="assets/logo.svg" alt="Logo DojoPass" class="logo">
     <nav class="nav">
       <a href="#sobre">Sobre</a>
       <a href="#horarios">Horários</a>
@@ -25,10 +25,10 @@
 
 <section class="hero">
   <div class="container hero-inner">
-    <img src="assets/logo.svg" alt="Academia Exemplo" class="hero-logo">
-    <h1>ESCOLA DE JIU-JITSU<br><span>ACADEMIA EXEMPLO</span></h1>
+    <img src="assets/logo.svg" alt="DojoPass" class="hero-logo">
+    <h1>ESCOLA DE JIU-JITSU<br><span>ACADEMIA</span></h1>
     <p>Disciplina, respeito e evolução no tatame. Venha treinar com a gente.</p>
-    <a class="btn" href="https://wa.me/5500000000000" target="_blank" rel="noopener">Fale conosco no WhatsApp</a>
+    <a class="btn" href="#contato">Fale conosco</a>
   </div>
 </section>
 
@@ -36,9 +36,7 @@
   <div class="container">
     <h2>Sobre a Escola</h2>
     <p>
-      A Academia Exemplo forma alunos de todas as idades e níveis com foco em técnica, disciplina
-      e espírito de equipe. Seja para lazer, competição ou defesa pessoal, aqui você encontra um
-      ambiente acolhedor para evoluir dentro e fora do tatame.
+      Esta academia ainda está completando as informações públicas. Em breve você verá aqui a apresentação, os horários e os canais de contato desta unidade.
     </p>
   </div>
 </section>
@@ -52,99 +50,32 @@
           <tr><th>Dia</th><th>Horário</th><th>Turma</th></tr>
         </thead>
         <tbody id="grade-tabela-corpo">
-          <tr><td rowspan="3">Segunda-feira</td><td>11:00 às 12:00</td><td class="tag red">No-Gi</td></tr>
-          <tr><td>19:00 às 20:00</td><td>Juvenil / Iniciante</td></tr>
-          <tr><td>20:00 às 21:30</td><td>Adulto</td></tr>
-
-          <tr><td rowspan="4">Terça-feira</td><td>08:00 às 09:30</td><td>Misto</td></tr>
-          <tr><td>18:30 às 19:30</td><td class="tag yellow">Infantil (4 a 6 anos)</td></tr>
-          <tr><td>19:30 às 20:30</td><td class="tag yellow">Infantil (7 a 11 anos)</td></tr>
-          <tr><td>20:30 às 22:30</td><td class="tag red">Adulto Competição</td></tr>
-
-          <tr><td rowspan="3">Quarta-feira</td><td>11:00 às 12:00</td><td class="tag red">No-Gi</td></tr>
-          <tr><td>18:00 às 19:15</td><td class="tag pink">Feminino</td></tr>
-          <tr><td>19:30 às 21:00</td><td>Misto</td></tr>
-
-          <tr><td rowspan="4">Quinta-feira</td><td>08:00 às 09:30</td><td>Misto</td></tr>
-          <tr><td>18:30 às 19:30</td><td class="tag yellow">Infantil (4 a 6 anos)</td></tr>
-          <tr><td>19:30 às 20:30</td><td class="tag yellow">Infantil (7 a 11 anos)</td></tr>
-          <tr><td>20:30 às 22:30</td><td class="tag red">Adulto Competição</td></tr>
-
-          <tr><td rowspan="3">Sexta-feira</td><td>11:00 às 12:00</td><td class="tag red">No-Gi</td></tr>
-          <tr><td>19:00 às 20:00</td><td>Juvenil</td></tr>
-          <tr><td>20:00 às 21:30</td><td>Adulto</td></tr>
-
-          <tr><td>Sábado</td><td>09:00 às 10:30</td><td class="tag pink">Feminino</td></tr>
-          <tr><td>Domingo</td><td>09:30 às 11:00</td><td>Treino Livre Misto</td></tr>
+          <tr><td colspan="3">Horários em atualização.</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="schedule-mobile" id="grade-mobile">
       <div class="day-group">
-        <h3 class="day-title">Segunda-feira</h3>
-        <div class="time-row"><span class="time">11:00 às 12:00</span><span class="tag red">No-Gi</span></div>
-        <div class="time-row"><span class="time">19:00 às 20:00</span><span>Juvenil / Iniciante</span></div>
-        <div class="time-row"><span class="time">20:00 às 21:30</span><span>Adulto</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Terça-feira</h3>
-        <div class="time-row"><span class="time">08:00 às 09:30</span><span>Misto</span></div>
-        <div class="time-row"><span class="time">18:30 às 19:30</span><span class="tag yellow">Infantil (4 a 6 anos)</span></div>
-        <div class="time-row"><span class="time">19:30 às 20:30</span><span class="tag yellow">Infantil (7 a 11 anos)</span></div>
-        <div class="time-row"><span class="time">20:30 às 22:30</span><span class="tag red">Adulto Competição</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Quarta-feira</h3>
-        <div class="time-row"><span class="time">11:00 às 12:00</span><span class="tag red">No-Gi</span></div>
-        <div class="time-row"><span class="time">18:00 às 19:15</span><span class="tag pink">Feminino</span></div>
-        <div class="time-row"><span class="time">19:30 às 21:00</span><span>Misto</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Quinta-feira</h3>
-        <div class="time-row"><span class="time">08:00 às 09:30</span><span>Misto</span></div>
-        <div class="time-row"><span class="time">18:30 às 19:30</span><span class="tag yellow">Infantil (4 a 6 anos)</span></div>
-        <div class="time-row"><span class="time">19:30 às 20:30</span><span class="tag yellow">Infantil (7 a 11 anos)</span></div>
-        <div class="time-row"><span class="time">20:30 às 22:30</span><span class="tag red">Adulto Competição</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Sexta-feira</h3>
-        <div class="time-row"><span class="time">11:00 às 12:00</span><span class="tag red">No-Gi</span></div>
-        <div class="time-row"><span class="time">19:00 às 20:00</span><span>Juvenil</span></div>
-        <div class="time-row"><span class="time">20:00 às 21:30</span><span>Adulto</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Sábado</h3>
-        <div class="time-row"><span class="time">09:00 às 10:30</span><span class="tag pink">Feminino</span></div>
-      </div>
-
-      <div class="day-group">
-        <h3 class="day-title">Domingo</h3>
-        <div class="time-row"><span class="time">09:30 às 11:00</span><span>Treino Livre Misto</span></div>
+        <h3 class="day-title">Horários em atualização</h3>
+        <div class="time-row"><span>A academia ainda não publicou a grade desta unidade.</span></div>
       </div>
     </div>
 
     <div class="staff" id="lista-equipe">
       <div class="staff-card">
         <span class="staff-label">Professor Responsável</span>
-        <span class="staff-name">[Nome do Professor Responsável]</span>
+        <span class="staff-name">Equipe em cadastramento</span>
       </div>
       <div class="staff-card">
         <span class="staff-label">Professores</span>
         <ul class="staff-list">
-          <li>[Nome do Professor 1]</li>
-          <li>[Nome do Professor 2]</li>
-          <li>[Nome do Professor 3]</li>
+          <li>Em breve a academia publicará os professores desta unidade.</li>
         </ul>
       </div>
       <div class="staff-card">
-        <span class="staff-label">Instrutora</span>
-        <span class="staff-name">[Nome da Instrutora]</span>
+        <span class="staff-label">Instrutores</span>
+        <span class="staff-name">Dados em atualização</span>
       </div>
     </div>
   </div>
@@ -155,13 +86,11 @@
     <div class="local-info" id="local-info">
       <h2>Onde estamos</h2>
       <p id="local-endereco"><strong>Endereço:</strong><br>
-      Av. Dr. Waldomiro de Carvalho, 434<br>
-      Itapetininga-SP - CEP: 18209-110</p>
+      Em atualização.</p>
     </div>
     <div class="map-wrap">
       <iframe
-        title="Mapa da Academia"
-        src="https://www.google.com/maps?q=-23.58810289825024,-48.067638301537485&output=embed"
+        title="Mapa da academia"
         loading="lazy"
         referrerpolicy="no-referrer-when-downgrade">
       </iframe>
@@ -173,13 +102,13 @@
   <div class="container contato-inner">
     <h2>Contato</h2>
     <div class="contato-cards" id="contato-cards">
-      <a class="card" id="contato-telefone" href="tel:+5500000000000">
+      <a class="card" id="contato-telefone">
         <span class="card-label">Telefone</span>
-        <span class="card-value">(00) 00000-0000</span>
+        <span class="card-value">Em atualização</span>
       </a>
-      <a class="card" id="contato-instagram" href="https://instagram.com/academia.exemplo" target="_blank" rel="noopener noreferrer">
+      <a class="card" id="contato-instagram">
         <span class="card-label">Instagram</span>
-        <span class="card-value">@academia.exemplo</span>
+        <span class="card-value">Em atualização</span>
       </a>
     </div>
   </div>
@@ -187,8 +116,8 @@
 
 <footer class="footer">
   <div class="container">
-    <img src="assets/logo.svg" alt="Logo Academia Exemplo" class="footer-logo">
-    <p>&copy; <span id="year"></span> Academia Exemplo</p>
+    <img src="assets/logo.svg" alt="Logo DojoPass" class="footer-logo">
+    <p>&copy; <span id="year"></span> DojoPass</p>
   </div>
 </footer>
 
@@ -200,6 +129,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script defer src="site-firebase.js"></script>
+<script defer src="app/tenant-context.js"></script>
 <script defer src="site-publico.js"></script>
 </body>
 </html>

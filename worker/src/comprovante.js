@@ -15,10 +15,10 @@
 // pelo Worker (service account), e não pelo cliente — por isso não existe (nem deve
 // existir) regra de update de aluno em `cobrancas` no firestore.rules.
 
-import { getDocument, patchDocument } from "./firestore.js";
+import { getDocument, patchDocument, tenantPath } from "./firestore.js";
 import { verificarIdToken } from "./auth.js";
-import { cobrancaIdValido } from "./validacao.js";
-import { json, corsHeaders, campoString } from "./http.js";
+import { cobrancaIdValido, tenantIdValido } from "./validacao.js";
+import { json, corsHeaders, campoString, origensPermitidas } from "./http.js";
 
 // Tipos aceitos → extensão do objeto no bucket. A extensão vem SEMPRE daqui, nunca do
 // nome do arquivo enviado pelo navegador (que é texto livre e controlado pelo cliente).
@@ -30,6 +30,87 @@ const TIPOS_ACEITOS = {
 };
 
 const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function caminhoTenant(tenantId, path) {
+  return tenantPath(tenantId, path);
+}
+
+async function resolverTenantAtivo(env, tenantId) {
+  if (!tenantIdValido(tenantId)) throw new Error("tenantId inválido.");
+  const tenant = await getDocument(env, "tenants/" + tenantId);
+  if (!tenant || campoString(tenant, "status") !== "ativo") {
+    throw new Error("Tenant inativo ou inexistente.");
+  }
+  return tenantId;
+}
+
+async function usuarioEhAdminTenant(env, uid, tenantId) {
+  const membership = await getDocument(env, caminhoTenant(tenantId, "memberships/" + uid));
+  const role = campoString(membership, "role");
+  const status = campoString(membership, "status");
+  if ((role === "admin" || role === "owner") && status === "ativo") return true;
+  return false;
+}
+
+async function usuarioEhAlunoTenant(env, uid, tenantId) {
+  const membership = await getDocument(env, caminhoTenant(tenantId, "memberships/" + uid));
+  const role = campoString(membership, "role");
+  const status = campoString(membership, "status");
+  return status === "ativo" && (role === "aluno" || role === "admin" || role === "owner");
+}
+
+function origemHost(request) {
+  const origin = request.headers.get("Origin");
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    return { origin, host: url.hostname.toLowerCase() };
+  } catch (err) {
+    return null;
+  }
+}
+
+async function origemAutorizaTenant(request, env, tenantId) {
+  const info = origemHost(request);
+  if (!info) return true;
+
+  const permitidoExato = origensPermitidas(env).includes(info.origin);
+  if (permitidoExato && (info.host === "localhost" || info.host === "127.0.0.1")) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+  if (permitidoExato && tenantId === env.DEFAULT_TENANT_ID) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+
+  const domainDoc = await getDocument(env, "tenantDomains/" + info.host);
+  if (domainDoc && campoString(domainDoc, "status") === "ativo" && campoString(domainDoc, "tenantId") === tenantId) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+
+  const sufixo = ".dojopass.com.br";
+  if (info.host.endsWith(sufixo) && info.host !== "www.dojopass.com.br") {
+    const slug = info.host.slice(0, -sufixo.length);
+    const slugDoc = await getDocument(env, "tenantSlugs/" + slug);
+    const permitido = !!(slugDoc && campoString(slugDoc, "status") === "ativo" && campoString(slugDoc, "tenantId") === tenantId);
+    if (permitido) fixarCorsOrigin(request, info.origin);
+    return permitido;
+  }
+
+  return false;
+}
+
+async function exigirOrigemTenant(request, env, tenantId) {
+  if (await origemAutorizaTenant(request, env, tenantId)) return null;
+  return json({ erro: "Origem não autorizada para esta academia." }, 403, request, env);
+}
+
+async function tenantIdDaUrl(request, env) {
+  const valor = new URL(request.url).searchParams.get("tenantId");
+  return resolverTenantAtivo(env, valor);
+}
 
 function extensaoDoTipo(contentType) {
   return Object.prototype.hasOwnProperty.call(TIPOS_ACEITOS, contentType)
@@ -84,6 +165,20 @@ async function handleUploadComprovante(request, env) {
     return json({ erro: "Envio inválido (esperado multipart/form-data)." }, 400, request, env);
   }
 
+  const tenantIdBruto = formulario.get("tenantId");
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivo(env, tenantIdBruto);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  if (!(await usuarioEhAlunoTenant(env, uid, tenantId))) {
+    return json({ erro: "Seu vínculo com esta academia não está ativo." }, 403, request, env);
+  }
+
   const cobrancaId = formulario.get("cobrancaId");
   if (!cobrancaIdValido(cobrancaId)) {
     return json({ erro: "Cobrança inválida." }, 400, request, env);
@@ -116,7 +211,7 @@ async function handleUploadComprovante(request, env) {
 
   // Autorização de verdade: a cobrança tem que existir, ser manual, ser DESTE aluno e
   // ainda estar pendente. Um aluno nunca envia comprovante na cobrança de outro.
-  const cobranca = await getDocument(env, "cobrancas/" + cobrancaId);
+  const cobranca = await getDocument(env, caminhoTenant(tenantId, "cobrancas/" + cobrancaId));
   if (!cobranca) return json({ erro: "Cobrança não encontrada." }, 404, request, env);
 
   // Documento antigo sem 'origem' conta como 'asaas' — mesmo default do firestore.rules.
@@ -151,7 +246,7 @@ async function handleUploadComprovante(request, env) {
 
   // Key derivada de uid + cobrancaId (ambos já validados): um aluno só escreve dentro do
   // próprio prefixo, e um reenvio sobrescreve o próprio arquivo em vez de acumular lixo.
-  const key = "comprovantes/" + uid + "/" + cobrancaId + "." + extensao;
+  const key = "tenants/" + tenantId + "/comprovantes/" + uid + "/" + cobrancaId + "." + extensao;
 
   const conteudo = await arquivo.arrayBuffer();
   if (conteudo.byteLength > TAMANHO_MAXIMO_BYTES) {
@@ -165,7 +260,7 @@ async function handleUploadComprovante(request, env) {
 
   await patchDocument(
     env,
-    "cobrancas/" + cobrancaId,
+    caminhoTenant(tenantId, "cobrancas/" + cobrancaId),
     {
       status: "aguardando_confirmacao",
       comprovantePath: key,
@@ -191,6 +286,15 @@ async function handleBaixarComprovante(request, env, cobrancaId) {
     return json({ erro: "Cobrança inválida." }, 400, request, env);
   }
 
+  let tenantId;
+  try {
+    tenantId = await tenantIdDaUrl(request, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
   let uid;
   try {
     ({ uid } = await verificarIdToken(env, tokenDaRequisicao(request, true)));
@@ -199,13 +303,13 @@ async function handleBaixarComprovante(request, env, cobrancaId) {
     return json({ erro: "Não autenticado." }, 401, request, env);
   }
 
-  // Só professor. A coleção admins é a mesma fonte de verdade das Firestore Rules.
-  const adminDoc = await getDocument(env, "admins/" + uid);
+  // Só professor do tenant da cobrança.
+  const adminDoc = await usuarioEhAdminTenant(env, uid, tenantId);
   if (!adminDoc) {
     return json({ erro: "Sem permissão para ver comprovantes." }, 403, request, env);
   }
 
-  const cobranca = await getDocument(env, "cobrancas/" + cobrancaId);
+  const cobranca = await getDocument(env, caminhoTenant(tenantId, "cobrancas/" + cobrancaId));
   if (!cobranca) return json({ erro: "Cobrança não encontrada." }, 404, request, env);
 
   const caminho = campoString(cobranca, "comprovantePath");

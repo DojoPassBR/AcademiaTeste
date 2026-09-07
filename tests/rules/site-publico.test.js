@@ -16,6 +16,8 @@ import {
   deleteDoc,
   getDoc,
   getDocs,
+  query,
+  where,
   serverTimestamp
 } from "firebase/firestore";
 import { criarAmbiente, semear, semearAdmin, semearAluno } from "./setup.js";
@@ -141,9 +143,9 @@ describe("site público — leitura sem login", () => {
   it("visitante anônimo lê turmas, equipe, horarios e academia/perfil", async () => {
     await semearConteudoPublico();
     const db = comoPublico();
-    await assertSucceeds(getDocs(collection(db, "turmas")));
-    await assertSucceeds(getDocs(collection(db, "equipe")));
-    await assertSucceeds(getDocs(collection(db, "horarios")));
+    await assertSucceeds(getDocs(query(collection(db, "turmas"), where("ativo", "==", true))));
+    await assertSucceeds(getDocs(query(collection(db, "equipe"), where("ativo", "==", true))));
+    await assertSucceeds(getDocs(query(collection(db, "horarios"), where("ativo", "==", true))));
     await assertSucceeds(getDoc(doc(db, "academia", "perfil")));
   });
 
@@ -153,6 +155,28 @@ describe("site público — leitura sem login", () => {
     await assertSucceeds(getDoc(doc(db, "turmas", TURMA_ID)));
     await assertSucceeds(getDoc(doc(db, "equipe", MEMBRO_ID)));
     await assertSucceeds(getDoc(doc(db, "horarios", HORARIO_ID)));
+  });
+
+
+  it("visitante anônimo não lê documento público com campo extra sensível", async () => {
+    await semear(ambiente, async (db) => {
+      await setDoc(doc(db, "turmas", "turma-com-extra"), {
+        ...TURMA_BASE,
+        criadoPor: ADMIN_UID,
+        criadoEm: new Date("2026-09-01T12:00:00Z"),
+        apiKey: "nao-pode-vazar"
+      });
+      await setDoc(doc(db, "academia", "perfil"), {
+        ...PERFIL_BASE,
+        atualizadoPor: ADMIN_UID,
+        atualizadoEm: new Date("2026-09-01T12:00:00Z"),
+        pixChaveManual: "chave-secreta"
+      });
+    });
+
+    const db = comoPublico();
+    await assertFails(getDoc(doc(db, "turmas", "turma-com-extra")));
+    await assertFails(getDoc(doc(db, "academia", "perfil")));
   });
 });
 

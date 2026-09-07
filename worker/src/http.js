@@ -14,6 +14,40 @@ function origensPermitidas(env) {
     .filter(Boolean);
 }
 
+function origemDojopassPermitida(origin) {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase();
+    return host === "dojopass.com.br" || host.endsWith(".dojopass.com.br");
+  } catch (err) {
+    return false;
+  }
+}
+
+function origemLocalPermitida(origin) {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "http:" && (host === "localhost" || host === "127.0.0.1");
+  } catch (err) {
+    return false;
+  }
+}
+
+const corsOriginPorRequest = new WeakMap();
+
+function origemPermitida(origin, env) {
+  if (!origin) return false;
+  if (origensPermitidas(env).includes(origin)) return true;
+  if (origemLocalPermitida(origin)) return true;
+  return origemDojopassPermitida(origin);
+}
+
+function fixarCorsOrigin(request, origin) {
+  if (request && origin) corsOriginPorRequest.set(request, origin);
+}
+
 function corsHeaders(request, env) {
   const headers = {
     // DELETE entrou na Fase 5 (DELETE /config/credencial-asaas, que remove a chave de
@@ -22,8 +56,8 @@ function corsHeaders(request, env) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin"
   };
-  const origin = request.headers.get("Origin");
-  if (origin && origensPermitidas(env).includes(origin)) {
+  const origin = corsOriginPorRequest.get(request) || request.headers.get("Origin");
+  if (origemPermitida(origin, env) || corsOriginPorRequest.has(request)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return headers;
@@ -43,4 +77,13 @@ function campoString(doc, nome) {
   return typeof valor?.stringValue === "string" ? valor.stringValue : null;
 }
 
-export { origensPermitidas, corsHeaders, json, campoString };
+export {
+  origensPermitidas,
+  origemPermitida,
+  origemDojopassPermitida,
+  origemLocalPermitida,
+  fixarCorsOrigin,
+  corsHeaders,
+  json,
+  campoString
+};

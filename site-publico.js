@@ -442,12 +442,13 @@
     // SDK não carregou ou site-firebase.js nem executou: página estática segue intacta.
     if (typeof dbPublico === "undefined" || !dbPublico) return;
 
+    Promise.resolve(typeof ensureTenantContext === "function" ? ensureTenantContext() : null).then(function () {
     var pTurmas = consultaSegura(function () {
-      return dbPublico.collection("turmas").where("ativo", "==", true).limit(50).get();
+      return tenantCollection("turmas").where("ativo", "==", true).limit(50).get();
     }, "turmas");
 
     var pEquipe = consultaSegura(function () {
-      return dbPublico.collection("equipe")
+      return tenantCollection("equipe")
         .where("ativo", "==", true)
         .orderBy("ordem")
         .orderBy("nome")
@@ -456,7 +457,7 @@
     }, "equipe");
 
     var pHorarios = consultaSegura(function () {
-      return dbPublico.collection("horarios")
+      return tenantCollection("horarios")
         .where("ativo", "==", true)
         .orderBy("diaSemana")
         .orderBy("horaInicio")
@@ -465,7 +466,7 @@
     }, "horarios");
 
     var pPerfil = consultaSegura(function () {
-      return dbPublico.collection("academia").doc("perfil").get();
+      return tenantCollection("academia").doc("perfil").get();
     }, "perfil da academia");
 
     Promise.all([pTurmas, pEquipe, pHorarios, pPerfil]).then(function (resultados) {
@@ -507,6 +508,7 @@
       // Promise.all aqui nunca deveria rejeitar (cada consulta já tem catch próprio),
       // mas se rejeitar a página estática continua exatamente como está.
       console.warn("[site] carga pública falhou; mantendo conteúdo estático.", erro);
+    });
     });
   }
 

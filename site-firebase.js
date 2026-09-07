@@ -42,10 +42,12 @@ try {
   if (typeof firebase !== "undefined" && typeof firebase.initializeApp === "function") {
     firebase.initializeApp(firebaseConfigPublico);
     dbPublico = firebase.firestore();
+    window.dbPublico = dbPublico;
   }
 } catch (erro) {
   // Nunca deixar um erro de inicialização quebrar a home. O site é estático primeiro.
   dbPublico = null;
+  window.dbPublico = dbPublico;
   if (typeof console !== "undefined" && console.warn) {
     console.warn("[site] Firebase não inicializou; mantendo conteúdo estático.", erro);
   }

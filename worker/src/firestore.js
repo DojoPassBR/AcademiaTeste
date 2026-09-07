@@ -129,6 +129,16 @@ function baseUrl(env, path) {
   return `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
 }
 
+function tenantPath(tenantId, path) {
+  if (typeof tenantId !== "string" || !/^[A-Za-z0-9_-]{2,64}$/.test(tenantId)) {
+    throw new Error("tenantId inválido.");
+  }
+  if (typeof path !== "string" || !path || path.includes("//") || path.split("/").some((p) => !p || p === "." || p === "..")) {
+    throw new Error("Caminho tenantizado inválido.");
+  }
+  return "tenants/" + tenantId + "/" + path;
+}
+
 // Converte um objeto JS simples (sem aninhamento) pro formato de "fields" da REST API do Firestore.
 function toFirestoreFields(obj) {
   const fields = {};
@@ -242,6 +252,7 @@ export {
   getDocument,
   createDocument,
   patchDocument,
+  tenantPath,
   limparCacheToken,
   getAccessToken,
   SCOPE_DATASTORE,

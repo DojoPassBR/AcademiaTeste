@@ -10,6 +10,8 @@ binding = "COMPROVANTES_BUCKET"
 bucket_name = "dojopass-comprovantes"
 
 [vars]
+DEFAULT_TENANT_ID = "jairo"
+ALLOW_LEGACY_ASAAS_FALLBACK = "true"
 FIREBASE_PROJECT_ID = "academiateste-56922"
 # Lista branca de origens que podem chamar /criar-cobranca do navegador (separadas por
 # vírgula). O Worker só devolve Access-Control-Allow-Origin pra uma origem desta lista.
@@ -67,7 +69,9 @@ EMAIL_REMETENTE = "DojoPass <mensalidade@dojopass.com.br>"
 #                              lixo). Trocou, recadastre a chave pelo painel.
 #                            Sem esta secret, o POST /config/credencial-asaas responde 501 e
 #                            o sistema segue usando a ASAAS_API_KEY legada abaixo.
-# ASAAS_API_KEY           -> LEGADO/FALLBACK. Painel do Asaas > Integrações > Chave de API.
+# ASAAS_API_KEY           -> LEGADO/FALLBACK explícito apenas para DEFAULT_TENANT_ID quando
+#                            ALLOW_LEGACY_ASAAS_FALLBACK = "true".
+#                            Painel do Asaas > Integrações > Chave de API.
 #                            Desde a Fase 5, a chave normalmente vem cifrada de
 #                            config/credenciais (cadastrada pelo professor); esta secret só
 #                            é usada quando NENHUMA credencial estiver cadastrada lá — é o

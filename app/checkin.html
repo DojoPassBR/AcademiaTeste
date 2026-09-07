@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Check-in - Academia Exemplo</title>
+<title>Check-in - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -96,6 +96,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
+<script src="tenant-context.js"></script>
 <script>
 const msg = document.getElementById("msg");
 const btnCheckin = document.getElementById("btn-checkin");
@@ -161,7 +162,9 @@ auth.onAuthStateChanged(async (user) => {
     return;
   }
 
-  const alunoDoc = await db.collection("alunos").doc(user.uid).get();
+  await ensureTenantContext();
+
+  const alunoDoc = await tenantCollection("alunos").doc(user.uid).get();
   if (alunoDoc.exists) {
     const alunoData = alunoDoc.data();
     alunoNome = alunoData.nome;
@@ -171,8 +174,9 @@ auth.onAuthStateChanged(async (user) => {
   }
 
   // Uma única leitura de config/geral serve pro modo de mensalidade E pro aviso visual.
-  const configDoc = await db.collection("config").doc("geral").get();
+  const configDoc = await tenantCollection("config").doc("geral").get();
   const config = configDoc.exists ? configDoc.data() : {};
+  configurarGeofenceCheckin(config);
   mensalidadeModo = config.mensalidadeModo || "manual";
   lembreteVisualAtivo = config.lembreteVisualAtivo !== false;
   if (typeof config.lembreteDiasParaAlerta === "number" && config.lembreteDiasParaAlerta > 0) {
@@ -267,14 +271,14 @@ async function carregarGrade() {
 
   try {
     [turmasSnap, horariosSnap, equipeSnap] = await Promise.all([
-      db.collection("turmas").where("ativo", "==", true).limit(50).get(),
-      db.collection("horarios")
+      tenantCollection("turmas").where("ativo", "==", true).limit(50).get(),
+      tenantCollection("horarios")
         .where("ativo", "==", true)
         .orderBy("diaSemana")
         .orderBy("horaInicio")
         .limit(200)
         .get(),
-      db.collection("equipe").where("ativo", "==", true).limit(50).get()
+      tenantCollection("equipe").where("ativo", "==", true).limit(50).get()
     ]);
   } catch (err) {
     avisoNoContainer(gradeHorarios, "p", "Não foi possível carregar a grade de horários.");
@@ -410,7 +414,7 @@ function montarRedesEquipe(redes, nomeDono) {
 async function carregarEquipe() {
   let snap;
   try {
-    snap = await db.collection("equipe")
+    snap = await tenantCollection("equipe")
       .where("ativo", "==", true)
       .orderBy("ordem")
       .orderBy("nome")
@@ -465,7 +469,7 @@ async function carregarEquipe() {
 async function carregarEventos() {
   let snap;
   try {
-    snap = await db.collection("eventos")
+    snap = await tenantCollection("eventos")
       .where("data", ">=", new Date().toISOString().slice(0, 10))
       .orderBy("data", "asc")
       .limit(10)
@@ -549,7 +553,7 @@ function linkHttpsValido(valor) {
 async function carregarCobrancaPendente(uid) {
   let snap;
   try {
-    snap = await db.collection("cobrancas")
+    snap = await tenantCollection("cobrancas")
       .where("alunoId", "==", uid)
       .where("status", "in", ["pendente", "aguardando_confirmacao"])
       .orderBy("criadoEm", "desc")
@@ -625,6 +629,7 @@ btnEnviarComprovante.addEventListener("click", async () => {
 
   try {
     const formData = new FormData();
+    formData.append("tenantId", DOJOPASS_TENANT.tenantId);
     formData.append("cobrancaId", cobrancaManualPendenteId);
     formData.append("arquivo", arquivo);
 
@@ -711,7 +716,7 @@ function atualizarBotaoCheckin() {
 }
 
 async function carregarUltimoCheckin(uid) {
-  const snap = await db.collection("checkins")
+  const snap = await tenantCollection("checkins")
     .where("alunoId", "==", uid)
     .orderBy("timestamp", "desc")
     .limit(1)
@@ -739,7 +744,7 @@ async function carregarUltimoCheckin(uid) {
 }
 
 async function carregarHistorico(uid) {
-  const snap = await db.collection("checkins")
+  const snap = await tenantCollection("checkins")
     .where("alunoId", "==", uid)
     .orderBy("timestamp", "desc")
     .limit(15)
@@ -765,6 +770,11 @@ btnCheckin.addEventListener("click", () => {
     return;
   }
 
+  if (!geofenceCheckinConfigurado()) {
+    showMsg("O check-in desta academia ainda não foi configurado pelo professor.", "error");
+    return;
+  }
+
   if (!navigator.geolocation) {
     showMsg("Seu navegador não suporta geolocalização.", "error");
     return;
@@ -779,7 +789,7 @@ btnCheckin.addEventListener("click", () => {
     const lng = pos.coords.longitude;
     const dist = distanceToSchoolMeters(lat, lng);
 
-    if (dist > CHECKIN_RADIUS_METERS) {
+    if (dist > raioCheckinMetros()) {
       showMsg("Você está a " + Math.round(dist) + "m da escola. Chegue mais perto para fazer o check-in.", "error");
       btnCheckin.disabled = false;
       btnCheckin.textContent = "Fazer Check-in";
@@ -800,7 +810,7 @@ btnCheckin.addEventListener("click", () => {
       const janela = Math.floor(Date.now() / CHECKIN_JANELA_MS);
       const checkinId = user.uid + "_" + janela;
 
-      await db.collection("checkins").doc(checkinId).set({
+      await tenantCollection("checkins").doc(checkinId).set({
         alunoId: user.uid,
         nome: alunoNome,
         lat,

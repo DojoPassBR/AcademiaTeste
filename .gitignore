@@ -19,3 +19,6 @@ pubsub-debug.log
 
 # Espelho local de skills gerado por ferramentas de agente (não é código do projeto)
 .agents/
+
+# Secrets locais do Cloudflare Worker
+worker/.dev.vars

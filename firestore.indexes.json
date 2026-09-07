@@ -4,35 +4,96 @@
       "collectionGroup": "checkins",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "alunoId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
+        {
+          "fieldPath": "alunoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "cobrancas",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "alunoId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "alunoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "horarios",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "ativo", "order": "ASCENDING" },
-        { "fieldPath": "diaSemana", "order": "ASCENDING" },
-        { "fieldPath": "horaInicio", "order": "ASCENDING" }
+        {
+          "fieldPath": "ativo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "diaSemana",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "horaInicio",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "equipe",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "ativo", "order": "ASCENDING" },
-        { "fieldPath": "ordem", "order": "ASCENDING" },
-        { "fieldPath": "nome", "order": "ASCENDING" }
+        {
+          "fieldPath": "ativo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ordem",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cobrancas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "mesReferencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cobrancas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "asaasPaymentId",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

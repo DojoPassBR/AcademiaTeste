@@ -813,3 +813,21 @@ tem um bloco de **regressão explícita**: prova que a leitura pública NÃO vaz
 `alunos`, `checkins`, `cobrancas`, `config/geral`, `config/credenciais`, `eventos` nem
 `admins` — esse é o teste mais importante do arquivo, porque é o que detectaria no futuro
 um `match` novo escrito largo demais.
+
+## Multi-tenant no mesmo repo/site/Firebase (2026-09-06)
+
+Decisão de arquitetura: todas as academias continuam usando o mesmo repositório, o mesmo site público/app e o mesmo projeto Firebase. A separação passa a ser por tenant no banco:
+
+- `tenants/{tenantId}/alunos`, `checkins`, `cobrancas`, `eventos`, `turmas`, `equipe`, `horarios`, `academia/perfil` e `config/geral` guardam os dados de cada academia.
+- `tenantSlugs/{slug}` e `tenantDomains/{host}` resolvem a academia ativa por slug/subdomínio/domínio.
+- `users/{uid}/memberships/{tenantId}` permite que o usuário descubra seu papel naquele tenant sem abrir dados da academia.
+- `tenants/{tenantId}/memberships/{uid}` é a fonte de autorização nas rules para `admin`/`owner`.
+- Durante a migração, `DEFAULT_TENANT_ID = "jairo"` mantém o piloto atual como fallback. As coleções globais antigas continuam nas rules para compatibilidade até a migração ser rodada e validada.
+
+O Worker financeiro aceita `tenantId` nos endpoints de cobrança, lembrete, comprovante, cadastro de aluno e credencial Asaas. Credenciais Asaas agora são cacheadas e gravadas por tenant em `tenants/{tenantId}/config/credenciais`. O webhook aceita `externalReference` novo no formato `tenantId:alunoId_YYYY-MM` e mantém fallback legado para o tenant padrão.
+
+Migração inicial: usar `scripts/migrate-global-to-tenant.mjs` com uma service account local para copiar os dados globais atuais para `tenants/jairo` e criar os documentos de resolução/memberships. O script não apaga os dados globais.
+
+## Separação entre site institucional DojoPass e site das academias
+
+Este workspace local está ligado ao remoto `DojoPassBR/AcademiaTeste.git` e contém o app/site público das academias cliente. O domínio principal `dojopass.com.br` visto em produção é outra landing institucional, com o texto "A gestão inteligente para academias de artes marciais". Não transformar o `index.html` deste repo nessa landing e não inserir CTA "Criar academia" no site da academia.

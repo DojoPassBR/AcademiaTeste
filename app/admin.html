@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel do Professor - Academia Exemplo</title>
+<title>Painel do Professor - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -486,7 +486,7 @@
         </div>
         <div>
           <label for="config-academia">Nome da academia</label>
-          <input type="text" id="config-academia" maxlength="80" placeholder="Ex.: Academia Exemplo">
+          <input type="text" id="config-academia" maxlength="80" placeholder="Ex.: DojoPass Unidade Centro">
         </div>
         <div>
           <label for="config-pix">Chave Pix da academia</label>
@@ -495,6 +495,18 @@
         <div>
           <label for="config-dias">Avisar quando a mensalidade estiver pendente há quantos dias</label>
           <input type="number" id="config-dias" min="1" max="60" step="1" placeholder="Ex.: 5">
+        </div>
+        <div>
+          <label for="config-checkin-lat">Latitude do check-in</label>
+          <input type="number" id="config-checkin-lat" min="-90" max="90" step="0.000001" placeholder="Ex.: -23.588103">
+        </div>
+        <div>
+          <label for="config-checkin-lng">Longitude do check-in</label>
+          <input type="number" id="config-checkin-lng" min="-180" max="180" step="0.000001" placeholder="Ex.: -48.067638">
+        </div>
+        <div>
+          <label for="config-checkin-raio">Raio do check-in (metros)</label>
+          <input type="number" id="config-checkin-raio" min="30" max="1000" step="1" placeholder="Ex.: 150">
         </div>
       </div>
 
@@ -695,6 +707,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script src="firebase-init.js"></script>
+<script src="tenant-context.js"></script>
 <script>
 const btnSair = document.getElementById("btn-sair");
 const cardNegado = document.getElementById("card-negado");
@@ -778,6 +791,9 @@ const configValor = document.getElementById("config-valor");
 const configAcademia = document.getElementById("config-academia");
 const configPix = document.getElementById("config-pix");
 const configDias = document.getElementById("config-dias");
+const configCheckinLat = document.getElementById("config-checkin-lat");
+const configCheckinLng = document.getElementById("config-checkin-lng");
+const configCheckinRaio = document.getElementById("config-checkin-raio");
 const configLembreteWhatsapp = document.getElementById("config-lembrete-whatsapp");
 const configLembreteEmail = document.getElementById("config-lembrete-email");
 const configLembreteVisual = document.getElementById("config-lembrete-visual");
@@ -944,7 +960,7 @@ async function carregarCheckins7Dias() {
 
   const resultados = await Promise.all(
     dias.map(({ inicio, fim }) =>
-      db.collection("checkins")
+      tenantCollection("checkins")
         .where("timestamp", ">=", inicio)
         .where("timestamp", "<", fim)
         .count()
@@ -965,11 +981,11 @@ async function carregarCheckins7Dias() {
 // dashboardCobrancasAguardando, já preenchido por carregarComprovantesPendentes().
 async function contarCobrancasPorStatus() {
   const [pendente, pago, cancelado] = await Promise.all([
-    db.collection("cobrancas").where("status", "==", "pendente").count().get()
+    tenantCollection("cobrancas").where("status", "==", "pendente").count().get()
       .then((agg) => agg.data().count).catch(() => null),
-    db.collection("cobrancas").where("status", "==", "pago").count().get()
+    tenantCollection("cobrancas").where("status", "==", "pago").count().get()
       .then((agg) => agg.data().count).catch(() => null),
-    db.collection("cobrancas").where("status", "==", "cancelado").count().get()
+    tenantCollection("cobrancas").where("status", "==", "cancelado").count().get()
       .then((agg) => agg.data().count).catch(() => null)
   ]);
   dashboardCobrancasPendentes = pendente;
@@ -1297,13 +1313,26 @@ auth.onAuthStateChanged(async (user) => {
     return;
   }
 
-  const adminDoc = await db.collection("admins").doc(user.uid).get();
-  if (!adminDoc.exists) {
+  await ensureTenantContext();
+
+  let ehAdmin = false;
+  try {
+    const membershipDoc = await db.collection("users").doc(user.uid).collection("memberships").doc(DOJOPASS_TENANT.tenantId).get();
+    const role = membershipDoc.exists ? membershipDoc.data().role : null;
+    ehAdmin = role === "admin" || role === "owner";
+  } catch (tenantErr) {
+    console.warn("[admin] Não foi possível ler o membership do tenant; tentando admin legado.", tenantErr);
+  }
+  if (!ehAdmin) {
+    const adminGlobalDoc = await db.collection("admins").doc(user.uid).get();
+    ehAdmin = adminGlobalDoc.exists;
+  }
+  if (!ehAdmin) {
     cardNegado.style.display = "block";
     return;
   }
 
-  const configDoc = await db.collection("config").doc("geral").get();
+  const configDoc = await tenantCollection("config").doc("geral").get();
   configGeral = normalizarConfig(configDoc.exists ? configDoc.data() : {});
   mensalidadeModo = configGeral.mensalidadeModo;
   preencherFormularioConfig();
@@ -1318,7 +1347,7 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 async function carregarAlunos() {
-  const snap = await db.collection("alunos").orderBy("nome").get();
+  const snap = await tenantCollection("alunos").orderBy("nome").get();
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
@@ -1344,7 +1373,7 @@ async function carregarAlunos() {
   // pra mostrar um número. O histórico completo só é carregado quando a linha é clicada.
   const contagens = await Promise.all(
     snap.docs.map((doc) =>
-      db.collection("checkins").where("alunoId", "==", doc.id).count().get()
+      tenantCollection("checkins").where("alunoId", "==", doc.id).count().get()
         .then((agg) => agg.data().count)
         .catch(() => null)
     )
@@ -1500,7 +1529,7 @@ async function carregarComprovantesPendentes() {
   const mapa = {};
   let snap;
   try {
-    snap = await db.collection("cobrancas")
+    snap = await tenantCollection("cobrancas")
       .where("status", "==", "aguardando_confirmacao")
       .get();
   } catch (err) {
@@ -1565,7 +1594,8 @@ async function abrirComprovante(cobrancaId, botao) {
   try {
     const token = await auth.currentUser.getIdToken();
     const url = WORKER_URL + "/comprovante/" + encodeURIComponent(cobrancaId)
-      + "?token=" + encodeURIComponent(token);
+      + "?tenantId=" + encodeURIComponent(DOJOPASS_TENANT.tenantId)
+      + "&token=" + encodeURIComponent(token);
     window.open(url, "_blank", "noopener");
   } catch (err) {
     alert("Não foi possível abrir o comprovante. Tente novamente.");
@@ -1585,7 +1615,7 @@ async function confirmarPagamentoComprovante(cobrancaId, alunoId, botao) {
   botao.textContent = "Confirmando...";
 
   try {
-    await db.collection("cobrancas").doc(cobrancaId).update({
+    await tenantCollection("cobrancas").doc(cobrancaId).update({
       status: "pago",
       confirmadoPorUid: auth.currentUser.uid,
       confirmadoEm: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1601,7 +1631,7 @@ async function confirmarPagamentoComprovante(cobrancaId, alunoId, botao) {
   }
 
   try {
-    await db.collection("alunos").doc(alunoId).update({
+    await tenantCollection("alunos").doc(alunoId).update({
       mensalidadeStatus: "pago",
       mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1729,7 +1759,7 @@ async function enviarLembreteEmail(alunoId, botao) {
         Authorization: "Bearer " + token,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ alunoId: alunoId })
+      body: JSON.stringify(tenantPayload({ alunoId: alunoId }))
     });
 
     const dados = await resp.json().catch(() => null);
@@ -1804,7 +1834,7 @@ function limparFormularioEvento() {
 async function carregarEventos() {
   let snap;
   try {
-    snap = await db.collection("eventos").orderBy("data", "desc").get();
+    snap = await tenantCollection("eventos").orderBy("data", "desc").get();
   } catch (err) {
     tabelaEventos.innerHTML = "<tr><td colspan='5'>Não foi possível carregar os eventos.</td></tr>";
     eventosCache = [];
@@ -1935,7 +1965,7 @@ async function salvarEvento() {
 
   try {
     if (eventoEditandoId) {
-      await db.collection("eventos").doc(eventoEditandoId).update({
+      await tenantCollection("eventos").doc(eventoEditandoId).update({
         nome,
         data,
         local,
@@ -1956,7 +1986,7 @@ async function salvarEvento() {
       };
       if (link) payload.link = link;
 
-      await db.collection("eventos").add(payload);
+      await tenantCollection("eventos").add(payload);
       limparFormularioEvento();
       mostrarMsgEvento("Evento cadastrado.", "success");
     }
@@ -1979,7 +2009,7 @@ async function apagarEvento(id, nome) {
   if (!confirm('Apagar o evento "' + nome + '"?')) return;
 
   try {
-    await db.collection("eventos").doc(id).delete();
+    await tenantCollection("eventos").doc(id).delete();
     if (eventoEditandoId === id) limparFormularioEvento();
     mostrarMsgEvento("Evento apagado.", "success");
     carregarEventos();
@@ -2040,7 +2070,7 @@ function gerarRelatorio() {
 }
 
 async function alterarMensalidade(alunoId, novoStatus) {
-  await db.collection("alunos").doc(alunoId).update({
+  await tenantCollection("alunos").doc(alunoId).update({
     mensalidadeStatus: novoStatus,
     mensalidadeAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
@@ -2108,7 +2138,7 @@ async function confirmarGeracaoCobranca() {
         "Content-Type": "application/json",
         Authorization: "Bearer " + idToken
       },
-      body: JSON.stringify(corpo)
+      body: JSON.stringify(tenantPayload(corpo))
     });
 
     if (resp.status === 401) {
@@ -2198,7 +2228,10 @@ function configPadrao() {
     // Gatilho VISUAL do modo Pix automático: com quantos dias de antecedência a cobrança
     // do Asaas aparece destacada no painel. Não é o prazo de vencimento (esse é fixo no
     // servidor, ASAAS_DUE_DATE_DIAS) e não dispara envio nenhum.
-    asaasDiasAvisoAntesVencimento: null
+    asaasDiasAvisoAntesVencimento: null,
+    checkinLat: null,
+    checkinLng: null,
+    checkinRaioMetros: null
   };
 }
 
@@ -2236,6 +2269,9 @@ function normalizarConfig(dados) {
   if (typeof dados.asaasDiasAvisoAntesVencimento === "number") {
     base.asaasDiasAvisoAntesVencimento = dados.asaasDiasAvisoAntesVencimento;
   }
+  if (typeof dados.checkinLat === "number") base.checkinLat = dados.checkinLat;
+  if (typeof dados.checkinLng === "number") base.checkinLng = dados.checkinLng;
+  if (typeof dados.checkinRaioMetros === "number") base.checkinRaioMetros = dados.checkinRaioMetros;
   return base;
 }
 
@@ -2250,6 +2286,9 @@ function preencherFormularioConfig() {
   configDias.value = configGeral.lembreteDiasParaAlerta === null
     ? ""
     : String(configGeral.lembreteDiasParaAlerta);
+  configCheckinLat.value = configGeral.checkinLat === null ? "" : String(configGeral.checkinLat);
+  configCheckinLng.value = configGeral.checkinLng === null ? "" : String(configGeral.checkinLng);
+  configCheckinRaio.value = configGeral.checkinRaioMetros === null ? "" : String(configGeral.checkinRaioMetros);
   configLembreteWhatsapp.checked = configGeral.lembreteWhatsappAtivo;
   configLembreteEmail.checked = configGeral.lembreteEmailAtivo;
   configLembreteVisual.checked = configGeral.lembreteVisualAtivo;
@@ -2329,6 +2368,31 @@ async function salvarConfiguracoes() {
     payload.asaasDiasAvisoAntesVencimento = avisoDias;
   }
 
+  const checkinLatTexto = configCheckinLat.value.trim();
+  const checkinLngTexto = configCheckinLng.value.trim();
+  const checkinRaioTexto = configCheckinRaio.value.trim();
+  const algumGeofence = checkinLatTexto || checkinLngTexto || checkinRaioTexto;
+  if (algumGeofence) {
+    const lat = parseFloat(checkinLatTexto);
+    const lng = parseFloat(checkinLngTexto);
+    const raio = parseFloat(checkinRaioTexto);
+    if (!isFinite(lat) || lat < -90 || lat > 90) {
+      mostrarMsgConfig("Latitude do check-in inválida.", "error");
+      return false;
+    }
+    if (!isFinite(lng) || lng < -180 || lng > 180) {
+      mostrarMsgConfig("Longitude do check-in inválida.", "error");
+      return false;
+    }
+    if (!isFinite(raio) || raio < 30 || raio > 1000) {
+      mostrarMsgConfig("Raio do check-in deve ficar entre 30 e 1000 metros.", "error");
+      return false;
+    }
+    payload.checkinLat = lat;
+    payload.checkinLng = lng;
+    payload.checkinRaioMetros = raio;
+  }
+
   const template = configTemplate.value.trim();
   if (template.length > 500) {
     mostrarMsgConfig("O texto do lembrete deve ter até 500 caracteres.", "error");
@@ -2348,7 +2412,7 @@ async function salvarConfiguracoes() {
     // set() sem merge: campos apagados no formulário somem do documento em vez de virar
     // string vazia — o hasOnly das rules aceita ausência, e a tela já trata ausência
     // como default.
-    await db.collection("config").doc("geral").set(payload);
+    await tenantCollection("config").doc("geral").set(payload);
     configGeral = normalizarConfig(payload);
     mensalidadeModo = configGeral.mensalidadeModo;
     preencherFormularioConfig();
@@ -2705,7 +2769,7 @@ async function criarAlunoPeloProfessor() {
         "Content-Type": "application/json",
         Authorization: "Bearer " + idToken
       },
-      body: JSON.stringify({ nome, email, senha, telefone, nascimento, faixa })
+      body: JSON.stringify(tenantPayload({ nome, email, senha, telefone, nascimento, faixa }))
     });
 
     // A senha já cumpriu o papel dela: sai do DOM antes mesmo de tratar a resposta.
@@ -2832,7 +2896,7 @@ async function carregarCredencialAsaas() {
 
   try {
     const token = await auth.currentUser.getIdToken();
-    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas?tenantId=" + encodeURIComponent(DOJOPASS_TENANT.tenantId), {
       headers: { Authorization: "Bearer " + token }
     });
 
@@ -2879,7 +2943,7 @@ async function salvarCredencialAsaas() {
         "Content-Type": "application/json",
         Authorization: "Bearer " + token
       },
-      body: JSON.stringify({ apiKey: chave, ambiente })
+      body: JSON.stringify(tenantPayload({ apiKey: chave, ambiente }))
     });
 
     const dados = await resp.json().catch(() => ({}));
@@ -2931,7 +2995,7 @@ async function removerCredencialAsaas() {
 
   try {
     const token = await auth.currentUser.getIdToken();
-    const resp = await fetch(WORKER_URL + "/config/credencial-asaas", {
+    const resp = await fetch(WORKER_URL + "/config/credencial-asaas?tenantId=" + encodeURIComponent(DOJOPASS_TENANT.tenantId), {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token }
     });
@@ -3033,7 +3097,7 @@ async function confirmarCobrancaManual() {
 
   try {
     const cobrancaId = manualAlunoAtual.id + "_" + mesReferencia;
-    const ref = db.collection("cobrancas").doc(cobrancaId);
+    const ref = tenantCollection("cobrancas").doc(cobrancaId);
     const existente = await ref.get();
 
     if (existente.exists) {
@@ -3082,7 +3146,7 @@ async function abrirHistorico(nome, alunoId) {
 
   let snap;
   try {
-    snap = await db.collection("checkins")
+    snap = await tenantCollection("checkins")
       .where("alunoId", "==", alunoId)
       .orderBy("timestamp", "desc")
       .limit(50)
@@ -3324,7 +3388,7 @@ async function carregarConteudoPublico() {
 async function carregarTurmas() {
   let snap;
   try {
-    snap = await db.collection("turmas").get();
+    snap = await tenantCollection("turmas").get();
   } catch (err) {
     turmasCache = [];
     tabelaTurmas.innerHTML = "";
@@ -3441,7 +3505,7 @@ async function salvarTurma() {
 
   try {
     if (turmaEditandoId) {
-      await db.collection("turmas").doc(turmaEditandoId).update({
+      await tenantCollection("turmas").doc(turmaEditandoId).update({
         nome: nome,
         // Campo vazio some do documento em vez de virar "" — a rule aceita ausência
         // de 'descricao', mesma lógica do 'link' do mural de eventos.
@@ -3467,7 +3531,7 @@ async function salvarTurma() {
       if (descricao) payload.descricao = descricao;
 
       // ID automático, igual ao mural de eventos: não existe chave natural pra turma.
-      await db.collection("turmas").add(payload);
+      await tenantCollection("turmas").add(payload);
       limparFormularioTurma();
       mostrarMsgEm(turmaMsg, "Turma cadastrada.", "success");
     }
@@ -3501,7 +3565,7 @@ async function apagarTurma(id, nome) {
   if (!confirm(pergunta)) return;
 
   try {
-    await db.collection("turmas").doc(id).delete();
+    await tenantCollection("turmas").doc(id).delete();
     if (turmaEditandoId === id) limparFormularioTurma();
     mostrarMsgEm(turmaMsg, "Turma apagada.", "success");
     await carregarTurmas();
@@ -3515,7 +3579,7 @@ async function apagarTurma(id, nome) {
 async function carregarEquipe() {
   let snap;
   try {
-    snap = await db.collection("equipe").get();
+    snap = await tenantCollection("equipe").get();
   } catch (err) {
     equipeCache = [];
     tabelaEquipe.innerHTML = "";
@@ -3650,7 +3714,7 @@ async function salvarMembroEquipe() {
   try {
     if (membroEditandoId) {
       const apagar = firebase.firestore.FieldValue.delete();
-      await db.collection("equipe").doc(membroEditandoId).update({
+      await tenantCollection("equipe").doc(membroEditandoId).update({
         tipo: tipo,
         nome: nome,
         telefone: telefone ? telefone : apagar,
@@ -3677,7 +3741,7 @@ async function salvarMembroEquipe() {
       if (faixa) payload.faixa = faixa;
       if (redesColetadas.redes) payload.redes = redesColetadas.redes;
 
-      await db.collection("equipe").add(payload);
+      await tenantCollection("equipe").add(payload);
       limparFormularioEquipe();
       mostrarMsgEm(equipeMsg, "Cadastrado na equipe.", "success");
     }
@@ -3709,7 +3773,7 @@ async function apagarMembroEquipe(id, nome) {
   if (!confirm(pergunta)) return;
 
   try {
-    await db.collection("equipe").doc(id).delete();
+    await tenantCollection("equipe").doc(id).delete();
     if (membroEditandoId === id) limparFormularioEquipe();
     mostrarMsgEm(equipeMsg, "Cadastro apagado.", "success");
     await carregarEquipe();
@@ -3780,7 +3844,7 @@ function atualizarDisponibilidadeHorario() {
 async function carregarHorarios() {
   let snap;
   try {
-    snap = await db.collection("horarios").get();
+    snap = await tenantCollection("horarios").get();
   } catch (err) {
     horariosCache = [];
     renderHorarios();
@@ -3962,7 +4026,7 @@ async function salvarHorario() {
   try {
     if (horarioEditandoId) {
       const apagar = firebase.firestore.FieldValue.delete();
-      await db.collection("horarios").doc(horarioEditandoId).update({
+      await tenantCollection("horarios").doc(horarioEditandoId).update({
         diaSemana: diaSemana,
         horaInicio: inicio,
         horaFim: fim,
@@ -3989,7 +4053,7 @@ async function salvarHorario() {
       if (professorId) payload.professorId = professorId;
       if (observacao) payload.observacao = observacao;
 
-      await db.collection("horarios").add(payload);
+      await tenantCollection("horarios").add(payload);
       limparFormularioHorario();
       mostrarMsgEm(horarioMsg, "Horário cadastrado.", "success");
     }
@@ -4014,7 +4078,7 @@ async function apagarHorario(id, descricao) {
   if (!confirm("Apagar o horário de " + descricao + "?")) return;
 
   try {
-    await db.collection("horarios").doc(id).delete();
+    await tenantCollection("horarios").doc(id).delete();
     if (horarioEditandoId === id) limparFormularioHorario();
     mostrarMsgEm(horarioMsg, "Horário apagado.", "success");
     await carregarHorarios();
@@ -4028,7 +4092,7 @@ async function apagarHorario(id, descricao) {
 async function carregarPerfilAcademia() {
   let doc;
   try {
-    doc = await db.collection("academia").doc("perfil").get();
+    doc = await tenantCollection("academia").doc("perfil").get();
   } catch (err) {
     mostrarMsgEm(perfilMsg, "Não foi possível carregar o perfil da academia.", "error");
     return;
@@ -4121,7 +4185,7 @@ async function salvarPerfilAcademia() {
     // set() sem merge (mesma escolha de config/geral): campo limpo no formulário some
     // do documento em vez de virar string vazia — a rule aceita ausência, e a página
     // pública já trata ausência como "não informado".
-    await db.collection("academia").doc("perfil").set(payload, { merge: false });
+    await tenantCollection("academia").doc("perfil").set(payload, { merge: false });
     mostrarMsgEm(perfilMsg, "Perfil da academia salvo.", "success");
   } catch (err) {
     const semPermissao = err && err.code === "permission-denied";

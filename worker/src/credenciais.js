@@ -17,11 +17,15 @@
 // cipher), obterAsaasApiKey devolve env.ASAAS_API_KEY. É o que mantém o piloto atual
 // funcionando sem nenhuma migração.
 
-import { getDocument, createDocument, patchDocument } from "./firestore.js";
+import { getDocument, createDocument, patchDocument, tenantPath } from "./firestore.js";
 import { campoString } from "./http.js";
 import { cifrar, decifrar } from "./cripto.js";
 
 const CAMINHO_CREDENCIAIS = "config/credenciais";
+
+function caminhoCredenciais(tenantId) {
+  return tenantId ? tenantPath(tenantId, CAMINHO_CREDENCIAIS) : CAMINHO_CREDENCIAIS;
+}
 
 const AMBIENTES = {
   sandbox: "https://sandbox.asaas.com/api/v3",
@@ -33,10 +37,15 @@ const AMBIENTES = {
 // burro de propósito: quem grava/apaga chama invalidarCacheCredencial() na hora, então o
 // TTL é só a rede de segurança pro caso de outra isolate ter feito a alteração.
 const CACHE_TTL_MS = 5 * 60 * 1000;
-let cacheCredencial = null; // { apiKey: string|undefined, baseUrl: string, expiraEm: number }
+let cacheCredencial = new Map(); // chave -> { apiKey: string|undefined, baseUrl: string, expiraEm: number }
 
-function invalidarCacheCredencial() {
-  cacheCredencial = null;
+function chaveCache(tenantId) {
+  return tenantId || "__global__";
+}
+
+function invalidarCacheCredencial(tenantId) {
+  if (tenantId) cacheCredencial.delete(chaveCache(tenantId));
+  else cacheCredencial.clear();
 }
 
 // Lê um campo timestamp de um documento cru da REST API do Firestore.
@@ -77,14 +86,16 @@ function ambienteValido(ambiente) {
  * apiKey pode vir undefined (nenhuma das duas existe) — quem chama TEM que tratar isso
  * antes de falar com o Asaas.
  */
-async function obterConfigAsaas(env) {
-  if (cacheCredencial && cacheCredencial.expiraEm > Date.now()) {
-    return { apiKey: cacheCredencial.apiKey, baseUrl: cacheCredencial.baseUrl };
+async function obterConfigAsaas(env, tenantId) {
+  const cacheKey = chaveCache(tenantId);
+  const emCache = cacheCredencial.get(cacheKey);
+  if (emCache && emCache.expiraEm > Date.now()) {
+    return { apiKey: emCache.apiKey, baseUrl: emCache.baseUrl };
   }
 
   let apiKey;
   let baseUrl;
-  const doc = await getDocument(env, CAMINHO_CREDENCIAIS);
+  const doc = await getDocument(env, caminhoCredenciais(tenantId));
   const cipher = doc ? campoString(doc, "asaasApiKeyCipher") : null;
   const iv = doc ? campoString(doc, "asaasApiKeyIv") : null;
 
@@ -95,17 +106,24 @@ async function obterConfigAsaas(env) {
     apiKey = await decifrar(env, { cipher, iv });
     baseUrl = baseUrlDoAmbiente(campoString(doc, "asaasAmbiente")) || env.ASAAS_BASE_URL;
   } else {
-    apiKey = env.ASAAS_API_KEY || undefined;
-    baseUrl = env.ASAAS_BASE_URL;
+    const tenantPadrao = env && typeof env.DEFAULT_TENANT_ID === "string" ? env.DEFAULT_TENANT_ID : "jairo";
+    const fallbackLegadoAtivo = env && env.ALLOW_LEGACY_ASAAS_FALLBACK === "true";
+    if (fallbackLegadoAtivo && tenantId === tenantPadrao) {
+      apiKey = env.ASAAS_API_KEY || undefined;
+      baseUrl = env.ASAAS_BASE_URL;
+    } else {
+      apiKey = undefined;
+      baseUrl = env.ASAAS_BASE_URL;
+    }
   }
 
-  cacheCredencial = { apiKey, baseUrl, expiraEm: Date.now() + CACHE_TTL_MS };
+  cacheCredencial.set(cacheKey, { apiKey, baseUrl, expiraEm: Date.now() + CACHE_TTL_MS });
   return { apiKey, baseUrl };
 }
 
 /** Atalho pra quem só precisa da chave. */
-async function obterAsaasApiKey(env) {
-  const { apiKey } = await obterConfigAsaas(env);
+async function obterAsaasApiKey(env, tenantId) {
+  const { apiKey } = await obterConfigAsaas(env, tenantId);
   return apiKey;
 }
 
@@ -115,7 +133,7 @@ async function obterAsaasApiKey(env) {
  * ciphertext, o IV e os 4 últimos dígitos (que existem só pra o professor reconhecer
  * qual chave está ali).
  */
-async function salvarAsaasApiKey(env, { apiKeyPlana, ambiente, atualizadoPorUid }) {
+async function salvarAsaasApiKey(env, { apiKeyPlana, ambiente, atualizadoPorUid, tenantId }) {
   if (typeof apiKeyPlana !== "string" || !apiKeyPlana) {
     throw new Error("Chave de API ausente.");
   }
@@ -134,22 +152,23 @@ async function salvarAsaasApiKey(env, { apiKeyPlana, ambiente, atualizadoPorUid 
     atualizadoEm: new Date()
   };
 
-  const existente = await getDocument(env, CAMINHO_CREDENCIAIS);
+  const caminho = caminhoCredenciais(tenantId);
+  const existente = await getDocument(env, caminho);
   if (existente) {
-    await patchDocument(env, CAMINHO_CREDENCIAIS, dados, { exigirExistente: true });
+    await patchDocument(env, caminho, dados, { exigirExistente: true });
   } else {
-    await createDocument(env, CAMINHO_CREDENCIAIS, dados);
+    await createDocument(env, caminho, dados);
   }
 
-  invalidarCacheCredencial();
+  invalidarCacheCredencial(tenantId);
 }
 
 /**
  * Metadados seguros da credencial, pro painel mostrar o status.
  * NUNCA devolve o cipher, o IV nem a chave decifrada.
  */
-async function obterMetadadosCredencial(env) {
-  const doc = await getDocument(env, CAMINHO_CREDENCIAIS);
+async function obterMetadadosCredencial(env, tenantId) {
+  const doc = await getDocument(env, caminhoCredenciais(tenantId));
   const cipher = doc ? campoString(doc, "asaasApiKeyCipher") : null;
 
   if (!doc || !cipher) {
@@ -173,13 +192,14 @@ async function obterMetadadosCredencial(env) {
  * configurada", e o sistema volta ao fallback env.ASAAS_API_KEY. O ciphertext antigo é
  * de fato substituído, não fica escondido no documento.
  */
-async function apagarCredencial(env) {
-  const existente = await getDocument(env, CAMINHO_CREDENCIAIS);
+async function apagarCredencial(env, tenantId) {
+  const caminho = caminhoCredenciais(tenantId);
+  const existente = await getDocument(env, caminho);
 
   if (existente) {
     await patchDocument(
       env,
-      CAMINHO_CREDENCIAIS,
+      caminho,
       {
         asaasApiKeyCipher: null,
         asaasApiKeyIv: null,
@@ -192,7 +212,7 @@ async function apagarCredencial(env) {
     );
   }
 
-  invalidarCacheCredencial();
+  invalidarCacheCredencial(tenantId);
 }
 
 export {

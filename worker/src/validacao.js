@@ -72,6 +72,47 @@ function cobrancaIdValido(v) {
   return alunoIdValido(v.slice(0, corte)) && mesReferenciaValido(v.slice(corte + 1));
 }
 
+
+function tenantIdValido(v) {
+  return typeof v === "string" && /^[A-Za-z0-9_-]{2,64}$/.test(v);
+}
+
+function tenantSlugValido(v) {
+  return typeof v === "string" && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(v);
+}
+
+function tenantHostValido(v) {
+  return typeof v === "string" && /^[a-z0-9.-]{3,253}$/.test(v) && !v.includes("..");
+}
+
+function tenantIdDoPayload(body) {
+  const tenantId = body && typeof body === "object" ? body.tenantId : null;
+  if (!tenantIdValido(tenantId)) throw new Error("tenantId inválido.");
+  return tenantId;
+}
+
+function derivarCobrancaExternalReference(tenantId, alunoId, mesReferencia) {
+  if (!tenantIdValido(tenantId)) throw new Error("tenantId inválido para externalReference.");
+  return tenantId + ":" + derivarCobrancaId(alunoId, mesReferencia);
+}
+
+function separarCobrancaExternalReference(referencia, env) {
+  if (typeof referencia !== "string") return null;
+  let tenantId = env && typeof env.DEFAULT_TENANT_ID === "string" ? env.DEFAULT_TENANT_ID : "jairo";
+  let bruto = referencia;
+  const pos = referencia.indexOf(":");
+  if (pos > 0) {
+    tenantId = referencia.slice(0, pos);
+    bruto = referencia.slice(pos + 1);
+  }
+  const corte = bruto.lastIndexOf("_");
+  if (corte <= 0) return null;
+  const alunoId = bruto.slice(0, corte);
+  const mesReferencia = bruto.slice(corte + 1);
+  if (!tenantIdValido(tenantId) || !alunoIdValido(alunoId) || !mesReferenciaValido(mesReferencia)) return null;
+  return { tenantId, alunoId, mesReferencia, cobrancaId: derivarCobrancaId(alunoId, mesReferencia) };
+}
+
 // ---------------------------------------------------------------------------
 // Validadores do cadastro de aluno feito PELO PROFESSOR (POST /criar-aluno).
 //
@@ -126,6 +167,7 @@ function senhaInicialValida(v) {
   return typeof v === "string" && v.length >= 6 && v.length <= 128;
 }
 
+
 // Reexportado daqui pro index.js importar todas as validações de um lugar só.
 export { cpfCnpjValido } from "./cpf.js";
 
@@ -143,5 +185,11 @@ export {
   nascimentoValido,
   faixaValida,
   senhaInicialValida,
-  FAIXAS_VALIDAS
+  FAIXAS_VALIDAS,
+  tenantIdValido,
+  tenantSlugValido,
+  tenantHostValido,
+  tenantIdDoPayload,
+  derivarCobrancaExternalReference,
+  separarCobrancaExternalReference
 };

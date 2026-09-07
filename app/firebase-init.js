@@ -11,6 +11,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+window.auth = auth;
+window.db = db;
 
 // TODO(security): ativar Firebase App Check com ReCaptchaV3Provider aqui quando houver
 // uma site key de produção (Firebase Console > App Check > registrar o app web com
@@ -29,6 +31,13 @@ const SCHOOL_LAT = -23.58810289825024;
 const SCHOOL_LNG = -48.067638301537485;
 // GEO-SYNC: CHECKIN_RADIUS_METERS = 150
 const CHECKIN_RADIUS_METERS = 150;
+const CHECKIN_CONFIG_PADRAO = {
+  lat: SCHOOL_LAT,
+  lng: SCHOOL_LNG,
+  raioMetros: CHECKIN_RADIUS_METERS
+};
+let checkinConfigAtual = { ...CHECKIN_CONFIG_PADRAO };
+let checkinGeofenceConfigurado = false;
 // Intervalo mínimo entre check-ins, pra evitar check-ins repetidos em sequência.
 // Vira o divisor da janela do checkinId (90 * 60 * 1000 = 5400000 ms), e a rule
 // checkinIdValido em firestore.rules usa exatamente esse mesmo número.
@@ -40,14 +49,40 @@ const CHECKIN_JANELA_MS = CHECKIN_INTERVALO_MINUTOS * 60 * 1000;
 // URL do Cloudflare Worker do módulo financeiro (gera cobrança Pix + recebe webhook do
 // Asaas). Ver worker/ na raiz do repositório e config/geral.mensalidadeModo (o modo "pix"
 // precisa estar ativo em config/geral pro botão de cobrança aparecer em admin.html).
-const WORKER_URL = "https://academiateste-financeiro.arnaldohungria.workers.dev";
+const WORKER_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://127.0.0.1:8787"
+  : "https://academiateste-financeiro.arnaldohungria.workers.dev";
 
 function distanceToSchoolMeters(lat, lng) {
   const metersPerDegLat = 111320;
-  const metersPerDegLng = 111320 * Math.cos(SCHOOL_LAT * Math.PI / 180);
-  const dLat = (lat - SCHOOL_LAT) * metersPerDegLat;
-  const dLng = (lng - SCHOOL_LNG) * metersPerDegLng;
+  const metersPerDegLng = 111320 * Math.cos(checkinConfigAtual.lat * Math.PI / 180);
+  const dLat = (lat - checkinConfigAtual.lat) * metersPerDegLat;
+  const dLng = (lng - checkinConfigAtual.lng) * metersPerDegLng;
   return Math.sqrt(dLat * dLat + dLng * dLng);
+}
+
+function raioCheckinMetros() {
+  return checkinConfigAtual.raioMetros;
+}
+
+function configurarGeofenceCheckin(config) {
+  const configurado = typeof config?.checkinLat === "number"
+    && typeof config?.checkinLng === "number"
+    && typeof config?.checkinRaioMetros === "number";
+  const lat = configurado ? config.checkinLat : CHECKIN_CONFIG_PADRAO.lat;
+  const lng = configurado ? config.checkinLng : CHECKIN_CONFIG_PADRAO.lng;
+  const raio = configurado ? config.checkinRaioMetros : CHECKIN_CONFIG_PADRAO.raioMetros;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || raio < 30 || raio > 1000) {
+    checkinConfigAtual = { ...CHECKIN_CONFIG_PADRAO };
+    checkinGeofenceConfigurado = false;
+    return;
+  }
+  checkinConfigAtual = { lat, lng, raioMetros: raio };
+  checkinGeofenceConfigurado = configurado;
+}
+
+function geofenceCheckinConfigurado() {
+  return checkinGeofenceConfigurado;
 }
 
 function formatDateTime(timestamp) {

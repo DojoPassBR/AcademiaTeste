@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - Academia Exemplo</title>
+<title>Login - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -38,6 +38,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
+<script src="tenant-context.js"></script>
 <script>
 const form = document.getElementById("form-login");
 const msg = document.getElementById("msg");
@@ -57,11 +58,32 @@ form.addEventListener("submit", async (e) => {
   btn.textContent = "Entrando...";
 
   try {
+    const local = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (local) {
+      window.localStorage.removeItem("firebase:authUser:" + firebaseConfig.apiKey + ":[DEFAULT]");
+      window.localStorage.removeItem("dojopassDevAdmin");
+    }
+
     const cred = await auth.signInWithEmailAndPassword(email, senha);
-    const adminDoc = await db.collection("admins").doc(cred.user.uid).get();
-    window.location.href = adminDoc.exists ? "admin.html" : "checkin.html";
+    await ensureTenantContext();
+    let ehAdmin = false;
+    try {
+      const membershipDoc = await db.collection("users").doc(cred.user.uid).collection("memberships").doc(DOJOPASS_TENANT.tenantId).get();
+      const role = membershipDoc.exists ? membershipDoc.data().role : null;
+      ehAdmin = role === "admin" || role === "owner";
+    } catch (tenantErr) {
+      console.warn("[login] Não foi possível ler o membership do tenant; tentando admin legado.", tenantErr);
+    }
+    if (!ehAdmin) {
+      const adminGlobalDoc = await db.collection("admins").doc(cred.user.uid).get();
+      ehAdmin = adminGlobalDoc.exists;
+    }
+    window.location.href = ehAdmin ? "admin.html" : "checkin.html";
   } catch (err) {
-    showMsg("E-mail ou senha incorretos.", "error");
+    console.error("[login] Falha ao entrar", err);
+    const local = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const detalhe = local && err && err.code ? " (" + err.code + ")" : "";
+    showMsg("Não foi possível entrar. Confira e-mail e senha." + detalhe, "error");
     btn.disabled = false;
     btn.textContent = "Entrar";
   }

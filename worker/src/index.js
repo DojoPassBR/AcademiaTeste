@@ -1,8 +1,13 @@
-import { getDocument, createDocument, patchDocument } from "./firestore.js";
-import { criarCustomer, criarPagamentoPix, obterQrCodePix, consultarPagamento } from "./asaas.js";
+import { getDocument, createDocument, patchDocument, tenantPath } from "./firestore.js";
+import {
+  criarCustomer,
+  criarPagamentoPix,
+  obterQrCodePix,
+  consultarPagamento
+} from "./asaas.js";
 import { verificarIdToken } from "./auth.js";
 import { validarTokenWebhook } from "./webhook-token.js";
-import { corsHeaders, json, campoString } from "./http.js";
+import { corsHeaders, json, campoString, origensPermitidas, origemDojopassPermitida, fixarCorsOrigin } from "./http.js";
 import {
   obterConfigAsaas,
   salvarAsaasApiKey,
@@ -20,6 +25,10 @@ import {
   alunoNomeValido,
   emailValido,
   derivarCobrancaId,
+  derivarCobrancaExternalReference,
+  separarCobrancaExternalReference,
+  tenantIdDoPayload,
+  tenantIdValido,
   cpfCnpjValido,
   nomeAlunoCadastroValido,
   telefoneValido,
@@ -28,6 +37,154 @@ import {
   senhaInicialValida
 } from "./validacao.js";
 import { criarUsuarioAuth } from "./identity.js";
+
+
+function tenantPadrao(env) {
+  return env.DEFAULT_TENANT_ID || "jairo";
+}
+
+function caminhoTenant(tenantId, path) {
+  return tenantPath(tenantId, path);
+}
+
+function tenantDocPath(tenantId) {
+  if (!tenantIdValido(tenantId)) throw new Error("tenantId inválido.");
+  return "tenants/" + tenantId;
+}
+
+async function resolverTenantAtivo(env, tenantId) {
+  if (!tenantIdValido(tenantId)) throw new Error("tenantId inválido.");
+  const tenant = await getDocument(env, tenantDocPath(tenantId));
+  if (!tenant || campoString(tenant, "status") !== "ativo") {
+    const err = new Error("Tenant inativo ou inexistente.");
+    err.tenantInativo = true;
+    throw err;
+  }
+  return tenantId;
+}
+
+async function resolverTenantAtivoDoPayload(body, env) {
+  return resolverTenantAtivo(env, tenantIdDoPayload(body));
+}
+
+async function resolverTenantAtivoDaUrl(request, env) {
+  const tenantId = new URL(request.url).searchParams.get("tenantId");
+  return resolverTenantAtivo(env, tenantId);
+}
+
+function origemHost(request) {
+  const origin = request.headers.get("Origin");
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    return { origin, protocol: url.protocol, host: url.hostname.toLowerCase() };
+  } catch (err) {
+    return null;
+  }
+}
+
+function roleMembership(doc) {
+  return campoString(doc, "role");
+}
+
+async function usuarioEhAdminTenant(env, uid, tenantId) {
+  if (!tenantIdValido(tenantId)) return false;
+  const membership = await getDocument(env, caminhoTenant(tenantId, "memberships/" + uid));
+  const role = membership ? roleMembership(membership) : null;
+  const status = membership ? campoString(membership, "status") : null;
+  if ((role === "admin" || role === "owner") && status === "ativo") return true;
+  return false;
+}
+
+async function origemAutorizaTenant(request, env, tenantId) {
+  const info = origemHost(request);
+  if (!info) return true;
+
+  const permitidoExato = origensPermitidas(env).includes(info.origin);
+  if (permitidoExato && (info.host === "localhost" || info.host === "127.0.0.1")) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+  if (permitidoExato && tenantId === tenantPadrao(env)) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+
+  const domainDoc = await getDocument(env, "tenantDomains/" + info.host);
+  if (domainDoc && campoString(domainDoc, "status") === "ativo" && campoString(domainDoc, "tenantId") === tenantId) {
+    fixarCorsOrigin(request, info.origin);
+    return true;
+  }
+
+  const sufixo = ".dojopass.com.br";
+  if (info.host.endsWith(sufixo) && info.host !== "www.dojopass.com.br") {
+    const slug = info.host.slice(0, -sufixo.length);
+    const slugDoc = await getDocument(env, "tenantSlugs/" + slug);
+    const permitido = !!(slugDoc && campoString(slugDoc, "status") === "ativo" && campoString(slugDoc, "tenantId") === tenantId);
+    if (permitido) fixarCorsOrigin(request, info.origin);
+    return permitido;
+  }
+
+  return false;
+}
+
+async function corsHeadersPreflight(request, env) {
+  const headers = corsHeaders(request, env);
+  const info = origemHost(request);
+  if (!info) return headers;
+  if (headers["Access-Control-Allow-Origin"]) return headers;
+  if (info.protocol !== "https:") return headers;
+
+  const domainDoc = await getDocument(env, "tenantDomains/" + info.host);
+  if (domainDoc && campoString(domainDoc, "status") === "ativo" && campoString(domainDoc, "tenantId")) {
+    fixarCorsOrigin(request, info.origin);
+    return corsHeaders(request, env);
+  }
+
+  if (origemDojopassPermitida(info.origin)) {
+    fixarCorsOrigin(request, info.origin);
+    return corsHeaders(request, env);
+  }
+
+  return headers;
+}
+
+async function exigirOrigemTenant(request, env, tenantId) {
+  if (await origemAutorizaTenant(request, env, tenantId)) return null;
+  return json({ erro: "Origem não autorizada para esta academia." }, 403, request, env);
+}
+
+async function criarOuAtualizarMembershipAluno(env, tenantId, uid, dadosExtras = {}) {
+  const agora = new Date();
+  const dados = {
+    role: "aluno",
+    status: "ativo",
+    tenantId,
+    uid,
+    criadoEm: agora,
+    atualizadoEm: agora,
+    ...dadosExtras
+  };
+
+  await patchDocument(env, caminhoTenant(tenantId, "memberships/" + uid), dados);
+  await patchDocument(env, "users/" + uid + "/memberships/" + tenantId, dados);
+}
+
+async function exigirAdminTenant(request, env, acao, tenantId) {
+  let uid;
+  try {
+    ({ uid } = await verificarIdToken(env, request.headers.get("Authorization")));
+  } catch (err) {
+    console.error("Falha na verificação do ID token:", err);
+    return { resposta: json({ erro: "Não autenticado." }, 401, request, env) };
+  }
+
+  if (!(await usuarioEhAdminTenant(env, uid, tenantId))) {
+    return { resposta: json({ erro: "Sem permissão para " + acao + " nesta academia." }, 403, request, env) };
+  }
+
+  return { uid, tenantId };
+}
 
 // ASAAS_API_KEY saiu desta lista na Fase 5: a chave do Asaas pode vir do documento
 // cifrado config/credenciais (cadastrada pelo professor) OU da secret legada, então a
@@ -49,11 +206,11 @@ function credenciaisFaltando(env) {
 // envAsaas é o env com ASAAS_BASE_URL ajustada pro ambiente da credencial cadastrada
 // (worker/src/asaas.js lê a base URL de lá). Sem isso, uma chave de PRODUÇÃO cadastrada
 // pelo painel seria usada contra a URL de SANDBOX do wrangler.toml — e vice-versa.
-async function resolverApiKeyAsaas(request, env) {
+async function resolverApiKeyAsaas(request, env, tenantId) {
   let apiKey;
   let baseUrl;
   try {
-    ({ apiKey, baseUrl } = await obterConfigAsaas(env));
+    ({ apiKey, baseUrl } = await obterConfigAsaas(env, tenantId));
   } catch (err) {
     // Erro típico: CREDENCIAL_CRYPTO_KEY trocada/ausente. O detalhe (que nunca contém a
     // chave em si — ver worker/src/cripto.js) fica no log do Worker.
@@ -105,27 +262,25 @@ async function handleCriarCobranca(request, env) {
     );
   }
 
-  // 1) Quem está chamando? Só um ID token válido do Firebase passa daqui.
-  let uid;
-  try {
-    ({ uid } = await verificarIdToken(env, request.headers.get("Authorization")));
-  } catch (err) {
-    console.error("Falha na verificação do ID token:", err);
-    return json({ erro: "Não autenticado." }, 401, request, env);
-  }
-
-  // 2) Esse usuário é professor? A coleção admins é a mesma fonte de verdade das rules.
-  const adminDoc = await getDocument(env, "admins/" + uid);
-  if (!adminDoc) {
-    return json({ erro: "Sem permissão para gerar cobranças." }, 403, request, env);
-  }
-
-  // 2.1) Qual chave do Asaas usar? (credencial cadastrada pelo professor > secret legada)
-  const { apiKey, envAsaas, resposta: semChave } = await resolverApiKeyAsaas(request, env);
-  if (semChave) return semChave;
-
   const body = await request.json().catch(() => null);
   if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { uid, resposta } = await exigirAdminTenant(request, env, "gerar cobranças", tenantId);
+  if (resposta) return resposta;
+
+  // Chave do Asaas por academia (credencial cadastrada > secret legada).
+  const { apiKey, envAsaas, resposta: semChave } = await resolverApiKeyAsaas(request, env, tenantId);
+  if (semChave) return semChave;
 
   const { alunoId, alunoNome, valor, mesReferencia, cpfCnpj } = body;
 
@@ -144,7 +299,7 @@ async function handleCriarCobranca(request, env) {
   }
 
   // 3) O aluno tem que existir de verdade — nada de cobrança pra ID inventado.
-  const alunoDoc = await getDocument(env, "alunos/" + alunoId);
+  const alunoDoc = await getDocument(env, caminhoTenant(tenantId, "alunos/" + alunoId));
   if (!alunoDoc) return json({ erro: "Aluno não encontrado." }, 404, request, env);
 
   // 4) Customer do Asaas: criado uma vez por aluno e reusado dali em diante.
@@ -173,7 +328,7 @@ async function handleCriarCobranca(request, env) {
       nome: alunoNome,
       cpfCnpj: String(cpfCnpj),
       email: emailAluno || undefined,
-      externalReference: alunoId
+      externalReference: tenantId + ":" + alunoId
     });
     asaasCustomerId = customer.id;
 
@@ -181,8 +336,8 @@ async function handleCriarCobranca(request, env) {
     // PATCH nunca crie um "aluno fantasma" caso ele suma no meio do caminho.
     await patchDocument(
       env,
-      "alunos/" + alunoId,
-      { asaasCustomerId, customerCriadoEm: new Date() },
+      caminhoTenant(tenantId, "alunos/" + alunoId),
+      { asaasCustomerId, customerCriadoEm: new Date(), tenantId },
       { exigirExistente: true }
     );
   }
@@ -190,7 +345,7 @@ async function handleCriarCobranca(request, env) {
   // 5) Idempotência: o ID do documento é "<alunoId>_<mesReferencia>". O Asaas não tem
   // X-Idempotency-Key nativo, então o guard é aqui — ANTES de qualquer chamada à API.
   const cobrancaId = derivarCobrancaId(alunoId, mesReferencia);
-  const cobrancaPath = "cobrancas/" + cobrancaId;
+  const cobrancaPath = caminhoTenant(tenantId, "cobrancas/" + cobrancaId);
   const cobrancaExistente = await getDocument(env, cobrancaPath);
   const statusExistente = cobrancaExistente ? campoString(cobrancaExistente, "status") : null;
 
@@ -218,7 +373,7 @@ async function handleCriarCobranca(request, env) {
     valor,
     dueDate,
     descricao: "Mensalidade " + mesReferencia + " - " + alunoNome,
-    externalReference: cobrancaId
+    externalReference: derivarCobrancaExternalReference(tenantId, alunoId, mesReferencia)
   });
 
   // O QR Code é uma segunda chamada. Se ela falhar, o payment JÁ existe no Asaas — então
@@ -248,7 +403,8 @@ async function handleCriarCobranca(request, env) {
     pixExpiraEm: qr.expirationDate,
     criadoPorUid: uid,
     criadoEm: agora,
-    atualizadoEm: agora
+    atualizadoEm: agora,
+    tenantId
   };
 
   if (cobrancaExistente) {
@@ -259,6 +415,15 @@ async function handleCriarCobranca(request, env) {
     // pelo guard acima, o segundo falha em vez de sobrescrever a cobrança do primeiro.
     await createDocument(env, cobrancaPath, dados);
   }
+
+  await patchDocument(env, "asaasPayments/" + pagamento.id, {
+    tenantId,
+    alunoId,
+    cobrancaId,
+    mesReferencia,
+    asaasPaymentId: pagamento.id,
+    atualizadoEm: agora
+  });
 
   if (qrFalhou) {
     return json(
@@ -302,10 +467,36 @@ async function handleWebhookAsaas(request, env) {
   // Notificação que não é de pagamento; só confirma recebimento pro Asaas não reenfileirar.
   if (!paymentId) return json({ ok: true }, 200, request, env);
 
-  // Nunca confia no status que veio no payload — sempre reconsulta a API do Asaas.
-  // A chave é resolvida só agora, depois do token válido e de haver um paymentId: assim
-  // um webhook forjado nem chega a tocar no Firestore/credencial.
-  const { apiKey, envAsaas, resposta: semChave } = await resolverApiKeyAsaas(request, env);
+  const indicePagamento = await getDocument(env, "asaasPayments/" + paymentId);
+  let tenantIdWebhook = indicePagamento ? campoString(indicePagamento, "tenantId") : null;
+
+  if (!tenantIdWebhook) {
+    const urlTenant = new URL(request.url).searchParams.get("tenantId");
+    if (tenantIdValido(urlTenant)) tenantIdWebhook = urlTenant;
+  }
+
+  if (!tenantIdWebhook) {
+    const referenciaPayload = corpo?.payment?.externalReference;
+    const partesPayload = separarCobrancaExternalReference(referenciaPayload, env);
+    if (partesPayload && partesPayload.tenantId) tenantIdWebhook = partesPayload.tenantId;
+  }
+
+
+  if (!tenantIdWebhook) {
+    console.error("Webhook: paymentId sem índice, sem tenantId e sem externalReference tenantizado:", paymentId);
+    return json({ ok: true }, 200, request, env);
+  }
+
+  try {
+    await resolverTenantAtivo(env, tenantIdWebhook);
+  } catch (err) {
+    console.error("Webhook: tenant inativo ou inválido para paymentId:", paymentId);
+    return json({ ok: true }, 200, request, env);
+  }
+
+  // Nunca confia no status que veio no payload — sempre reconsulta a API do Asaas usando
+  // a credencial do tenant encontrado pelo índice paymentId -> tenantId.
+  const { apiKey, envAsaas, resposta: semChave } = await resolverApiKeyAsaas(request, env, tenantIdWebhook);
   if (semChave) return semChave;
 
   const pagamento = await consultarPagamento(envAsaas, apiKey, paymentId);
@@ -319,18 +510,17 @@ async function handleWebhookAsaas(request, env) {
       return json({ ok: true }, 200, request, env);
     }
 
-    // "<alunoId>_<mesReferencia>": corta no ÚLTIMO "_" (o alunoId pode conter "_").
-    const corte = referencia.lastIndexOf("_");
-    const alunoId = referencia.slice(0, corte);
-    const mesReferencia = referencia.slice(corte + 1);
-
-    // Valida os dois pedaços antes de montar qualquer caminho de documento.
-    if (!alunoIdValido(alunoId) || !mesReferenciaValido(mesReferencia)) {
+    const partesReferencia = separarCobrancaExternalReference(referencia, env);
+    if (!partesReferencia) {
       console.error("Webhook: externalReference em formato inesperado:", referencia);
       return json({ ok: true }, 200, request, env);
     }
 
-    const cobrancaId = derivarCobrancaId(alunoId, mesReferencia);
+    const { tenantId, alunoId, mesReferencia, cobrancaId } = partesReferencia;
+    if (tenantId !== tenantIdWebhook) {
+      console.error("Webhook: tenant do externalReference difere do tenant do paymentId:", paymentId);
+      return json({ ok: true }, 200, request, env);
+    }
     const agora = new Date();
 
     // exigirExistente: true nos dois PATCHs. Sem isso, o upsert cego criava
@@ -338,7 +528,7 @@ async function handleWebhookAsaas(request, env) {
     try {
       await patchDocument(
         env,
-        "cobrancas/" + cobrancaId,
+        caminhoTenant(tenantId, "cobrancas/" + cobrancaId),
         {
           status: "pago",
           pagoEm: agora,
@@ -355,7 +545,7 @@ async function handleWebhookAsaas(request, env) {
     try {
       await patchDocument(
         env,
-        "alunos/" + alunoId,
+        caminhoTenant(tenantId, "alunos/" + alunoId),
         { mensalidadeStatus: "pago", mensalidadeAtualizadoEm: agora },
         { exigirExistente: true }
       );
@@ -439,29 +629,28 @@ async function handleEnviarLembrete(request, env) {
     );
   }
 
-  // 1) Autenticação + admin, mesmo padrão de handleCriarCobranca.
-  let uid;
-  try {
-    ({ uid } = await verificarIdToken(env, request.headers.get("Authorization")));
-  } catch (err) {
-    console.error("Falha na verificação do ID token:", err);
-    return json({ erro: "Não autenticado." }, 401, request, env);
-  }
-
-  const adminDoc = await getDocument(env, "admins/" + uid);
-  if (!adminDoc) {
-    return json({ erro: "Sem permissão para enviar lembretes." }, 403, request, env);
-  }
-
   const body = await request.json().catch(() => null);
   if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { resposta } = await exigirAdminTenant(request, env, "enviar lembretes", tenantId);
+  if (resposta) return resposta;
 
   const { alunoId } = body;
   if (!alunoIdValido(alunoId)) {
     return json({ erro: "Campo obrigatório: alunoId." }, 400, request, env);
   }
 
-  const alunoDoc = await getDocument(env, "alunos/" + alunoId);
+  const alunoDoc = await getDocument(env, caminhoTenant(tenantId, "alunos/" + alunoId));
   if (!alunoDoc) return json({ erro: "Aluno não encontrado." }, 404, request, env);
 
   // 2) O destinatário SEMPRE sai do documento do aluno, nunca do corpo da requisição —
@@ -485,7 +674,7 @@ async function handleEnviarLembrete(request, env) {
   // simultâneas podem contar como uma só — é um teto de proteção, não um contábil.
   const agora = new Date();
   const dataISO = agora.toISOString().slice(0, 10);
-  const contadorPath = caminhoContadorLembretes(dataISO);
+  const contadorPath = caminhoTenant(tenantId, caminhoContadorLembretes(dataISO));
   const contadorDoc = await getDocument(env, contadorPath);
   const contagemAtual = contadorDoc ? campoNumero(contadorDoc, "contagem") || 0 : 0;
 
@@ -499,7 +688,7 @@ async function handleEnviarLembrete(request, env) {
   }
 
   // 4) Texto do lembrete, com o mesmo template do botão de WhatsApp.
-  const configDoc = await getDocument(env, "config/geral");
+  const configDoc = await getDocument(env, caminhoTenant(tenantId, "config/geral"));
   const academiaNome = (configDoc && campoString(configDoc, "academiaNome")) || ACADEMIA_NOME_PADRAO;
   const template = (configDoc && campoString(configDoc, "lembreteTemplate")) || LEMBRETE_TEMPLATE_PADRAO;
   const pixChave = (configDoc && campoString(configDoc, "pixChaveManual")) || "";
@@ -589,12 +778,21 @@ async function handleCriarAluno(request, env) {
     );
   }
 
-  // 1) Autenticação + admin, mesmo padrão de handleCriarCobranca.
-  const { uid: adminUid, resposta } = await exigirAdmin(request, env, "cadastrar alunos");
-  if (resposta) return resposta;
-
   const body = await request.json().catch(() => null);
   if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { uid: adminUid, resposta } = await exigirAdminTenant(request, env, "cadastrar alunos", tenantId);
+  if (resposta) return resposta;
 
   const { nome, email, senha, telefone, nascimento, faixa } = body;
 
@@ -643,13 +841,18 @@ async function handleCriarAluno(request, env) {
   // 5) Documento do aluno. Os campos de dados espelham exatamente dadosAlunoValidos das
   // rules, pra que o aluno consiga editar o próprio cadastro depois.
   try {
-    await createDocument(env, "alunos/" + uid, {
+    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), {
       nome,
       telefone,
       nascimento,
       faixa,
       email,
       criadoEm: new Date(),
+      criadoPorAdmin: true,
+      criadoPorUid: adminUid,
+      tenantId
+    });
+    await criarOuAtualizarMembershipAluno(env, tenantId, uid, {
       criadoPorAdmin: true,
       criadoPorUid: adminUid
     });
@@ -678,6 +881,85 @@ async function handleCriarAluno(request, env) {
   return json({ ok: true, alunoId: uid }, 200, request, env);
 }
 
+async function handleCompletarCadastroAluno(request, env) {
+  const faltando = credenciaisFaltando(env);
+  if (faltando) {
+    return json(
+      { erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") },
+      501,
+      request,
+      env
+    );
+  }
+
+  let uid;
+  try {
+    ({ uid } = await verificarIdToken(env, request.headers.get("Authorization")));
+  } catch (err) {
+    console.error("Falha na verificação do ID token no cadastro do aluno:", err);
+    return json({ erro: "Não autenticado." }, 401, request, env);
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida ou inativa." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { nome, email, telefone, nascimento, faixa } = body;
+  if (!alunoIdValido(uid)) {
+    return json({ erro: "Usuário inválido." }, 400, request, env);
+  }
+  if (!nomeAlunoCadastroValido(nome)) {
+    return json({ erro: "Nome inválido (1 a 99 caracteres)." }, 400, request, env);
+  }
+  if (!emailValido(email)) {
+    return json({ erro: "E-mail inválido." }, 400, request, env);
+  }
+  if (!telefoneValido(telefone)) {
+    return json({ erro: "Telefone inválido (até 29 caracteres)." }, 400, request, env);
+  }
+  if (!nascimentoValido(nascimento)) {
+    return json({ erro: "Data de nascimento inválida (use AAAA-MM-DD)." }, 400, request, env);
+  }
+  if (!faixaValida(faixa)) {
+    return json({ erro: "Faixa inválida." }, 400, request, env);
+  }
+
+  try {
+    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), {
+      nome,
+      telefone,
+      nascimento,
+      faixa,
+      email,
+      criadoEm: new Date(),
+      tenantId
+    });
+    await criarOuAtualizarMembershipAluno(env, tenantId, uid, {
+      criadoPorAdmin: false
+    });
+  } catch (err) {
+    if (err.jaExiste) {
+      await criarOuAtualizarMembershipAluno(env, tenantId, uid, {
+        criadoPorAdmin: false
+      });
+      return json({ ok: true, alunoId: uid }, 200, request, env);
+    }
+    console.error("Cadastro do aluno autenticado falhou no Firestore:", uid, err);
+    return json({ erro: "Cadastro criado no login, mas não foi concluído. Tente novamente." }, 500, request, env);
+  }
+
+  return json({ ok: true, alunoId: uid }, 200, request, env);
+}
+
 // ---------------------------------------------------------------------------
 // Credencial do Asaas do próprio professor (Fase 5) — /config/credencial-asaas.
 //
@@ -697,21 +979,8 @@ const ASAAS_API_KEY_MAX = 200;
 
 // Autenticação + admin, o mesmo padrão dos outros handlers. Devolve { uid } ou
 // { resposta } com o 401/403 pronto.
-async function exigirAdmin(request, env, acao) {
-  let uid;
-  try {
-    ({ uid } = await verificarIdToken(env, request.headers.get("Authorization")));
-  } catch (err) {
-    console.error("Falha na verificação do ID token:", err);
-    return { resposta: json({ erro: "Não autenticado." }, 401, request, env) };
-  }
-
-  const adminDoc = await getDocument(env, "admins/" + uid);
-  if (!adminDoc) {
-    return { resposta: json({ erro: "Sem permissão para " + acao + "." }, 403, request, env) };
-  }
-
-  return { uid };
+async function exigirAdmin(request, env, acao, tenantId = tenantPadrao(env)) {
+  return exigirAdminTenant(request, env, acao, tenantId);
 }
 
 // Confere a chave contra a própria API do Asaas antes de gravar qualquer coisa: pega
@@ -736,9 +1005,6 @@ async function validarChaveNoAsaas(apiKey, ambiente) {
 }
 
 async function handleSalvarCredencialAsaas(request, env) {
-  const { uid, resposta } = await exigirAdmin(request, env, "configurar a credencial de pagamento");
-  if (resposta) return resposta;
-
   if (!env.CREDENCIAL_CRYPTO_KEY) {
     return json(
       { erro: "Worker sem CREDENCIAL_CRYPTO_KEY configurada — não é possível guardar a chave com segurança." },
@@ -750,6 +1016,19 @@ async function handleSalvarCredencialAsaas(request, env) {
 
   const body = await request.json().catch(() => null);
   if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { uid, resposta } = await exigirAdminTenant(request, env, "configurar a credencial de pagamento", tenantId);
+  if (resposta) return resposta;
 
   const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
   const ambiente = body.ambiente;
@@ -772,33 +1051,57 @@ async function handleSalvarCredencialAsaas(request, env) {
     return json({ erro: "Chave inválida ou ambiente incorreto." }, 400, request, env);
   }
 
-  await salvarAsaasApiKey(env, { apiKeyPlana: apiKey, ambiente, atualizadoPorUid: uid });
+  await salvarAsaasApiKey(env, { apiKeyPlana: apiKey, ambiente, atualizadoPorUid: uid, tenantId });
 
   // Só os 4 últimos dígitos voltam pro painel — o suficiente pro professor reconhecer
   // qual chave está ali, inútil pra quem interceptar.
   return json({ ok: true, ultimos4: apiKey.slice(-4), ambiente }, 200, request, env);
 }
 
+async function tenantIdDaUrl(request, env) {
+  return resolverTenantAtivoDaUrl(request, env);
+}
+
 async function handleLerCredencialAsaas(request, env) {
-  const { resposta } = await exigirAdmin(request, env, "ver a credencial de pagamento");
+  let tenantId;
+  try {
+    tenantId = await tenantIdDaUrl(request, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { resposta } = await exigirAdminTenant(request, env, "ver a credencial de pagamento", tenantId);
   if (resposta) return resposta;
 
-  const metadados = await obterMetadadosCredencial(env);
+  const metadados = await obterMetadadosCredencial(env, tenantId);
   return json(metadados, 200, request, env);
 }
 
 async function handleApagarCredencialAsaas(request, env) {
-  const { resposta } = await exigirAdmin(request, env, "remover a credencial de pagamento");
+  let tenantId;
+  try {
+    tenantId = await tenantIdDaUrl(request, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { resposta } = await exigirAdminTenant(request, env, "remover a credencial de pagamento", tenantId);
   if (resposta) return resposta;
 
-  await apagarCredencial(env);
+  await apagarCredencial(env, tenantId);
   return json({ ok: true }, 200, request, env);
 }
 
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders(request, env) });
+      return new Response(null, { headers: await corsHeadersPreflight(request, env) });
     }
 
     const { pathname } = new URL(request.url);
@@ -817,6 +1120,11 @@ export default {
       // Cadastro de aluno pelo professor (cria conta no Auth + documento). Só admin.
       if (pathname === "/criar-aluno" && request.method === "POST") {
         return await handleCriarAluno(request, env);
+      }
+      // Cadastro feito pelo próprio aluno: Auth acontece no navegador, Firestore e
+      // memberships são finalizados aqui com service account.
+      if (pathname === "/completar-cadastro" && request.method === "POST") {
+        return await handleCompletarCadastroAluno(request, env);
       }
       // Comprovante de pagamento do modo Pix manual (ver worker/src/comprovante.js).
       if (pathname === "/comprovante" && request.method === "POST") {
