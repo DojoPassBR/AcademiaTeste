@@ -85,16 +85,6 @@
           "order": "DESCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "cobrancas",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "asaasPaymentId",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []
