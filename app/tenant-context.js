@@ -165,14 +165,46 @@
     return null;
   }
 
+  // Timeout defensivo: a consulta ao Firestore não tem prazo próprio, e uma conexão
+  // que trava (rede instável, bloqueio de terceiro, etc.) deixaria a Promise pendurada
+  // pra sempre — o botão de login ficaria preso em "Verificando academia..." sem
+  // nenhum jeito do usuário tentar de novo. 8s é generoso o bastante pra rede ruim.
+  function comTimeout(promessaAlvo, ms) {
+    return new Promise(function (resolve, reject) {
+      var jaResolveu = false;
+      var timer = setTimeout(function () {
+        if (jaResolveu) return;
+        jaResolveu = true;
+        reject(new Error("timeout"));
+      }, ms);
+      promessaAlvo.then(
+        function (valor) {
+          if (jaResolveu) return;
+          jaResolveu = true;
+          clearTimeout(timer);
+          resolve(valor);
+        },
+        function (erro) {
+          if (jaResolveu) return;
+          jaResolveu = true;
+          clearTimeout(timer);
+          reject(erro);
+        }
+      );
+    });
+  }
+
   async function resolverTenantPorSlug(slug) {
     var slugNormalizado = normalizarSlugTenant(slug);
     if (!slugValido(slugNormalizado)) {
       return { ok: false, motivo: "formato" };
     }
     var dbRef = firestore();
+    if (!dbRef) {
+      return { ok: false, motivo: "rede" };
+    }
     try {
-      var slugDoc = await dbRef.collection("tenantSlugs").doc(slugNormalizado).get();
+      var slugDoc = await comTimeout(dbRef.collection("tenantSlugs").doc(slugNormalizado).get(), 8000);
       if (slugDoc.exists && aplicarResolucao(slugDoc.data(), "slug-login", slugNormalizado)) {
         promessa = Promise.resolve(estado);
         return { ok: true, estado: estado };
