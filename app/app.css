@@ -146,6 +146,51 @@ input:focus, select:focus {
   outline-offset: -2px;
 }
 
+/* Wrapper do campo "Nome da academia" (login.html): a borda/raio ficam no
+   wrapper (que ganha o anel de foco via :focus-within) e o input interno fica
+   sem borda própria, pra o sufixo ".dojopass.com.br" parecer parte do mesmo
+   campo em vez de um texto solto ao lado. */
+.slug-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding-right: 14px;
+  background: #fff;
+}
+
+.slug-input-wrap input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  padding-right: 4px;
+}
+
+.slug-input-wrap input[type="text"]:focus {
+  outline: none;
+  border-color: transparent;
+}
+
+.slug-input-wrap:focus-within {
+  outline: none;
+  border-color: var(--red);
+}
+
+.slug-suffix {
+  color: #666;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+#academia-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 8px;
+}
+
 .btn {
   display: inline-block;
   width: 100%;

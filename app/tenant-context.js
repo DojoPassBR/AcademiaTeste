@@ -142,6 +142,47 @@
     return promessa;
   }
 
+  function normalizarSlugTenant(valor) {
+    return String(valor)
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[\s_.]+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-{2,}/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function slugTenantSugerido() {
+    var doAmbiente = slugDoAmbiente();
+    if (doAmbiente) return doAmbiente;
+    var salvo = null;
+    try {
+      salvo = window.localStorage.getItem("dojopassTenantSlug");
+    } catch (erro) {}
+    if (slugValido(salvo)) return salvo;
+    return null;
+  }
+
+  async function resolverTenantPorSlug(slug) {
+    var slugNormalizado = normalizarSlugTenant(slug);
+    if (!slugValido(slugNormalizado)) {
+      return { ok: false, motivo: "formato" };
+    }
+    var dbRef = firestore();
+    try {
+      var slugDoc = await dbRef.collection("tenantSlugs").doc(slugNormalizado).get();
+      if (slugDoc.exists && aplicarResolucao(slugDoc.data(), "slug-login", slugNormalizado)) {
+        promessa = Promise.resolve(estado);
+        return { ok: true, estado: estado };
+      }
+      return { ok: false, motivo: "nao-encontrada" };
+    } catch (erro) {
+      return { ok: false, motivo: "rede" };
+    }
+  }
+
   function exigirTenantResolvido() {
     if (!tenantIdValido(estado.tenantId)) {
       throw new Error("Academia não resolvida. Confira o domínio/subdomínio cadastrado.");
@@ -173,4 +214,7 @@
   window.tenantCollection = tenantCollection;
   window.tenantDocRef = tenantDocRef;
   window.tenantPayload = tenantPayload;
+  window.normalizarSlugTenant = normalizarSlugTenant;
+  window.slugTenantSugerido = slugTenantSugerido;
+  window.resolverTenantPorSlug = resolverTenantPorSlug;
 })();

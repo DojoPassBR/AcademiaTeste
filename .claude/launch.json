@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "serve", "-l", "8000", "/Users/tainavidal/Documents/DojoPass"],
       "port": 8000
+    },
+    {
+      "name": "landing-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-l", "8011", "/Users/tainavidal/Documents/DojoPassBR.github.io"],
+      "port": 8011
     }
   ]
 }
