@@ -3,133 +3,255 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Academia - DojoPass</title>
-<meta name="description" content="Página pública da academia cliente DojoPass.">
+<title>DojoPass | Gestão para academias de luta</title>
+<meta name="description" content="DojoPass centraliza alunos, planos, presenças e mensalidades para academias de luta.">
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="header">
+<header class="site-header">
   <div class="container header-inner">
-    <img src="assets/logo.svg" alt="Logo DojoPass" class="logo">
-    <nav class="nav">
-      <a href="#sobre">Sobre</a>
-      <a href="#horarios">Horários</a>
-      <a href="#local">Endereço</a>
+    <a class="brand" href="#inicio" aria-label="DojoPass">
+      <img src="assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass" class="brand-logo brand-logo-final">
+    </a>
+    <nav class="nav" aria-label="Navegação principal">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#planos">Planos</a>
       <a href="#contato">Contato</a>
-      <a href="app/login.html" class="nav-destaque">Área do Aluno</a>
     </nav>
+    <a class="header-login" href="app/login.html">Entrar</a>
   </div>
 </header>
 
-<section class="hero">
-  <div class="container hero-inner">
-    <img src="assets/logo.svg" alt="DojoPass" class="hero-logo">
-    <h1>ESCOLA DE JIU-JITSU<br><span>ACADEMIA</span></h1>
-    <p>Disciplina, respeito e evolução no tatame. Venha treinar com a gente.</p>
-    <a class="btn" href="#contato">Fale conosco</a>
-  </div>
-</section>
-
-<section id="sobre" class="section">
-  <div class="container">
-    <h2>Sobre a Escola</h2>
-    <p>
-      Esta academia ainda está completando as informações públicas. Em breve você verá aqui a apresentação, os horários e os canais de contato desta unidade.
-    </p>
-  </div>
-</section>
-
-<section id="horarios" class="section alt">
-  <div class="container">
-    <h2>Grade de Horários</h2>
-    <div class="table-wrap">
-      <table class="schedule">
-        <thead>
-          <tr><th>Dia</th><th>Horário</th><th>Turma</th></tr>
-        </thead>
-        <tbody id="grade-tabela-corpo">
-          <tr><td colspan="3">Horários em atualização.</td></tr>
-        </tbody>
-      </table>
+<main id="inicio">
+  <section class="hero-section">
+    <div class="hero-photo" aria-hidden="true">
+      <img src="assets/landing/jiu-jitsu-hero.png" alt="">
     </div>
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Sistema para academias de luta</span>
+        <h1>Gestão completa para dojos, academias e equipes.</h1>
+        <p class="hero-lead">
+          Controle alunos, planos, pagamentos, presença e rotina administrativa em um só lugar, com uma experiência simples para professores e alunos.
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#contato">Começar agora</a>
+          <a class="btn secondary" href="#funcionalidades">Ver recursos</a>
+        </div>
+        <div class="hero-proof" aria-label="Destaques da plataforma">
+          <span>Presença por localização</span>
+          <span>Controle de mensalidades</span>
+          <span>Painel do professor</span>
+        </div>
+      </div>
 
-    <div class="schedule-mobile" id="grade-mobile">
-      <div class="day-group">
-        <h3 class="day-title">Horários em atualização</h3>
-        <div class="time-row"><span>A academia ainda não publicou a grade desta unidade.</span></div>
+      <div class="product-preview" aria-label="Prévia do painel DojoPass">
+        <div class="preview-topbar">
+          <div class="preview-brand">
+            <img src="assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass">
+          </div>
+          <span>Academia ativa</span>
+        </div>
+        <div class="preview-body">
+          <aside class="preview-sidebar">
+            <span class="active">Início</span>
+            <span>Alunos</span>
+            <span>Presenças</span>
+            <span>Mensalidades</span>
+            <span>Relatórios</span>
+          </aside>
+          <div class="preview-content">
+            <div class="preview-greeting">
+              <span>Hoje no tatame</span>
+              <strong>Visão geral da academia</strong>
+            </div>
+            <div class="metric-grid">
+              <article>
+                <span>Alunos ativos</span>
+                <strong>128</strong>
+                <small>+12% no mês</small>
+              </article>
+              <article>
+                <span>Presenças</span>
+                <strong>892</strong>
+                <small>Check-ins validados</small>
+              </article>
+              <article>
+                <span>Mensalidades</span>
+                <strong>R$ 12.450</strong>
+                <small>Recebido no período</small>
+              </article>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head">
+                <strong>Evolução de alunos</strong>
+                <span>Últimos 6 meses</span>
+              </div>
+              <div class="chart-bars" aria-hidden="true">
+                <i style="height: 34%"></i>
+                <i style="height: 48%"></i>
+                <i style="height: 44%"></i>
+                <i style="height: 62%"></i>
+                <i style="height: 70%"></i>
+                <i style="height: 88%"></i>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="staff" id="lista-equipe">
-      <div class="staff-card">
-        <span class="staff-label">Professor Responsável</span>
-        <span class="staff-name">Equipe em cadastramento</span>
+  <section class="stats-band" aria-label="Números do DojoPass">
+    <div class="container stats-grid">
+      <article>
+        <strong>1 plataforma</strong>
+        <span>para gestão, presença e mensalidades</span>
+      </article>
+      <article>
+        <strong>2 áreas</strong>
+        <span>painel do professor e área do aluno</span>
+      </article>
+      <article>
+        <strong>Mensalidades</strong>
+        <span>acompanhe pagamentos e pendências</span>
+      </article>
+      <article>
+        <strong>Check-in</strong>
+        <span>com validação por localização</span>
+      </article>
+    </div>
+  </section>
+
+  <section id="funcionalidades" class="section">
+    <div class="container">
+      <div class="section-heading">
+        <span class="eyebrow">Funcionalidades</span>
+        <h2>Feito para a rotina real de academias de luta.</h2>
+        <p>DojoPass organiza o essencial para professores acompanharem a operação sem depender de planilhas soltas, listas manuais ou mensagens espalhadas.</p>
       </div>
-      <div class="staff-card">
-        <span class="staff-label">Professores</span>
-        <ul class="staff-list">
-          <li>Em breve a academia publicará os professores desta unidade.</li>
+      <div class="features-grid">
+        <article class="feature-card">
+          <span class="feature-icon">01</span>
+          <h3>Cadastro de alunos</h3>
+          <p>Dados do aluno, faixa, contato, histórico e status de mensalidade em uma visão simples.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">02</span>
+          <h3>Controle de presença</h3>
+          <p>Aluno faz check-in e a plataforma registra presença com validação por localização.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">03</span>
+          <h3>Mensalidades</h3>
+          <p>Controle mensalidades pagas, pendentes e organize a rotina financeira da academia.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">04</span>
+          <h3>Painel do professor</h3>
+          <p>Lista de alunos, status financeiro, presenças e ações administrativas em um painel direto.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">05</span>
+          <h3>Área do aluno</h3>
+          <p>O aluno consulta status, faz check-in e acessa informações importantes da academia.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">06</span>
+          <h3>Site público</h3>
+          <p>Estrutura para apresentar academia, horários, equipe, endereço e canais de contato.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona" class="section split-section">
+    <div class="container split-grid">
+      <div>
+        <span class="eyebrow">Como funciona</span>
+        <h2>Menos trabalho administrativo, mais foco no tatame.</h2>
+        <p>
+          A academia usa o painel para organizar alunos, presenças e mensalidades. O aluno acessa sua área para check-in e acompanhamento. Tudo foi pensado para funcionar de forma leve, segura e fácil de manter.
+        </p>
+      </div>
+      <div class="steps">
+        <article>
+          <strong>1</strong>
+          <div>
+            <h3>Configure a academia</h3>
+            <p>Cadastre alunos, professores, turmas, horários e regras da operação.</p>
+          </div>
+        </article>
+        <article>
+          <strong>2</strong>
+          <div>
+            <h3>Acompanhe a rotina</h3>
+            <p>Veja presenças, status de pagamento e evolução dos alunos sem perder tempo.</p>
+          </div>
+        </article>
+        <article>
+          <strong>3</strong>
+          <div>
+            <h3>Cobre mensalidades</h3>
+            <p>Acompanhe pagamentos e pendências com clareza para reduzir esquecimentos.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="planos" class="section pricing-section">
+    <div class="container pricing-grid">
+      <div class="pricing-copy">
+        <span class="eyebrow">Planos</span>
+        <h2>Comece com o essencial e evolua quando precisar.</h2>
+        <p>
+          DojoPass foi criado para atender academias pequenas, equipes em crescimento e operações que querem profissionalizar presença e mensalidades.
+        </p>
+      </div>
+      <article class="pricing-card">
+        <span class="plan-label">DojoPass Gestão</span>
+        <h3>Organização completa para sua academia</h3>
+        <ul>
+          <li>Cadastro e área do aluno</li>
+          <li>Controle de presença</li>
+          <li>Controle de mensalidades</li>
+          <li>Painel administrativo do professor</li>
+          <li>Site público da academia</li>
         </ul>
-      </div>
-      <div class="staff-card">
-        <span class="staff-label">Instrutores</span>
-        <span class="staff-name">Dados em atualização</span>
-      </div>
+        <a class="btn primary full" href="#contato">Quero conhecer</a>
+      </article>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="local" class="section">
-  <div class="container local-inner">
-    <div class="local-info" id="local-info">
-      <h2>Onde estamos</h2>
-      <p id="local-endereco"><strong>Endereço:</strong><br>
-      Em atualização.</p>
+  <section id="contato" class="final-cta">
+    <div class="container final-grid">
+      <div>
+        <span class="eyebrow">DojoPass</span>
+        <h2>Leve a gestão da sua academia para o próximo nível.</h2>
+        <p>Fale com a DojoPass para organizar alunos, presenças, mensalidades e pagamentos em uma plataforma feita para academias de luta.</p>
+      </div>
+      <div class="cta-panel">
+        <a class="btn primary full" href="mailto:tatamepass@gmail.com?subject=Quero conhecer o DojoPass">Enviar e-mail</a>
+        <a class="btn secondary full dark" href="app/login.html">Acessar sistema</a>
+        <small>Atendimento em português para academias, dojos e equipes.</small>
+      </div>
     </div>
-    <div class="map-wrap">
-      <iframe
-        title="Mapa da academia"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade">
-      </iframe>
-    </div>
-  </div>
-</section>
-
-<section id="contato" class="section">
-  <div class="container contato-inner">
-    <h2>Contato</h2>
-    <div class="contato-cards" id="contato-cards">
-      <a class="card" id="contato-telefone">
-        <span class="card-label">Telefone</span>
-        <span class="card-value">Em atualização</span>
-      </a>
-      <a class="card" id="contato-instagram">
-        <span class="card-label">Instagram</span>
-        <span class="card-value">Em atualização</span>
-      </a>
-    </div>
-  </div>
-</section>
+  </section>
+</main>
 
 <footer class="footer">
-  <div class="container">
-    <img src="assets/logo.svg" alt="Logo DojoPass" class="footer-logo">
-    <p>&copy; <span id="year"></span> DojoPass</p>
+  <div class="container footer-inner">
+    <a class="brand footer-brand" href="#inicio" aria-label="DojoPass">
+      <img src="assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass" class="brand-logo brand-logo-final">
+    </a>
+    <p>&copy; <span id="year"></span> DojoPass. Gestão para academias de luta.</p>
   </div>
 </footer>
 
 <script src="script.js"></script>
-
-<!-- Hidratação opcional do site com os dados do admin (turmas, equipe, grade, endereço).
-     Tudo com defer e depois do conteúdo: se qualquer um destes scripts falhar, não
-     carregar ou for bloqueado, o HTML estático acima continua na tela como fallback. -->
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script defer src="site-firebase.js"></script>
-<script defer src="app/tenant-context.js"></script>
-<script defer src="site-publico.js"></script>
 </body>
 </html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Professor - DojoPass</title>
+<link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+<link rel="stylesheet" href="app.css?v=20260910">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="app-sidebar" id="sidebar-professor">
+    <div class="app-sidebar-brand">
+      <img src="../assets/logo.svg" alt="Logo">
+      <div>
+        <strong>DojoPass</strong>
+        <span>Painel do professor</span>
+      </div>
+    </div>
+
+    <!-- Índice de âncoras: as três seções ficam empilhadas na mesma página (não há
+         show/hide), então cada link só rola até o card correspondente — o mesmo
+         padrão da .admin-nav antiga. -->
+    <nav class="app-sidebar-nav" aria-label="Seções do painel">
+      <a class="app-sidebar-link" href="#card-meus-alunos"><span class="icon" aria-hidden="true">👥</span>Meus alunos</a>
+      <a class="app-sidebar-link" href="#card-minhas-aulas"><span class="icon" aria-hidden="true">🗓️</span>Minhas aulas</a>
+      <a class="app-sidebar-link" href="#card-eventos"><span class="icon" aria-hidden="true">🏆</span>Eventos</a>
+    </nav>
+
+    <div class="app-sidebar-footer">
+      <span class="quem">Professor</span>
+      <button type="button" class="app-sidebar-sair sair" id="btn-sair">Sair</button>
+    </div>
+  </aside>
+
+  <div class="app-shell-backdrop" id="backdrop-professor"></div>
+
+  <main class="app-content">
+    <button type="button" class="app-sidebar-toggle" id="btn-menu-professor"
+      aria-controls="sidebar-professor" aria-expanded="false">
+      <span aria-hidden="true">☰</span> Menu
+    </button>
+
+    <div class="app-content-header">
+      <div>
+        <h1>Painel do professor</h1>
+        <p>Seus alunos, suas aulas e os próximos eventos da academia.</p>
+      </div>
+    </div>
+
+    <!-- Carregando / erro de contexto. Fica visível até o gate de auth decidir o que
+         mostrar, pra a tela nunca ficar em branco. -->
+    <div class="panel" id="card-carregando">
+      <div class="panel-header panel-header-acento"><h2>Carregando…</h2></div>
+      <p class="msg show info" id="msg-carregando" role="status" aria-live="polite">Verificando seu acesso…</p>
+    </div>
+
+    <!-- Quem cai aqui está autenticado mas não tem role 'professor' no membership
+         desta academia. Admin/owner ganham o atalho pro painel completo. -->
+    <div class="panel" id="card-negado" hidden>
+      <div class="panel-header panel-header-acento"><h2>Acesso restrito</h2></div>
+      <p>Esta área é exclusiva para professores desta academia. Se você dá aula aqui e está
+        vendo esta mensagem, peça ao administrador para vincular seu acesso de professor.</p>
+      <p id="negado-atalhos" hidden>
+        <a href="admin.html" id="link-admin" class="rede-link">Ir para o painel do administrador</a>
+      </p>
+      <p><a href="checkin.html" class="rede-link">Ir para a área do aluno</a></p>
+    </div>
+
+    <div id="conteudo" hidden>
+      <div class="panel" id="card-meus-alunos" tabindex="-1">
+        <div class="panel-header panel-header-acento">
+          <div>
+            <h2>Meus alunos</h2>
+            <p>Só aparecem aqui os alunos que o administrador vinculou a você. Esta tela é
+              somente leitura: quem altera mensalidade ou cadastro é o administrador.</p>
+          </div>
+        </div>
+        <div class="msg" id="alunos-msg" role="status" aria-live="polite"></div>
+        <div class="panel-scroll">
+          <table class="admin-table panel-table" id="tabela-alunos">
+            <caption>Alunos vinculados ao seu perfil de professor</caption>
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Faixa</th>
+                <th scope="col">Telefone</th>
+                <th scope="col">Mensalidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="card-minhas-aulas" tabindex="-1">
+        <div class="panel-header panel-header-acento">
+          <div>
+            <h2>Minhas aulas</h2>
+            <!-- Pegadinha documentada em CONTEXT.md: horarios.professorId guarda o ID do
+                 documento da vitrine pública em equipe/{id}, NÃO o uid do Firebase Auth.
+                 A ponte é professores/{uid}.equipeId. -->
+            <p>São as aulas da grade em que o seu perfil da equipe está marcado como professor.</p>
+          </div>
+        </div>
+        <div class="msg" id="aulas-msg" role="status" aria-live="polite"></div>
+        <div class="panel-scroll">
+          <table class="admin-table panel-table" id="tabela-aulas">
+            <caption>Aulas da grade sob sua responsabilidade</caption>
+            <thead>
+              <tr>
+                <th scope="col">Dia</th>
+                <th scope="col">Horário</th>
+                <th scope="col">Turma</th>
+                <th scope="col">Observação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="card-eventos" tabindex="-1">
+        <div class="panel-header panel-header-acento"><h2>Eventos</h2></div>
+        <div class="msg" id="eventos-msg" role="status" aria-live="polite"></div>
+        <ul class="checkin-list panel-lista" id="lista-eventos">
+          <li>Carregando…</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js?v=20260910"></script>
+<script src="tenant-context.js?v=20260910"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Menu lateral em telas estreitas. Bloco isolado (IIFE) de propósito: nada aqui
+// compartilha nome com as constantes do script principal abaixo.
+// ---------------------------------------------------------------------------
+(function () {
+  const sidebar = document.getElementById("sidebar-professor");
+  const backdrop = document.getElementById("backdrop-professor");
+  const botaoMenu = document.getElementById("btn-menu-professor");
+  if (!sidebar || !backdrop || !botaoMenu) return;
+
+  function alternarMenu(abrir) {
+    sidebar.classList.toggle("is-open", abrir);
+    backdrop.classList.toggle("is-open", abrir);
+    botaoMenu.setAttribute("aria-expanded", abrir ? "true" : "false");
+  }
+
+  botaoMenu.addEventListener("click", () => {
+    alternarMenu(!sidebar.classList.contains("is-open"));
+  });
+
+  backdrop.addEventListener("click", () => alternarMenu(false));
+
+  // Clicar numa âncora fecha o menu — senão a sidebar cobre a seção recém-rolada.
+  sidebar.querySelectorAll(".app-sidebar-link").forEach((link) => {
+    link.addEventListener("click", () => alternarMenu(false));
+  });
+
+  document.addEventListener("keydown", (evento) => {
+    if (evento.key === "Escape") alternarMenu(false);
+  });
+})();
+</script>
+<script>
+// ---------------------------------------------------------------------------
+// Painel do professor — v1 SOMENTE LEITURA.
+//
+// Existe separado de admin.html de propósito: o painel do admin escreve em alunos,
+// cobrancas, config e nas quatro coleções públicas. O professor não escreve em nada.
+// Manter dois arquivos evita que um `if (ehProfessor)` esquecido em algum canto do
+// admin.html vire escrita indevida — as rules já negam, mas a tela também nega.
+//
+// Nada de innerHTML com dado do Firestore em lugar nenhum deste arquivo: nome de
+// aluno, turma e evento são texto livre digitado por outra pessoa.
+// ---------------------------------------------------------------------------
+
+const DIAS_SEMANA = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado"
+];
+
+const cardCarregando = document.getElementById("card-carregando");
+const msgCarregando = document.getElementById("msg-carregando");
+const cardNegado = document.getElementById("card-negado");
+const negadoAtalhos = document.getElementById("negado-atalhos");
+const conteudo = document.getElementById("conteudo");
+const btnSair = document.getElementById("btn-sair");
+
+const tabelaAlunos = document.querySelector("#tabela-alunos tbody");
+const tabelaAulas = document.querySelector("#tabela-aulas tbody");
+const listaEventos = document.getElementById("lista-eventos");
+const alunosMsg = document.getElementById("alunos-msg");
+const aulasMsg = document.getElementById("aulas-msg");
+const eventosMsg = document.getElementById("eventos-msg");
+
+function mostrarMsgEm(elemento, texto, tipo) {
+  elemento.textContent = texto;
+  elemento.className = texto ? "msg show " + tipo : "msg";
+}
+
+function textoNaoVazio(valor) {
+  return typeof valor === "string" && valor.trim().length > 0 ? valor.trim() : null;
+}
+
+function celula(texto) {
+  const td = document.createElement("td");
+  td.textContent = texto;
+  return td;
+}
+
+// Iniciais do nome pro avatar da tabela — puramente decorativo (aria-hidden), o
+// nome continua em texto ao lado.
+function iniciaisDe(nome) {
+  const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  const primeira = partes[0].charAt(0);
+  const ultima = partes.length > 1 ? partes[partes.length - 1].charAt(0) : "";
+  return (primeira + ultima).toUpperCase();
+}
+
+// Célula de "pessoa": avatar com iniciais + nome. Nada de innerHTML — o nome do
+// aluno é texto livre digitado por outra pessoa.
+function celulaPessoa(nome) {
+  const td = document.createElement("td");
+  const linha = document.createElement("div");
+  linha.className = "linha-pessoa";
+
+  const avatar = document.createElement("span");
+  avatar.className = "avatar-iniciais";
+  avatar.setAttribute("aria-hidden", "true");
+  avatar.textContent = iniciaisDe(nome);
+
+  const textos = document.createElement("div");
+  textos.className = "linha-pessoa-textos";
+  const nomeEl = document.createElement("span");
+  nomeEl.className = "linha-pessoa-nome";
+  nomeEl.textContent = nome;
+  textos.appendChild(nomeEl);
+
+  linha.append(avatar, textos);
+  td.appendChild(linha);
+  return td;
+}
+
+// Selo de status. O texto dentro do selo é a informação — a cor é só reforço.
+function celulaBadge(texto, variante) {
+  const td = document.createElement("td");
+  const selo = document.createElement("span");
+  selo.className = "badge " + variante;
+  selo.textContent = texto;
+  td.appendChild(selo);
+  return td;
+}
+
+function linhaVazia(colunas, texto) {
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  td.colSpan = colunas;
+  td.textContent = texto;
+  tr.appendChild(td);
+  return tr;
+}
+
+function limparNode(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+// Volta pro login preservando a academia atual na query string: sem isso, quem chega
+// por link direto perde o slug e cai no tenant padrão.
+function urlLogin() {
+  const slug = DOJOPASS_TENANT && DOJOPASS_TENANT.tenantSlug;
+  return slug ? "login.html?academia=" + encodeURIComponent(slug) : "login.html";
+}
+
+btnSair.addEventListener("click", () => {
+  auth.signOut().then(() => { window.location.href = urlLogin(); });
+});
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = urlLogin();
+    return;
+  }
+
+  try {
+    await ensureTenantContext();
+  } catch (err) {
+    mostrarMsgEm(msgCarregando, "Academia não encontrada ou domínio não cadastrado.", "error");
+    return;
+  }
+
+  let membership = null;
+  try {
+    // memberships/{uid} dentro do tenant é a MESMA fonte que as rules usam
+    // (isTenantProfessor). Ler daqui evita ter duas noções de "papel" no sistema.
+    const doc = await tenantDocRef("memberships", user.uid).get();
+    membership = doc.exists ? doc.data() : null;
+  } catch (err) {
+    mostrarMsgEm(msgCarregando, "Não foi possível verificar seu acesso. Tente de novo em instantes.", "error");
+    return;
+  }
+
+  const role = membership && membership.status === "ativo" ? membership.role : null;
+
+  if (role !== "professor") {
+    cardCarregando.hidden = true;
+    cardNegado.hidden = false;
+    // Admin/owner não é "erro de acesso": é só a página errada.
+    if (role === "admin" || role === "owner") negadoAtalhos.hidden = false;
+    return;
+  }
+
+  cardCarregando.hidden = true;
+  conteudo.hidden = false;
+
+  // equipeId liga o professor ao doc da vitrine pública em equipe/{id} — é ele que
+  // aparece em horarios.professorId. Sem equipeId não há grade a mostrar.
+  let equipeId = null;
+  try {
+    const professorDoc = await tenantCollection("professores").doc(user.uid).get();
+    if (professorDoc.exists) equipeId = textoNaoVazio(professorDoc.data().equipeId);
+  } catch (err) {
+    equipeId = null;
+  }
+
+  // Cada card carrega isolado: uma falha (rules, índice faltando, rede) não pode
+  // derrubar os outros dois.
+  carregarMeusAlunos(user.uid);
+  carregarMinhasAulas(equipeId);
+  carregarEventos();
+});
+
+// A rule de leitura de alunos exige a igualdade professorId == uid POR DOCUMENTO —
+// uma consulta sem este .where() bate num aluno de outro professor e é negada
+// inteira. O .where não é conveniência de UI: é o que torna a consulta permitida.
+async function carregarMeusAlunos(uid) {
+  let snap;
+  try {
+    snap = await tenantCollection("alunos")
+      .where("professorId", "==", uid)
+      .orderBy("nome")
+      .get();
+  } catch (err) {
+    limparNode(tabelaAlunos);
+    tabelaAlunos.appendChild(linhaVazia(4, "Não foi possível carregar seus alunos."));
+    mostrarMsgEm(alunosMsg, "Não foi possível carregar seus alunos. Tente recarregar a página.", "error");
+    return;
+  }
+
+  limparNode(tabelaAlunos);
+  mostrarMsgEm(alunosMsg, "", "");
+
+  if (snap.empty) {
+    tabelaAlunos.appendChild(linhaVazia(4, "Nenhum aluno vinculado a você ainda."));
+    return;
+  }
+
+  snap.forEach((doc) => {
+    const aluno = doc.data() || {};
+    const emDia = (aluno.mensalidadeStatus || "pendente") === "pago";
+    const tr = document.createElement("tr");
+    tr.append(
+      celulaPessoa(textoNaoVazio(aluno.nome) || "sem nome"),
+      celula(textoNaoVazio(aluno.faixa) || "-"),
+      celula(textoNaoVazio(aluno.telefone) || "-"),
+      // Status em TEXTO, nunca só por cor.
+      celulaBadge(emDia ? "Em dia" : "Pendente", emDia ? "badge-sucesso" : "badge-alerta")
+    );
+    tabelaAlunos.appendChild(tr);
+  });
+}
+
+// turmas e horarios são leitura pública (allow read: if true), então o professor lê
+// as duas sem depender do papel. O filtro por equipeId é feito em memória: são
+// dezenas de documentos, e assim não é preciso índice composto novo.
+async function carregarMinhasAulas(equipeId) {
+  if (!equipeId) {
+    limparNode(tabelaAulas);
+    tabelaAulas.appendChild(linhaVazia(4, "Peça ao administrador para vincular seu perfil da equipe."));
+    return;
+  }
+
+  let horariosSnap;
+  let turmasSnap;
+  try {
+    [horariosSnap, turmasSnap] = await Promise.all([
+      tenantCollection("horarios").limit(300).get(),
+      tenantCollection("turmas").limit(100).get()
+    ]);
+  } catch (err) {
+    limparNode(tabelaAulas);
+    tabelaAulas.appendChild(linhaVazia(4, "Não foi possível carregar a grade de horários."));
+    mostrarMsgEm(aulasMsg, "Não foi possível carregar a grade de horários.", "error");
+    return;
+  }
+
+  const turmasPorId = {};
+  turmasSnap.forEach((doc) => { turmasPorId[doc.id] = doc.data() || {}; });
+
+  const linhas = [];
+  horariosSnap.forEach((doc) => {
+    const horario = doc.data() || {};
+    if (horario.ativo === false) return;
+    if (horario.professorId !== equipeId) return;
+
+    const dia = typeof horario.diaSemana === "number" && horario.diaSemana >= 0 && horario.diaSemana <= 6
+      ? horario.diaSemana
+      : null;
+    const turma = turmasPorId[horario.turmaId] || null;
+
+    linhas.push({
+      dia: dia,
+      diaNome: dia === null ? "-" : DIAS_SEMANA[dia],
+      inicio: textoNaoVazio(horario.horaInicio) || "",
+      fim: textoNaoVazio(horario.horaFim) || "",
+      turma: (turma && textoNaoVazio(turma.nome)) || "Turma removida",
+      observacao: textoNaoVazio(horario.observacao) || "-"
+    });
+  });
+
+  linhas.sort((a, b) => {
+    const diaA = a.dia === null ? 99 : a.dia;
+    const diaB = b.dia === null ? 99 : b.dia;
+    if (diaA !== diaB) return diaA - diaB;
+    return a.inicio.localeCompare(b.inicio);
+  });
+
+  limparNode(tabelaAulas);
+  mostrarMsgEm(aulasMsg, "", "");
+
+  if (linhas.length === 0) {
+    tabelaAulas.appendChild(linhaVazia(4, "Nenhuma aula da grade está atribuída a você."));
+    return;
+  }
+
+  linhas.forEach((linha) => {
+    const faixa = linha.inicio && linha.fim
+      ? linha.inicio + " às " + linha.fim
+      : (linha.inicio || linha.fim || "-");
+    const tr = document.createElement("tr");
+    tr.append(
+      celula(linha.diaNome),
+      celula(faixa),
+      celula(linha.turma),
+      celula(linha.observacao)
+    );
+    tabelaAulas.appendChild(tr);
+  });
+}
+
+async function carregarEventos() {
+  let snap;
+  try {
+    snap = await tenantCollection("eventos")
+      .where("data", ">=", new Date().toISOString().slice(0, 10))
+      .orderBy("data", "asc")
+      .limit(10)
+      .get();
+  } catch (err) {
+    limparNode(listaEventos);
+    const li = document.createElement("li");
+    li.textContent = "Não foi possível carregar os eventos.";
+    listaEventos.appendChild(li);
+    mostrarMsgEm(eventosMsg, "Não foi possível carregar os eventos.", "error");
+    return;
+  }
+
+  limparNode(listaEventos);
+  mostrarMsgEm(eventosMsg, "", "");
+
+  if (snap.empty) {
+    const li = document.createElement("li");
+    li.textContent = "Nenhum evento agendado no momento.";
+    listaEventos.appendChild(li);
+    return;
+  }
+
+  snap.forEach((docEvento) => {
+    const evento = docEvento.data() || {};
+    const li = document.createElement("li");
+
+    const bloco = document.createElement("span");
+    const forte = document.createElement("strong");
+    forte.textContent = textoNaoVazio(evento.nome) || "Evento";
+    bloco.appendChild(forte);
+
+    const local = textoNaoVazio(evento.local);
+    if (local) {
+      const localEl = document.createElement("span");
+      localEl.className = "evento-data";
+      localEl.textContent = " - " + local;
+      bloco.appendChild(localEl);
+    }
+
+    const dataEl = document.createElement("span");
+    dataEl.className = "evento-data";
+    // "T00:00:00" força o fuso local: sem isso "YYYY-MM-DD" é lido como UTC e o dia
+    // aparece um a menos no Brasil.
+    dataEl.textContent = typeof evento.data === "string"
+      ? new Date(evento.data + "T00:00:00").toLocaleDateString("pt-BR")
+      : "";
+
+    li.append(bloco, dataEl);
+    listaEventos.appendChild(li);
+  });
+}
+</script>
+</body>
+</html>

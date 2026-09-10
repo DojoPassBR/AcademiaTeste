@@ -828,6 +828,84 @@ O Worker financeiro aceita `tenantId` nos endpoints de cobrança, lembrete, comp
 
 Migração inicial: usar `scripts/migrate-global-to-tenant.mjs` com uma service account local para copiar os dados globais atuais para `tenants/jairo` e criar os documentos de resolução/memberships. O script não apaga os dados globais.
 
+## Papel "professor" (2026-09-09)
+
+Até aqui existiam três papéis em `tenants/{tenantId}/memberships/{uid}`: `aluno`, `admin`
+e `owner`. Entrou um quarto, `professor` — o instrutor que precisa ver a turma dele sem
+receber o painel administrativo inteiro.
+
+**Os 4 roles** (UM documento por uid, UM role só — não é array):
+
+| Role | O que tem | Onde entra depois do login |
+|---|---|---|
+| `aluno` | check-in, próprio cadastro, eventos, `config/geral`, a própria cobrança | `checkin.html` |
+| `professor` | tudo do aluno **+** leitura dos alunos com `professorId == seu uid` | `professor.html` |
+| `admin` | painel completo (alunos, cobranças, config, conteúdo público) | `admin.html` |
+| `owner` | igual a `admin` nas rules; separado para hierarquia futura | `admin.html` |
+
+**Atenção ao enum de `membershipAtiva()`:** estar nele é o que faz `isTenantAluno()`
+devolver true. O professor herda, de propósito, tudo o que um aluno já tem (professor que
+também treina continua sendo aluno normal, com documento próprio em `alunos/{uid}`). Papel
+novo adicionado ali herda o mesmo pacote — não amplie sem revisar todos os usos de
+`isTenantAluno()`.
+
+**Na v1 o professor é somente leitura.** Nenhum disjunto de `update` foi dado a
+`isTenantProfessor()`: ele não marca mensalidade, não edita cadastro de aluno e não mexe no
+próprio vínculo. O que ele lê a mais é o disjunto de `read` em `alunos`, com **igualdade
+por documento** (`resource.data.get('professorId','') == request.auth.uid`) — é isso que
+obriga a consulta a levar `.where('professorId','==',uid)` e impede listar a base inteira.
+Trocar esse disjunto por um `isTenantProfessor(tenantId)` solto vazaria todos os alunos da
+academia; `tests/rules/professores.test.js` existe principalmente para travar isso.
+
+### Por que `memberships` e `professores` continuam `write: false`
+
+`tenants/{t}/memberships/{uid}` e `tenants/{t}/professores/{uid}` são **`allow write: if
+false` para todo cliente, inclusive admin**. Conceder papel é escalada de privilégio por
+definição: se o navegador pudesse escrever ali, a única barreira seria uma rule que precisa
+ler, ela mesma, o papel de quem escreve. Quem escreve é só o Worker, com service account,
+em dois endpoints novos:
+
+| Endpoint | O que faz |
+|---|---|
+| `POST /criar-professor` | cria conta no Auth + `professores/{uid}` + membership `professor`. Corpo: `{ tenantId, nome, email, senha, telefone?, equipeId? }` |
+| `POST /gerenciar-professor` | `{ acao: 'promover' \| 'remover', uid, equipeId? }` — promove quem já tem membership ativa nesta academia, ou rebaixa (o registro em `professores/` vira `status: 'inativo'`, nunca é apagado) |
+
+Os dois seguem a mesma cadeia dos outros endpoints administrativos:
+`resolverTenantAtivoDoPayload` → `exigirOrigemTenant` → `exigirAdminTenant` → validação →
+escrita. O `tenantId` chega no corpo (texto escolhido pelo cliente) e sozinho não vale
+nada — quem o legitima é o `Origin` resolvido contra `tenantDomains`/`tenantSlugs`.
+`gravarMembership()` grava nos **dois espelhos**: `tenants/{t}/memberships/{uid}` (fonte de
+autorização das rules) e `users/{uid}/memberships/{t}` (o que o próprio usuário lê pra
+descobrir o papel dele).
+
+A única coisa que o cliente escreve nesse assunto é `alunos/{id}.professorId` (+
+`professorAtribuidoEm == request.time`), pelo `<select>` da coluna "Professor" na tabela de
+alunos do `admin.html` — campo de dado, não de papel, com disjunto próprio nas rules e
+`exists()` obrigando o `professorId` a apontar pra um documento real em `professores/`
+(mesma disciplina do `exists()` de `horarios.turmaId`). Desvincular é
+`FieldValue.delete()`: o campo some de `request.resource.data` e o `exists()` nem é
+avaliado. Índice novo em `firestore.indexes.json`: `alunos` `professorId` ASC + `nome` ASC.
+
+### Pegadinha: `horarios.professorId` NÃO é o uid do Auth
+
+`horarios/{id}.professorId` guarda o **ID do documento em `equipe/{id}`** — a vitrine
+pública do site, que existe desde antes deste papel e não tem relação nenhuma com login.
+O uid do Firebase Auth só aparece em `professores/{uid}`. A ponte entre os dois é o campo
+**`professores/{uid}.equipeId`**, opcional: sem ele o professor entra no painel e vê os
+alunos dele, mas o card "Minhas aulas" mostra "Peça ao administrador para vincular seu
+perfil da equipe". Quem vincula é o admin, pelo select do card "Professores".
+
+### Telas
+
+- **`app/professor.html`** (nova) — painel enxuto e read-only: "Meus alunos", "Minhas
+  aulas", "Eventos". Separado de `admin.html` de propósito, pra um `if` esquecido no painel
+  do admin nunca virar escrita indevida. `app/professor/index.html` é o stub de redirect,
+  igual a `app/admin/index.html`.
+- **`app/login.html`** — role `professor` roteia pra `professor.html`; `admin`/`owner`
+  continuam ganhando `admin.html` (admin nunca é sobreposto por professor).
+- **`app/admin.html`** — card `#card-professores` (listar, cadastrar novo, promover aluno
+  existente, remover/reativar acesso) e a coluna "Professor" na tabela de alunos.
+
 ## Separação entre site institucional DojoPass e site das academias
 
 Este workspace local está ligado ao remoto `DojoPassBR/AcademiaTeste.git` e contém o app/site público das academias cliente. O domínio principal `dojopass.com.br` visto em produção é outra landing institucional, com o texto "A gestão inteligente para academias de artes marciais". Não transformar o `index.html` deste repo nessa landing e não inserir CTA "Criar academia" no site da academia.

@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260908">
+<link rel="stylesheet" href="app.css?v=20260910">
 </head>
 <body>
 
-<header class="app-header">
+<header class="app-header app-header-auth">
   <div class="logo-wrap">
     <img src="../assets/logo.svg" alt="Logo">
     <h1>Área da Academia</h1>
   </div>
 </header>
 
-<main class="app-main">
-  <div class="card">
+<main class="app-main app-main-auth">
+  <div class="card card-auth">
     <h2>Entrar</h2>
     <form id="form-login">
       <label for="academia">Nome da academia</label>
@@ -46,8 +46,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="firebase-init.js?v=20260908"></script>
-<script src="tenant-context.js?v=20260908"></script>
+<script src="firebase-init.js?v=20260910"></script>
+<script src="tenant-context.js?v=20260910"></script>
 <script>
 const SLUG_TENANT_REGEX = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 
@@ -114,12 +114,16 @@ form.addEventListener("submit", async (e) => {
 
     const cred = await auth.signInWithEmailAndPassword(email, senha);
     let ehAdmin = false;
+    let ehProfessor = false;
     let temMembership = false;
     try {
       const membershipDoc = await db.collection("users").doc(cred.user.uid).collection("memberships").doc(DOJOPASS_TENANT.tenantId).get();
       temMembership = membershipDoc.exists;
       const role = temMembership ? membershipDoc.data().role : null;
       ehAdmin = role === "admin" || role === "owner";
+      // Papel professor: painel próprio (professor.html), enxuto e só de leitura.
+      // Nunca sobrepõe admin/owner — quem é admin continua indo pro painel completo.
+      ehProfessor = role === "professor";
     } catch (tenantErr) {
       console.warn("[login] Não foi possível ler o membership do tenant; tentando admin legado.", tenantErr);
     }
@@ -143,7 +147,13 @@ form.addEventListener("submit", async (e) => {
         return;
       }
     }
-    window.location.href = ehAdmin ? "admin.html" : "checkin.html";
+    if (ehAdmin) {
+      window.location.href = "admin.html";
+    } else if (ehProfessor) {
+      window.location.href = "professor.html";
+    } else {
+      window.location.href = "checkin.html";
+    }
   } catch (err) {
     console.error("[login] Falha ao entrar", err);
     const local = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";

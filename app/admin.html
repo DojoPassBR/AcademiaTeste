@@ -5,56 +5,99 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel do Professor - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260908">
+<link rel="stylesheet" href="app.css?v=20260912">
 </head>
 <body>
 
-<header class="app-header">
-  <div class="logo-wrap">
-    <img src="../assets/logo.svg" alt="Logo">
-    <h1>Painel do Professor</h1>
-  </div>
-  <span class="sair" id="btn-sair">Sair</span>
-</header>
+<div class="app-shell">
 
-<main class="app-main wide">
-  <div class="card" id="card-negado" style="display:none;">
-    <h2>Acesso restrito</h2>
-    <p>Esta área é exclusiva para professores. Se você é professor e está vendo esta mensagem, peça para o administrador liberar seu acesso.</p>
-  </div>
-
-  <div id="conteudo" style="display:none;">
-    <!-- Índice do painel. O arquivo tem muitos cards e o professor costuma vir atrás de
-         um só; os links são âncoras puras (nada de JS) pros ids dos cards. -->
-    <div class="admin-tabs" role="tablist" aria-label="Seções do painel">
-      <button type="button" class="admin-tab" role="tab" id="aba-dashboard" aria-controls="tela-dashboard" aria-selected="true" tabindex="0">Dashboard</button>
-      <button type="button" class="admin-tab" role="tab" id="aba-configuracoes" aria-controls="tela-configuracoes" aria-selected="false" tabindex="-1">Configurações</button>
+  <!-- Sidebar de navegação do painel. Cada item com data-alvo troca a seção visível
+       do painel (uma de cada vez); "Gestão" e "Configurações" são só rótulos visuais
+       de agrupamento, sem comportamento de clique. -->
+  <aside class="app-sidebar" id="app-sidebar">
+    <div class="app-sidebar-brand">
+      <img src="../assets/logo.svg" alt="Logo">
+      <div>
+        <strong>DojoPass</strong>
+        <span>Painel administrativo</span>
+      </div>
     </div>
 
-    <section id="tela-dashboard" role="tabpanel" aria-labelledby="aba-dashboard" tabindex="-1">
-    <div class="card" id="card-dashboard" tabindex="-1">
-      <h2>Dashboard</h2>
+    <nav class="app-sidebar-nav" aria-label="Seções do painel">
+      <a class="app-sidebar-link is-active" id="nav-dashboard" data-alvo="tela-dashboard" href="#tela-dashboard" aria-current="page"><span class="icon" aria-hidden="true">📊</span>Dashboard</a>
+
+      <span class="app-sidebar-group-label">Gestão</span>
+      <a class="app-sidebar-link" id="nav-alunos" data-alvo="card-alunos" href="#card-alunos"><span class="icon" aria-hidden="true">🧑‍🎓</span>Alunos</a>
+      <a class="app-sidebar-link" id="nav-professores" data-alvo="card-professores" href="#card-professores"><span class="icon" aria-hidden="true">🧑‍🏫</span>Professores</a>
+      <a class="app-sidebar-link" id="nav-turmas" data-alvo="card-turmas" href="#card-turmas"><span class="icon" aria-hidden="true">🥋</span>Turmas</a>
+      <a class="app-sidebar-link" id="nav-equipe" data-alvo="card-equipe" href="#card-equipe"><span class="icon" aria-hidden="true">👥</span>Equipe</a>
+      <a class="app-sidebar-link" id="nav-horarios" data-alvo="card-horarios" href="#card-horarios"><span class="icon" aria-hidden="true">🗓️</span>Horários</a>
+      <a class="app-sidebar-link" id="nav-eventos" data-alvo="card-eventos" href="#card-eventos"><span class="icon" aria-hidden="true">📣</span>Eventos</a>
+
+      <span class="app-sidebar-group-label">Configurações</span>
+      <a class="app-sidebar-link" id="nav-perfil-academia" data-alvo="card-perfil-academia" href="#card-perfil-academia"><span class="icon" aria-hidden="true">🏠</span>Perfil da academia</a>
+      <a class="app-sidebar-link" id="nav-configuracoes" data-alvo="card-configuracoes" href="#card-configuracoes"><span class="icon" aria-hidden="true">⚙️</span>Configurações</a>
+    </nav>
+
+    <div class="app-sidebar-footer">
+      <span class="quem" id="sidebar-usuario"></span>
+      <button type="button" class="app-sidebar-sair" id="btn-sair">Sair</button>
+    </div>
+  </aside>
+
+  <div class="app-shell-backdrop" id="sidebar-backdrop"></div>
+
+  <main class="app-content">
+    <button type="button" class="app-sidebar-toggle" id="btn-toggle-sidebar" aria-expanded="false" aria-controls="app-sidebar">☰ Menu</button>
+
+    <div class="app-content-header">
+      <div>
+        <h1>Painel administrativo</h1>
+        <p>Acompanhe alunos, mensalidades e o conteúdo público da sua academia.</p>
+      </div>
+    </div>
+
+    <div class="card panel" id="card-negado" style="display:none;">
+      <h2>Acesso restrito</h2>
+      <p>Esta área é exclusiva para professores. Se você é professor e está vendo esta mensagem, peça para o administrador liberar seu acesso.</p>
+    </div>
+
+  <div id="conteudo" style="display:none;">
+
+    <section id="tela-dashboard" role="region" aria-label="Dashboard" tabindex="-1">
+    <div class="card panel" id="card-dashboard" tabindex="-1">
+      <div class="card-header-row panel-header">
+        <div>
+          <h2>Dashboard</h2>
+          <p>Resumo do dia da academia.</p>
+        </div>
+      </div>
       <div id="dashboard-conteudo" role="status" aria-live="polite">
-        <div class="dashboard-kpis" id="dashboard-kpis">
-          <div class="kpi" id="kpi-total-alunos">
-            <span class="kpi-numero">—</span>
-            <span class="kpi-rotulo">Total de alunos</span>
+        <div class="dashboard-kpis stat-grid" id="dashboard-kpis">
+          <div class="kpi stat-card" id="kpi-total-alunos">
+            <span class="icon stat-card-icon" aria-hidden="true">👥</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Total de alunos</span>
           </div>
-          <div class="kpi" id="kpi-em-dia">
-            <span class="kpi-numero">—</span>
-            <span class="kpi-rotulo">Mensalidade em dia</span>
+          <div class="kpi stat-card" id="kpi-em-dia">
+            <span class="icon stat-card-icon" aria-hidden="true">✅</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Mensalidade em dia</span>
           </div>
-          <div class="kpi destaque" id="kpi-pendentes">
-            <span class="kpi-numero">—</span>
-            <span class="kpi-rotulo">Mensalidade pendente</span>
+          <div class="kpi destaque stat-card" id="kpi-pendentes">
+            <span class="icon stat-card-icon" aria-hidden="true">⚠️</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Mensalidade pendente</span>
           </div>
-          <div class="kpi" id="kpi-checkins-hoje">
-            <span class="kpi-numero">—</span>
-            <span class="kpi-rotulo">Check-ins de hoje</span>
+          <div class="kpi stat-card" id="kpi-checkins-hoje">
+            <span class="icon stat-card-icon" aria-hidden="true">📅</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Check-ins de hoje</span>
           </div>
-          <div class="kpi destaque" id="kpi-aguardando-confirmacao">
-            <span class="kpi-numero">—</span>
-            <span class="kpi-rotulo">Cobranças aguardando confirmação</span>
+          <div class="kpi destaque stat-card" id="kpi-aguardando-confirmacao">
+            <span class="icon stat-card-icon" aria-hidden="true">🧾</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Cobranças aguardando confirmação</span>
           </div>
         </div>
 
@@ -70,19 +113,19 @@
         </div>
 
         <div class="dashboard-graficos">
-          <figure class="grafico-figura">
+          <figure class="grafico-figura panel">
             <figcaption>Mensalidade</figcaption>
             <div class="grafico-box"><canvas id="grafico-mensalidade" aria-hidden="true"></canvas></div>
             <p class="grafico-indisponivel" id="grafico-mensalidade-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
             <ul class="grafico-dados" id="grafico-mensalidade-dados"></ul>
           </figure>
-          <figure class="grafico-figura">
+          <figure class="grafico-figura panel">
             <figcaption>Check-ins (últimos 7 dias)</figcaption>
             <div class="grafico-box"><canvas id="grafico-checkins" aria-hidden="true"></canvas></div>
             <p class="grafico-indisponivel" id="grafico-checkins-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
             <ul class="grafico-dados" id="grafico-checkins-dados"></ul>
           </figure>
-          <figure class="grafico-figura">
+          <figure class="grafico-figura panel">
             <figcaption>Cobranças por status</figcaption>
             <div class="grafico-box"><canvas id="grafico-cobrancas" aria-hidden="true"></canvas></div>
             <p class="grafico-indisponivel" id="grafico-cobrancas-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
@@ -93,19 +136,8 @@
     </div>
     </section>
 
-    <section id="tela-configuracoes" role="tabpanel" aria-labelledby="aba-configuracoes" tabindex="-1" hidden>
-    <nav class="admin-subnav" aria-label="Seções de configurações">
-      <a href="#card-alunos">Alunos</a>
-      <a href="#card-turmas">Turmas</a>
-      <a href="#card-equipe">Equipe</a>
-      <a href="#card-horarios">Grade de horários</a>
-      <a href="#card-perfil-academia">Perfil da academia</a>
-      <a href="#card-eventos">Eventos</a>
-      <a href="#card-configuracoes">Configurações</a>
-    </nav>
-
-    <div class="card" id="card-alunos" tabindex="-1">
-      <div class="card-header-row">
+    <div class="card panel" id="card-alunos" role="region" aria-label="Alunos" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
         <h2>Alunos cadastrados</h2>
         <div class="card-header-acoes">
           <button type="button" class="btn-secundario" id="btn-convite">Gerar link de convite</button>
@@ -114,9 +146,9 @@
         </div>
       </div>
       <div style="overflow-x:auto;">
-        <table class="admin-table" id="tabela-alunos">
+        <table class="admin-table panel-table" id="tabela-alunos">
           <thead>
-            <tr><th>Nome</th><th>Telefone</th><th>Faixa</th><th>Nascimento</th><th>Presenças</th><th>Mensalidade</th></tr>
+            <tr><th scope="col">Aluno</th><th scope="col">Faixa</th><th scope="col">Nascimento</th><th scope="col">Presenças</th><th scope="col">Professor</th><th scope="col">Mensalidade</th></tr>
           </thead>
           <tbody>
             <tr><td colspan="6">Carregando...</td></tr>
@@ -126,13 +158,59 @@
     </div>
 
     <!-- ====================================================================
+         Professores da academia.
+         Diferente do card "Equipe" (que é vitrine pública do site, sem login),
+         aqui se concede ACESSO: um professor entra no app e vê os alunos que
+         estão vinculados a ele. Por isso nenhuma escrita deste card vai direto
+         pro Firestore — tenants/{t}/professores e tenants/{t}/memberships são
+         `allow write: if false` até pra admin. Quem escreve é o Worker, nos
+         endpoints POST /criar-professor e POST /gerenciar-professor.
+         ==================================================================== -->
+    <div class="card panel" id="card-professores" role="region" aria-label="Professores" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Professores</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-cadastrar-professor">Cadastrar professor</button>
+          <button type="button" class="btn-secundario" id="btn-promover-professor">Promover aluno</button>
+        </div>
+      </div>
+      <p>Professor cadastrado aqui entra no app por uma tela própria e vê apenas os alunos
+        vinculados a ele — ele não altera mensalidade, cadastro nem configuração.</p>
+      <p>Vincular o professor a um perfil da <a href="#card-equipe">Equipe</a> é opcional, e é
+        o que faz as aulas da grade de horários aparecerem no painel dele.</p>
+
+      <div style="overflow-x:auto;">
+        <table class="admin-table panel-table" id="tabela-professores">
+          <caption>Professores com acesso ao painel desta academia</caption>
+          <thead>
+            <tr>
+              <th scope="col">Professor</th>
+              <th scope="col">Equipe vinculada</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="msg" id="professores-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- ====================================================================
          Conteúdo público do site (turmas, equipe, grade de horários, perfil).
          São as quatro coleções com `allow read: if true` em firestore.rules —
          por isso o aviso amarelo se repete em cada um dos quatro cards.
          ==================================================================== -->
 
-    <div class="card" id="card-turmas" tabindex="-1">
-      <h2>Turmas</h2>
+    <div class="card panel" id="card-turmas" role="region" aria-label="Turmas" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Turmas</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-nova-turma">Cadastrar turma</button>
+        </div>
+      </div>
       <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
         Desmarcar "Turma ativa" só tira a turma da exibição (site e app): o registro continua
         no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
@@ -140,57 +218,8 @@
       <p>Cada turma vira um card na página da academia. A ordem define a posição na
         listagem (0 aparece primeiro).</p>
 
-      <div class="config-form-row">
-        <div>
-          <label for="turma-nome">Nome da turma</label>
-          <input type="text" id="turma-nome" maxlength="60" placeholder="Ex.: Kids manhã">
-        </div>
-        <div>
-          <label for="turma-nivel">Nível</label>
-          <select id="turma-nivel">
-            <option value="Infantil">Infantil</option>
-            <option value="Juvenil">Juvenil</option>
-            <option value="Iniciante">Iniciante</option>
-            <option value="Intermediario">Intermediário</option>
-            <option value="Avancado">Avançado</option>
-            <option value="Competicao">Competição</option>
-            <option value="Misto">Misto</option>
-            <option value="Feminino">Feminino</option>
-            <option value="Livre">Livre</option>
-          </select>
-        </div>
-        <div>
-          <label for="turma-cor">Cor de destaque</label>
-          <select id="turma-cor">
-            <option value="red">Vermelho</option>
-            <option value="yellow">Amarelo</option>
-            <option value="pink">Rosa</option>
-            <option value="white">Branco</option>
-          </select>
-        </div>
-        <div>
-          <label for="turma-ordem">Ordem de exibição (0 a 99)</label>
-          <input type="number" id="turma-ordem" min="0" max="99" step="1" value="0">
-        </div>
-      </div>
-
-      <label for="turma-descricao">Descrição (opcional)</label>
-      <textarea id="turma-descricao" class="config-textarea" maxlength="300" rows="3"
-        placeholder="Ex.: Turma para crianças de 6 a 10 anos, foco em coordenação e disciplina."></textarea>
-
-      <fieldset class="config-toggles">
-        <legend>Exibição no site</legend>
-        <label class="config-check"><input type="checkbox" id="turma-ativo" checked> Turma ativa (exibir no site e no app)</label>
-        <p class="config-dica">Desmarcado, a turma deixa de ser exibida — mas não é apagada nem
-          fica escondida de quem consultar o banco direto. Use Apagar para remover.</p>
-      </fieldset>
-
-      <button type="button" class="btn" id="turma-salvar">Cadastrar turma</button>
-      <button type="button" class="btn-secundario" id="turma-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
-      <div class="msg" id="turma-msg" role="status" aria-live="polite"></div>
-
       <div style="overflow-x:auto;margin-top:24px;">
-        <table class="admin-table" id="tabela-turmas">
+        <table class="admin-table panel-table" id="tabela-turmas">
           <thead>
             <tr><th>Nome</th><th>Nível</th><th>Cor</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>
           </thead>
@@ -201,84 +230,21 @@
       </div>
     </div>
 
-    <div class="card" id="card-equipe" tabindex="-1">
-      <h2>Equipe</h2>
+    <div class="card panel" id="card-equipe" role="region" aria-label="Equipe" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Equipe</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-novo-equipe">Cadastrar na equipe</button>
+        </div>
+      </div>
       <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
         Desmarcar a exibição só tira o membro da listagem (site e app): o registro continua
         no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
         diretamente. Para remover de verdade, use o botão Apagar.</p>
       <p>Professores e instrutores exibidos na página da academia.</p>
 
-      <div class="config-form-row">
-        <div>
-          <label for="equipe-tipo">Tipo</label>
-          <select id="equipe-tipo">
-            <option value="professor">Professor</option>
-            <option value="instrutor">Instrutor</option>
-          </select>
-        </div>
-        <div>
-          <label for="equipe-nome">Nome</label>
-          <input type="text" id="equipe-nome" maxlength="80" placeholder="Ex.: Carlos Souza">
-        </div>
-        <div>
-          <label for="equipe-telefone">Telefone (opcional — aparece no site público)</label>
-          <input type="tel" id="equipe-telefone" maxlength="30" placeholder="(15) 99999-9999">
-        </div>
-        <div>
-          <label for="equipe-faixa">Faixa (opcional)</label>
-          <select id="equipe-faixa">
-            <option value="">Não informar</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Azul">Azul</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
-          </select>
-        </div>
-        <div>
-          <label for="equipe-ordem">Ordem de exibição (0 a 99)</label>
-          <input type="number" id="equipe-ordem" min="0" max="99" step="1" value="0">
-        </div>
-      </div>
-
-      <label for="equipe-bio">Bio (opcional)</label>
-      <textarea id="equipe-bio" class="config-textarea" maxlength="400" rows="3"
-        placeholder="Ex.: Faixa preta há 8 anos, competidor e responsável pelas turmas infantis."></textarea>
-
-      <fieldset class="config-toggles">
-        <legend>Redes sociais (opcional — todos os links precisam começar com https://)</legend>
-        <label for="equipe-rede-instagram">Instagram</label>
-        <input type="url" id="equipe-rede-instagram" maxlength="200" placeholder="https://instagram.com/...">
-        <label for="equipe-rede-facebook">Facebook</label>
-        <input type="url" id="equipe-rede-facebook" maxlength="200" placeholder="https://facebook.com/...">
-        <label for="equipe-rede-youtube">YouTube</label>
-        <input type="url" id="equipe-rede-youtube" maxlength="200" placeholder="https://youtube.com/...">
-        <label for="equipe-rede-tiktok">TikTok</label>
-        <input type="url" id="equipe-rede-tiktok" maxlength="200" placeholder="https://tiktok.com/@...">
-        <label for="equipe-rede-site">Site</label>
-        <input type="url" id="equipe-rede-site" maxlength="200" placeholder="https://...">
-        <label for="equipe-rede-whatsapp">WhatsApp</label>
-        <input type="url" id="equipe-rede-whatsapp" maxlength="200" placeholder="https://wa.me/5515999999999">
-      </fieldset>
-
-      <fieldset class="config-toggles">
-        <legend>Exibição no site</legend>
-        <label class="config-check"><input type="checkbox" id="equipe-ativo" checked> Exibir no site e no app</label>
-        <p class="config-dica">Desmarcado, o membro deixa de ser exibido — mas não é apagado nem
-          fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
-      </fieldset>
-
-      <button type="button" class="btn" id="equipe-salvar">Cadastrar na equipe</button>
-      <button type="button" class="btn-secundario" id="equipe-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
-      <div class="msg" id="equipe-msg" role="status" aria-live="polite"></div>
-
       <div style="overflow-x:auto;margin-top:24px;">
-        <table class="admin-table" id="tabela-equipe">
+        <table class="admin-table panel-table" id="tabela-equipe">
           <thead>
             <tr><th>Nome</th><th>Tipo</th><th>Telefone</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>
           </thead>
@@ -289,8 +255,13 @@
       </div>
     </div>
 
-    <div class="card" id="card-horarios" tabindex="-1">
-      <h2>Grade de horários</h2>
+    <div class="card panel" id="card-horarios" role="region" aria-label="Horários" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Grade de horários</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-novo-horario">Cadastrar horário</button>
+        </div>
+      </div>
       <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
         Desmarcar "Horário ativo" só tira a aula da grade exibida (site e app): o registro continua
         no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
@@ -302,58 +273,8 @@
       <p class="aviso-pendente" id="horario-sem-turma" style="display:none;">Cadastre ao menos
         uma turma antes de montar a grade de horários.</p>
 
-      <div class="config-form-row">
-        <div>
-          <label for="horario-dia">Dia da semana</label>
-          <select id="horario-dia">
-            <option value="0">Domingo</option>
-            <option value="1">Segunda-feira</option>
-            <option value="2">Terça-feira</option>
-            <option value="3">Quarta-feira</option>
-            <option value="4">Quinta-feira</option>
-            <option value="5">Sexta-feira</option>
-            <option value="6">Sábado</option>
-          </select>
-        </div>
-        <div>
-          <label for="horario-turma">Turma</label>
-          <select id="horario-turma">
-            <option value="">Carregando...</option>
-          </select>
-        </div>
-        <div>
-          <label for="horario-inicio">Hora de início</label>
-          <input type="time" id="horario-inicio">
-        </div>
-        <div>
-          <label for="horario-fim">Hora de término</label>
-          <input type="time" id="horario-fim">
-        </div>
-        <div>
-          <label for="horario-professor">Professor / instrutor (opcional)</label>
-          <select id="horario-professor">
-            <option value="">Nenhum</option>
-          </select>
-        </div>
-        <div>
-          <label for="horario-observacao">Observação (opcional)</label>
-          <input type="text" id="horario-observacao" maxlength="120" placeholder="Ex.: Sala 2 / traga quimono">
-        </div>
-      </div>
-
-      <fieldset class="config-toggles">
-        <legend>Exibição no site</legend>
-        <label class="config-check"><input type="checkbox" id="horario-ativo" checked> Horário ativo (exibir no site e no app)</label>
-        <p class="config-dica">Desmarcado, o horário deixa de ser exibido — mas não é apagado nem
-          fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
-      </fieldset>
-
-      <button type="button" class="btn" id="horario-salvar">Cadastrar horário</button>
-      <button type="button" class="btn-secundario" id="horario-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
-      <div class="msg" id="horario-msg" role="status" aria-live="polite"></div>
-
       <div style="overflow-x:auto;margin-top:24px;">
-        <table class="admin-table" id="tabela-horarios">
+        <table class="admin-table panel-table" id="tabela-horarios">
           <caption class="config-dica" style="caption-side:bottom;text-align:left;">Grade
             agrupada por dia da semana.</caption>
           <thead>
@@ -366,7 +287,7 @@
       </div>
     </div>
 
-    <div class="card" id="card-perfil-academia" tabindex="-1">
+    <div class="card panel" id="card-perfil-academia" role="region" aria-label="Perfil da academia" tabindex="-1" hidden>
       <h2>Perfil da academia</h2>
       <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
         Campos deixados em branco somem da exibição (site e app), mas qualquer dado já salvo aqui
@@ -425,38 +346,17 @@
       <div class="msg" id="perfil-msg" role="status" aria-live="polite"></div>
     </div>
 
-    <div class="card" id="card-eventos" tabindex="-1">
-      <h2>Eventos e campeonatos</h2>
-      <p>Cadastre aqui os eventos da escola. Todos os alunos veem os próximos eventos na área de check-in.</p>
-
-      <div class="evento-form-row">
-        <div>
-          <label for="evento-nome">Nome do evento</label>
-          <input type="text" id="evento-nome" maxlength="120" required placeholder="Ex.: Campeonato Paulista">
-        </div>
-        <div>
-          <label for="evento-data">Data</label>
-          <div class="date-input-wrap">
-            <input type="date" id="evento-data" placeholder="dd/mm/aaaa" required>
-            <button type="button" class="date-picker-btn" id="evento-data-abrir-calendario" aria-label="Abrir calendário">📅</button>
-          </div>
-        </div>
-        <div>
-          <label for="evento-local">Local</label>
-          <input type="text" id="evento-local" maxlength="160" required placeholder="Ex.: Ginásio Municipal - Itapetininga/SP">
-        </div>
-        <div>
-          <label for="evento-link">Link (opcional)</label>
-          <input type="url" id="evento-link" maxlength="500" placeholder="https://... (opcional)">
+    <div class="card panel" id="card-eventos" role="region" aria-label="Eventos" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Eventos e campeonatos</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="btn-novo-evento">Cadastrar evento</button>
         </div>
       </div>
-
-      <button type="button" class="btn" id="evento-salvar">Cadastrar evento</button>
-      <button type="button" class="btn-secundario" id="evento-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
-      <div class="msg" id="evento-msg" role="status" aria-live="polite"></div>
+      <p>Cadastre aqui os eventos da escola. Todos os alunos veem os próximos eventos na área de check-in.</p>
 
       <div style="overflow-x:auto;margin-top:24px;">
-        <table class="admin-table" id="tabela-eventos">
+        <table class="admin-table panel-table" id="tabela-eventos">
           <thead>
             <tr><th>Nome</th><th>Data</th><th>Local</th><th>Link</th><th>Ações</th></tr>
           </thead>
@@ -467,7 +367,7 @@
       </div>
     </div>
 
-    <div class="card" id="card-configuracoes" tabindex="-1">
+    <div class="card panel" id="card-configuracoes" role="region" aria-label="Configurações" tabindex="-1" hidden>
       <h2>Configurações</h2>
       <p>Ajustes gerais da academia: como a mensalidade é cobrada e como os alunos são lembrados do vencimento.</p>
 
@@ -534,9 +434,9 @@
         <button type="button" class="btn-secundario" id="credencial-editar">Editar credencial Asaas</button>
       </div>
     </div>
-    </section>
   </div>
-</main>
+  </main>
+</div>
 
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal">
@@ -700,14 +600,291 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="turma-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="turma-titulo">
+    <span class="close" id="turma-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="turma-titulo">Cadastrar turma</h2>
+    <div class="config-form-row">
+      <div>
+        <label for="turma-nome">Nome da turma</label>
+        <input type="text" id="turma-nome" maxlength="60" placeholder="Ex.: Kids manhã">
+      </div>
+      <div>
+        <label for="turma-nivel">Nível</label>
+        <select id="turma-nivel">
+          <option value="Infantil">Infantil</option>
+          <option value="Juvenil">Juvenil</option>
+          <option value="Iniciante">Iniciante</option>
+          <option value="Intermediario">Intermediário</option>
+          <option value="Avancado">Avançado</option>
+          <option value="Competicao">Competição</option>
+          <option value="Misto">Misto</option>
+          <option value="Feminino">Feminino</option>
+          <option value="Livre">Livre</option>
+        </select>
+      </div>
+      <div>
+        <label for="turma-cor">Cor de destaque</label>
+        <select id="turma-cor">
+          <option value="red">Vermelho</option>
+          <option value="yellow">Amarelo</option>
+          <option value="pink">Rosa</option>
+          <option value="white">Branco</option>
+        </select>
+      </div>
+      <div>
+        <label for="turma-ordem">Ordem de exibição (0 a 99)</label>
+        <input type="number" id="turma-ordem" min="0" max="99" step="1" value="0">
+      </div>
+    </div>
+
+    <label for="turma-descricao">Descrição (opcional)</label>
+    <textarea id="turma-descricao" class="config-textarea" maxlength="300" rows="3"
+      placeholder="Ex.: Turma para crianças de 6 a 10 anos, foco em coordenação e disciplina."></textarea>
+
+    <fieldset class="config-toggles">
+      <legend>Exibição no site</legend>
+      <label class="config-check"><input type="checkbox" id="turma-ativo" checked> Turma ativa (exibir no site e no app)</label>
+      <p class="config-dica">Desmarcado, a turma deixa de ser exibida — mas não é apagada nem
+        fica escondida de quem consultar o banco direto. Use Apagar para remover.</p>
+    </fieldset>
+
+    <button type="button" class="btn" id="turma-salvar">Cadastrar turma</button>
+    <button type="button" class="btn-secundario" id="turma-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+    <div class="msg" id="turma-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="equipe-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="equipe-titulo">
+    <span class="close" id="equipe-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="equipe-titulo">Cadastrar na equipe</h2>
+    <div class="config-form-row">
+      <div>
+        <label for="equipe-tipo">Tipo</label>
+        <select id="equipe-tipo">
+          <option value="professor">Professor</option>
+          <option value="instrutor">Instrutor</option>
+        </select>
+      </div>
+      <div>
+        <label for="equipe-nome">Nome</label>
+        <input type="text" id="equipe-nome" maxlength="80" placeholder="Ex.: Carlos Souza">
+      </div>
+      <div>
+        <label for="equipe-telefone">Telefone (opcional — aparece no site público)</label>
+        <input type="tel" id="equipe-telefone" maxlength="30" placeholder="(15) 99999-9999">
+      </div>
+      <div>
+        <label for="equipe-faixa">Faixa (opcional)</label>
+        <select id="equipe-faixa">
+          <option value="">Não informar</option>
+          <option value="Branca">Branca</option>
+          <option value="Cinza">Cinza</option>
+          <option value="Amarela">Amarela</option>
+          <option value="Laranja">Laranja</option>
+          <option value="Verde">Verde</option>
+          <option value="Azul">Azul</option>
+          <option value="Roxa">Roxa</option>
+          <option value="Marrom">Marrom</option>
+          <option value="Preta">Preta</option>
+        </select>
+      </div>
+      <div>
+        <label for="equipe-ordem">Ordem de exibição (0 a 99)</label>
+        <input type="number" id="equipe-ordem" min="0" max="99" step="1" value="0">
+      </div>
+    </div>
+
+    <label for="equipe-bio">Bio (opcional)</label>
+    <textarea id="equipe-bio" class="config-textarea" maxlength="400" rows="3"
+      placeholder="Ex.: Faixa preta há 8 anos, competidor e responsável pelas turmas infantis."></textarea>
+
+    <fieldset class="config-toggles">
+      <legend>Redes sociais (opcional — todos os links precisam começar com https://)</legend>
+      <label for="equipe-rede-instagram">Instagram</label>
+      <input type="url" id="equipe-rede-instagram" maxlength="200" placeholder="https://instagram.com/...">
+      <label for="equipe-rede-facebook">Facebook</label>
+      <input type="url" id="equipe-rede-facebook" maxlength="200" placeholder="https://facebook.com/...">
+      <label for="equipe-rede-youtube">YouTube</label>
+      <input type="url" id="equipe-rede-youtube" maxlength="200" placeholder="https://youtube.com/...">
+      <label for="equipe-rede-tiktok">TikTok</label>
+      <input type="url" id="equipe-rede-tiktok" maxlength="200" placeholder="https://tiktok.com/@...">
+      <label for="equipe-rede-site">Site</label>
+      <input type="url" id="equipe-rede-site" maxlength="200" placeholder="https://...">
+      <label for="equipe-rede-whatsapp">WhatsApp</label>
+      <input type="url" id="equipe-rede-whatsapp" maxlength="200" placeholder="https://wa.me/5515999999999">
+    </fieldset>
+
+    <fieldset class="config-toggles">
+      <legend>Exibição no site</legend>
+      <label class="config-check"><input type="checkbox" id="equipe-ativo" checked> Exibir no site e no app</label>
+      <p class="config-dica">Desmarcado, o membro deixa de ser exibido — mas não é apagado nem
+        fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
+    </fieldset>
+
+    <button type="button" class="btn" id="equipe-salvar">Cadastrar na equipe</button>
+    <button type="button" class="btn-secundario" id="equipe-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+    <div class="msg" id="equipe-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="horario-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="horario-titulo">
+    <span class="close" id="horario-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="horario-titulo">Cadastrar horário</h2>
+    <div class="config-form-row">
+      <div>
+        <label for="horario-dia">Dia da semana</label>
+        <select id="horario-dia">
+          <option value="0">Domingo</option>
+          <option value="1">Segunda-feira</option>
+          <option value="2">Terça-feira</option>
+          <option value="3">Quarta-feira</option>
+          <option value="4">Quinta-feira</option>
+          <option value="5">Sexta-feira</option>
+          <option value="6">Sábado</option>
+        </select>
+      </div>
+      <div>
+        <label for="horario-turma">Turma</label>
+        <select id="horario-turma">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <div>
+        <label for="horario-inicio">Hora de início</label>
+        <input type="time" id="horario-inicio">
+      </div>
+      <div>
+        <label for="horario-fim">Hora de término</label>
+        <input type="time" id="horario-fim">
+      </div>
+      <div>
+        <label for="horario-professor">Professor / instrutor (opcional)</label>
+        <select id="horario-professor">
+          <option value="">Nenhum</option>
+        </select>
+      </div>
+      <div>
+        <label for="horario-observacao">Observação (opcional)</label>
+        <input type="text" id="horario-observacao" maxlength="120" placeholder="Ex.: Sala 2 / traga quimono">
+      </div>
+    </div>
+
+    <fieldset class="config-toggles">
+      <legend>Exibição no site</legend>
+      <label class="config-check"><input type="checkbox" id="horario-ativo" checked> Horário ativo (exibir no site e no app)</label>
+      <p class="config-dica">Desmarcado, o horário deixa de ser exibido — mas não é apagado nem
+        fica escondido de quem consultar o banco direto. Use Apagar para remover.</p>
+    </fieldset>
+
+    <button type="button" class="btn" id="horario-salvar">Cadastrar horário</button>
+    <button type="button" class="btn-secundario" id="horario-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+    <div class="msg" id="horario-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="evento-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="evento-titulo">
+    <span class="close" id="evento-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="evento-titulo">Cadastrar evento</h2>
+    <div class="evento-form-row">
+      <div>
+        <label for="evento-nome">Nome do evento</label>
+        <input type="text" id="evento-nome" maxlength="120" required placeholder="Ex.: Campeonato Paulista">
+      </div>
+      <div>
+        <label for="evento-data">Data</label>
+        <div class="date-input-wrap">
+          <input type="date" id="evento-data" placeholder="dd/mm/aaaa" required>
+          <button type="button" class="date-picker-btn" id="evento-data-abrir-calendario" aria-label="Abrir calendário">📅</button>
+        </div>
+      </div>
+      <div>
+        <label for="evento-local">Local</label>
+        <input type="text" id="evento-local" maxlength="160" required placeholder="Ex.: Ginásio Municipal - Itapetininga/SP">
+      </div>
+      <div>
+        <label for="evento-link">Link (opcional)</label>
+        <input type="url" id="evento-link" maxlength="500" placeholder="https://... (opcional)">
+      </div>
+    </div>
+
+    <button type="button" class="btn" id="evento-salvar">Cadastrar evento</button>
+    <button type="button" class="btn-secundario" id="evento-cancelar" style="display:none;margin-top:12px;">Cancelar edição</button>
+    <div class="msg" id="evento-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="professor-novo-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="professor-novo-titulo">
+    <span class="close" id="professor-novo-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="professor-novo-titulo">Cadastrar professor novo</h2>
+    <p>Cria uma conta nova de acesso. Use quando a pessoa ainda não tem cadastro nesta
+      academia. Você vai conhecer a senha inicial dela — combine a troca depois.</p>
+    <div class="config-form-row">
+      <div>
+        <label for="professor-nome">Nome</label>
+        <input type="text" id="professor-nome" maxlength="99" autocomplete="off">
+      </div>
+      <div>
+        <label for="professor-email">E-mail</label>
+        <input type="email" id="professor-email" maxlength="120" autocomplete="off">
+      </div>
+      <div>
+        <label for="professor-senha">Senha inicial (mínimo 6 caracteres)</label>
+        <input type="password" id="professor-senha" maxlength="128" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="professor-telefone">Telefone (opcional)</label>
+        <input type="tel" id="professor-telefone" maxlength="29" autocomplete="off">
+      </div>
+      <div>
+        <label for="professor-equipe">Perfil da equipe (opcional)</label>
+        <select id="professor-equipe">
+          <option value="">Sem vínculo</option>
+        </select>
+      </div>
+    </div>
+    <button type="button" class="btn" id="professor-criar">Cadastrar professor</button>
+    <div class="msg" id="professor-criar-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="professor-promover-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="professor-promover-titulo">
+    <span class="close" id="professor-promover-close" role="button" tabindex="0" aria-label="Fechar">&times;</span>
+    <h2 id="professor-promover-titulo">Promover aluno existente a professor</h2>
+    <p>Mantém o cadastro de aluno da pessoa (ela continua fazendo check-in normalmente) e
+      adiciona o acesso de professor.</p>
+    <div class="config-form-row">
+      <div>
+        <label for="promover-aluno">Aluno</label>
+        <select id="promover-aluno">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <div>
+        <label for="promover-equipe">Perfil da equipe (opcional)</label>
+        <select id="promover-equipe">
+          <option value="">Sem vínculo</option>
+        </select>
+      </div>
+    </div>
+    <button type="button" class="btn-secundario" id="promover-confirmar">Promover a professor</button>
+    <div class="msg" id="promover-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
 <div class="only-print" id="relatorio-impressao"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
-<script src="firebase-init.js?v=20260908"></script>
-<script src="tenant-context.js?v=20260908"></script>
+<script src="firebase-init.js?v=20260909"></script>
+<script src="tenant-context.js?v=20260909"></script>
 <script>
 const btnSair = document.getElementById("btn-sair");
 const cardNegado = document.getElementById("card-negado");
@@ -750,6 +927,28 @@ const novoAlunoNascimento = document.getElementById("novo-aluno-nascimento");
 const novoAlunoFaixa = document.getElementById("novo-aluno-faixa");
 const novoAlunoCriar = document.getElementById("novo-aluno-criar");
 const novoAlunoMsg = document.getElementById("novo-aluno-msg");
+// ---- Professores (card-professores) ------------------------------------------------
+const tabelaProfessores = document.querySelector("#tabela-professores tbody");
+const professoresMsg = document.getElementById("professores-msg");
+const professorNome = document.getElementById("professor-nome");
+const professorEmail = document.getElementById("professor-email");
+const professorSenha = document.getElementById("professor-senha");
+const professorTelefone = document.getElementById("professor-telefone");
+const professorEquipe = document.getElementById("professor-equipe");
+const professorCriar = document.getElementById("professor-criar");
+const professorCriarMsg = document.getElementById("professor-criar-msg");
+const promoverAlunoSelect = document.getElementById("promover-aluno");
+const promoverEquipe = document.getElementById("promover-equipe");
+const promoverConfirmar = document.getElementById("promover-confirmar");
+const promoverMsg = document.getElementById("promover-msg");
+// Os dois formulários de professor vivem em modais próprios; a tabela fica sozinha no card.
+const btnCadastrarProfessor = document.getElementById("btn-cadastrar-professor");
+const professorNovoBackdrop = document.getElementById("professor-novo-backdrop");
+const professorNovoClose = document.getElementById("professor-novo-close");
+const btnPromoverProfessor = document.getElementById("btn-promover-professor");
+const professorPromoverBackdrop = document.getElementById("professor-promover-backdrop");
+const professorPromoverClose = document.getElementById("professor-promover-close");
+
 const dashboardListaEventos = document.getElementById("dashboard-lista-eventos");
 const dashboardListaAulas = document.getElementById("dashboard-lista-aulas");
 
@@ -761,6 +960,10 @@ const eventoLink = document.getElementById("evento-link");
 const eventoSalvar = document.getElementById("evento-salvar");
 const eventoCancelar = document.getElementById("evento-cancelar");
 const eventoMsg = document.getElementById("evento-msg");
+const btnNovoEvento = document.getElementById("btn-novo-evento");
+const eventoBackdrop = document.getElementById("evento-backdrop");
+const eventoClose = document.getElementById("evento-close");
+const eventoTitulo = document.getElementById("evento-titulo");
 
 // UX do <input type="date"> no Safari: ao digitar o dia, o foco não avança sozinho pro
 // segmento de mês (diferente do Chrome). Esse comportamento é nativo do controle do
@@ -823,88 +1026,97 @@ const manualConfirmar = document.getElementById("manual-confirmar");
 const manualMsg = document.getElementById("manual-msg");
 
 // ---------------------------------------------------------------------------
-// Navegação em abas (Dashboard / Configurações). Só duas abas reais — o resto do
-// painel (Alunos, Turmas, Equipe, Grade de horários, Perfil da academia, Eventos,
-// Configurações) mora todo dentro de "tela-configuracoes", navegável pela sub-nav
-// de âncoras que já existia como nav de índice.
+// Navegação do painel: cada item da sidebar mostra UMA seção e esconde todas as
+// outras. As "seções" são o <section id="tela-dashboard"> e os cards de gestão /
+// configuração — todos filhos diretos de #conteudo, escondidos com [hidden].
+// O vínculo item de menu -> seção é o atributo data-alvo de cada .app-sidebar-link.
 // ---------------------------------------------------------------------------
-const abaDashboard = document.getElementById("aba-dashboard");
-const abaConfiguracoes = document.getElementById("aba-configuracoes");
-const telaDashboard = document.getElementById("tela-dashboard");
-const telaConfiguracoes = document.getElementById("tela-configuracoes");
-
-// Ids dos cards que vivem dentro da aba "Configurações" — usados para o deep-link:
-// se a página abrir (ou o hash mudar) para um desses ids, a aba certa é ativada
-// antes do navegador rolar até a âncora.
-const IDS_CARDS_CONFIGURACOES = [
-  "card-alunos", "card-turmas", "card-equipe", "card-horarios",
-  "card-perfil-academia", "card-eventos", "card-configuracoes"
+const TODAS_SECOES = [
+  "tela-dashboard", "card-alunos", "card-professores", "card-turmas", "card-equipe",
+  "card-horarios", "card-perfil-academia", "card-eventos", "card-configuracoes"
 ];
 
-function ativarAba(idAba) {
-  const dashboardAtiva = idAba === "aba-dashboard";
+const linksNavegacao = Array.from(document.querySelectorAll(".app-sidebar-link[data-alvo]"));
 
-  abaDashboard.setAttribute("aria-selected", dashboardAtiva ? "true" : "false");
-  abaDashboard.tabIndex = dashboardAtiva ? 0 : -1;
-  abaConfiguracoes.setAttribute("aria-selected", dashboardAtiva ? "false" : "true");
-  abaConfiguracoes.tabIndex = dashboardAtiva ? -1 : 0;
+function ativarSecao(idSecaoAlvo) {
+  if (!TODAS_SECOES.includes(idSecaoAlvo)) return;
 
-  telaDashboard.hidden = !dashboardAtiva;
-  telaConfiguracoes.hidden = dashboardAtiva;
+  TODAS_SECOES.forEach((id) => {
+    const secao = document.getElementById(id);
+    if (secao) secao.hidden = id !== idSecaoAlvo;
+  });
 
-  const telaAtiva = dashboardAtiva ? telaDashboard : telaConfiguracoes;
-  telaAtiva.focus();
+  linksNavegacao.forEach((link) => {
+    const ativo = link.dataset.alvo === idSecaoAlvo;
+    link.classList.toggle("is-active", ativo);
+    if (ativo) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+
+  const secaoAtiva = document.getElementById(idSecaoAlvo);
+  if (secaoAtiva) secaoAtiva.focus();
+
+  history.replaceState(null, "", "#" + idSecaoAlvo);
 }
 
-abaDashboard.addEventListener("click", () => {
-  ativarAba("aba-dashboard");
-  history.replaceState(null, "", "#aba-dashboard");
-});
-abaConfiguracoes.addEventListener("click", () => {
-  ativarAba("aba-configuracoes");
-  history.replaceState(null, "", "#aba-configuracoes");
-});
-
-// Setas esquerda/direita alternam entre as duas abas quando o foco está num botão
-// de aba (padrão de teclado do papel ARIA "tablist"). Como só há duas abas, o foco
-// pode simplesmente alternar entre elas.
-[abaDashboard, abaConfiguracoes].forEach((botaoAba) => {
-  botaoAba.addEventListener("keydown", (evento) => {
-    if (evento.key !== "ArrowLeft" && evento.key !== "ArrowRight") return;
+linksNavegacao.forEach((link) => {
+  link.addEventListener("click", (evento) => {
+    // O href="#id" existe só como fallback sem JS; aqui a troca de seção é nossa.
     evento.preventDefault();
-    const proximaAba = botaoAba === abaDashboard ? abaConfiguracoes : abaDashboard;
-    ativarAba(proximaAba.id);
-    history.replaceState(null, "", "#" + proximaAba.id);
-    // Diferente do clique, a navegação por teclado entre abas mantém o foco na
-    // lista de abas (em vez de pular pro conteúdo), para permitir continuar
-    // navegando com as setas.
-    proximaAba.focus();
+    ativarSecao(link.dataset.alvo);
+  });
+
+  // Setas cima/baixo (e Home/End) percorrem a lista vertical de itens do menu.
+  link.addEventListener("keydown", (evento) => {
+    const indice = linksNavegacao.indexOf(link);
+    let proximo = null;
+    if (evento.key === "ArrowDown") proximo = linksNavegacao[(indice + 1) % linksNavegacao.length];
+    else if (evento.key === "ArrowUp") proximo = linksNavegacao[(indice - 1 + linksNavegacao.length) % linksNavegacao.length];
+    else if (evento.key === "Home") proximo = linksNavegacao[0];
+    else if (evento.key === "End") proximo = linksNavegacao[linksNavegacao.length - 1];
+    if (!proximo) return;
+    evento.preventDefault();
+    // Diferente do clique, a navegação por teclado só move o foco dentro do menu —
+    // a seção só troca quando a pessoa confirmar com Enter.
+    proximo.focus();
   });
 });
 
-// Deep-link: se a página carregar (ou o hash mudar) com #aba-configuracoes ou com
-// o id de um dos cards que vivem dentro dela, ativa a aba de Configurações antes
-// de rolar manualmente até o card (a rolagem nativa do navegador não alcança um
-// elemento que ainda está oculto por [hidden]).
-function ativarAbaConformeHash() {
+// Deep-link: se a página carregar (ou o hash mudar) com o id de uma das seções,
+// abre direto nela. Hash desconhecido é ignorado (fallback gracioso).
+function ativarSecaoConformeHash() {
   const hash = location.hash.replace("#", "");
   if (!hash) return;
-
-  if (hash === "aba-dashboard") {
-    ativarAba("aba-dashboard");
-    return;
-  }
-
-  if (hash === "aba-configuracoes" || IDS_CARDS_CONFIGURACOES.includes(hash)) {
-    ativarAba("aba-configuracoes");
-    if (IDS_CARDS_CONFIGURACOES.includes(hash)) {
-      const alvo = document.getElementById(hash);
-      if (alvo) alvo.scrollIntoView();
-    }
-  }
+  if (TODAS_SECOES.includes(hash)) ativarSecao(hash);
 }
-ativarAbaConformeHash();
-window.addEventListener("hashchange", ativarAbaConformeHash);
+ativarSecaoConformeHash();
+window.addEventListener("hashchange", ativarSecaoConformeHash);
+
+// ---------------------------------------------------------------------------
+// Sidebar em telas estreitas. Em desktop a sidebar é fixa e o botão nem aparece
+// (display:none no CSS); abaixo de 860px ela vira um painel deslizante.
+// ---------------------------------------------------------------------------
+const sidebarElemento = document.getElementById("app-sidebar");
+const sidebarBotao = document.getElementById("btn-toggle-sidebar");
+const sidebarFundo = document.getElementById("sidebar-backdrop");
+const sidebarUsuario = document.getElementById("sidebar-usuario");
+
+function definirSidebarAberta(aberta) {
+  sidebarElemento.classList.toggle("is-open", aberta);
+  sidebarFundo.classList.toggle("is-open", aberta);
+  sidebarBotao.setAttribute("aria-expanded", aberta ? "true" : "false");
+}
+
+sidebarBotao.addEventListener("click", () => {
+  definirSidebarAberta(!sidebarElemento.classList.contains("is-open"));
+});
+sidebarFundo.addEventListener("click", () => definirSidebarAberta(false));
+
+// Clicar num item do menu em mobile fecha a sidebar — senão o painel deslizante
+// fica cobrindo justamente o conteúdo pra onde a pessoa acabou de navegar.
+sidebarElemento.querySelectorAll(".app-sidebar-link").forEach((item) => {
+  item.addEventListener("click", () => definirSidebarAberta(false));
+});
 
 let cobrancaAlunoAtual = null;
 let manualAlunoAtual = null;
@@ -1250,7 +1462,10 @@ btnRelatorio.addEventListener("click", gerarRelatorio);
 cobrancaClose.addEventListener("click", fecharModalCobranca);
 cobrancaConfirmar.addEventListener("click", confirmarGeracaoCobranca);
 eventoSalvar.addEventListener("click", salvarEvento);
-eventoCancelar.addEventListener("click", limparFormularioEvento);
+eventoCancelar.addEventListener("click", () => {
+  limparFormularioEvento();
+  fecharModalEvento();
+});
 configSalvar.addEventListener("click", salvarConfiguracoes);
 configModo.addEventListener("change", aoTrocarModoMensalidade);
 credencialEditar.addEventListener("click", abrirModalCredencial);
@@ -1276,6 +1491,18 @@ document.addEventListener("keydown", (evento) => {
     fecharModalNovoAluno();
   } else if (conviteBackdrop.classList.contains("show")) {
     fecharModalConvite();
+  } else if (turmaBackdrop.classList.contains("show")) {
+    fecharModalTurma();
+  } else if (equipeBackdrop.classList.contains("show")) {
+    fecharModalEquipe();
+  } else if (horarioBackdrop.classList.contains("show")) {
+    fecharModalHorario();
+  } else if (eventoBackdrop.classList.contains("show")) {
+    fecharModalEvento();
+  } else if (professorNovoBackdrop.classList.contains("show")) {
+    fecharModalProfessorNovo();
+  } else if (professorPromoverBackdrop.classList.contains("show")) {
+    fecharModalProfessorPromover();
   }
 });
 btnNovoAluno.addEventListener("click", abrirModalNovoAluno);
@@ -1313,6 +1540,9 @@ auth.onAuthStateChanged(async (user) => {
     return;
   }
 
+  sidebarUsuario.textContent = user.email || "";
+  sidebarUsuario.title = user.email || "";
+
   await ensureTenantContext();
 
   let ehAdmin = false;
@@ -1338,6 +1568,9 @@ auth.onAuthStateChanged(async (user) => {
   preencherFormularioConfig();
 
   conteudo.style.display = "block";
+  // Professores vêm ANTES dos alunos: a coluna "Professor" da tabela de alunos monta o
+  // <select> de cada linha a partir de professoresCache.
+  await carregarProfessores();
   carregarAlunos();
   carregarEventos();
   carregarCredencialAsaas();
@@ -1348,6 +1581,10 @@ auth.onAuthStateChanged(async (user) => {
 
 async function carregarAlunos() {
   const snap = await tenantCollection("alunos").orderBy("nome").get();
+
+  // Cache usado pelo <select> "Promover aluno existente a professor" (card-professores).
+  alunosCache = snap.docs.map((doc) => ({ id: doc.id, nome: doc.data().nome || "sem nome" }));
+  atualizarSelectPromoverAluno();
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
@@ -1392,12 +1629,10 @@ async function carregarAlunos() {
     const emDia = (aluno.mensalidadeStatus || "pendente") === "pago";
 
     // Nome, telefone e faixa vêm do cadastro do próprio aluno (conteúdo livre) —
-    // nunca colocar em innerHTML. textContent escapa qualquer HTML/script.
-    const tdNome = document.createElement("td");
-    tdNome.textContent = aluno.nome;
-
-    const tdTelefone = document.createElement("td");
-    tdTelefone.textContent = aluno.telefone || "-";
+    // nunca colocar em innerHTML. celulaPessoa() monta tudo por textContent, que
+    // escapa qualquer HTML/script. O telefone virou o subtítulo do nome (era uma
+    // coluna própria antes) pra deixar a tabela mais estreita.
+    const tdNome = celulaPessoa(aluno.nome, aluno.telefone || "");
 
     const tdFaixa = document.createElement("td");
     const beltTag = document.createElement("span");
@@ -1413,6 +1648,12 @@ async function carregarAlunos() {
 
     const tdPresencas = document.createElement("td");
     tdPresencas.textContent = totalCheckins === null ? "-" : totalCheckins;
+
+    // Vínculo aluno→professor. Esta é a ÚNICA escrita de professorId feita pelo
+    // cliente, e a rule que a autoriza (disjunto próprio no update de alunos) só
+    // aceita os dois campos abaixo, com carimbo de servidor e exists() do professor.
+    const tdProfessor = document.createElement("td");
+    tdProfessor.appendChild(criarSelectProfessorDoAluno(doc.id, aluno));
 
     const tdMensalidade = document.createElement("td");
     // Dias de atraso: contados desde a última vez que o status foi mexido. Aluno que
@@ -1505,13 +1746,384 @@ async function carregarAlunos() {
       tdMensalidade.appendChild(btnMensalidade);
     }
 
-    tr.append(tdNome, tdTelefone, tdFaixa, tdNascimento, tdPresencas, tdMensalidade);
+    tr.append(tdNome, tdFaixa, tdNascimento, tdPresencas, tdProfessor, tdMensalidade);
     tr.addEventListener("click", () => abrirHistorico(aluno.nome, doc.id));
 
     tabelaAlunos.appendChild(tr);
   });
 
   renderDashboard();
+}
+
+// ---------------------------------------------------------------------------
+// Professores (card-professores).
+//
+// Regra central: NADA aqui escreve direto no Firestore. tenants/{t}/professores e
+// tenants/{t}/memberships são `allow write: if false` para todo cliente, inclusive
+// admin — conceder papel é escalada de privilégio, e o único caminho auditável é o
+// Worker (POST /criar-professor e POST /gerenciar-professor), que revalida admin e
+// origem com service account. A única exceção é a coluna "Professor" da tabela de
+// alunos, que grava alunos/{id}.professorId — campo de dado, não de papel, e com
+// disjunto próprio nas rules (exists() do professor + carimbo de servidor).
+// ---------------------------------------------------------------------------
+
+// [{ id, ...doc }] de tenants/{t}/professores. [] = nenhum, ou falha de leitura.
+let professoresCache = [];
+// [{ id, nome }] dos alunos já carregados — alimenta o select de promoção.
+let alunosCache = [];
+// true quando a leitura de professores falhou: a tabela precisa dizer "falhou" em vez
+// de "nenhum professor cadastrado" (que seria mentira e levaria a cadastrar duplicado).
+let professoresFalhouLeitura = false;
+
+async function carregarProfessores() {
+  let snap;
+  try {
+    snap = await tenantCollection("professores").get();
+  } catch (err) {
+    professoresCache = [];
+    professoresFalhouLeitura = true;
+    renderProfessores();
+    mostrarMsgEm(professoresMsg, "Não foi possível carregar a lista de professores.", "error");
+    return;
+  }
+
+  professoresFalhouLeitura = false;
+  professoresCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  professoresCache.sort((a, b) =>
+    String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+
+  renderProfessores();
+}
+
+// Nome do perfil da vitrine pública ligado ao professor. equipeCache pode ainda não
+// ter carregado (as duas leituras são independentes): nesse caso mostra o id cru, e a
+// tabela é redesenhada quando carregarEquipe() terminar.
+function nomeEquipeVinculada(equipeId) {
+  if (!equipeId) return "Sem vínculo";
+  const membro = equipeCache.find((item) => item.id === equipeId);
+  return membro ? (membro.nome || "sem nome") : equipeId;
+}
+
+function renderProfessores() {
+  tabelaProfessores.innerHTML = "";
+
+  if (professoresFalhouLeitura) {
+    tabelaProfessores.appendChild(linhaVazia(4, "Não foi possível carregar os professores."));
+    return;
+  }
+
+  if (professoresCache.length === 0) {
+    tabelaProfessores.appendChild(linhaVazia(4, "Nenhum professor cadastrado ainda."));
+    return;
+  }
+
+  professoresCache.forEach((professor) => {
+    const nome = professor.nome || "sem nome";
+    const ativo = professor.status !== "inativo";
+    const tr = document.createElement("tr");
+    // O e-mail virou o subtítulo do nome (era coluna própria) — mesmo dado, menos
+    // colunas. O status vira um badge, mas o texto continua sendo a informação.
+    const tdStatus = document.createElement("td");
+    const badgeStatus = document.createElement("span");
+    badgeStatus.className = "badge " + (ativo ? "badge-sucesso" : "badge-neutro");
+    badgeStatus.textContent = ativo ? "Ativo" : "Inativo";
+    tdStatus.appendChild(badgeStatus);
+
+    tr.append(
+      celulaPessoa(nome, professor.email || ""),
+      celula(nomeEquipeVinculada(professor.equipeId)),
+      tdStatus
+    );
+
+    const tdAcoes = document.createElement("td");
+    if (ativo) {
+      tdAcoes.appendChild(botaoAcao(
+        "Remover acesso",
+        "Remover o acesso de professor de " + nome,
+        () => gerenciarProfessor("remover", professor.id, nome)
+      ));
+    } else {
+      tdAcoes.appendChild(botaoAcao(
+        "Reativar",
+        "Reativar o acesso de professor de " + nome,
+        () => gerenciarProfessor("promover", professor.id, nome)
+      ));
+    }
+    tr.appendChild(tdAcoes);
+
+    tabelaProfessores.appendChild(tr);
+  });
+}
+
+// Os dois selects de equipe (cadastro e promoção) saem do mesmo cache do card Equipe.
+function atualizarSelectsEquipeProfessor() {
+  [professorEquipe, promoverEquipe].forEach((select) => {
+    const anterior = select.value;
+    select.innerHTML = "";
+
+    const nenhum = document.createElement("option");
+    nenhum.value = "";
+    nenhum.textContent = "Sem vínculo";
+    select.appendChild(nenhum);
+
+    equipeCache.forEach((membro) => {
+      const opcao = document.createElement("option");
+      opcao.value = membro.id;
+      opcao.textContent = membro.nome || "sem nome";
+      select.appendChild(opcao);
+    });
+
+    if (anterior) select.value = anterior;
+  });
+}
+
+function atualizarSelectPromoverAluno() {
+  const anterior = promoverAlunoSelect.value;
+  promoverAlunoSelect.innerHTML = "";
+
+  const vazio = document.createElement("option");
+  vazio.value = "";
+  vazio.textContent = alunosCache.length === 0 ? "Nenhum aluno cadastrado" : "Escolha um aluno";
+  promoverAlunoSelect.appendChild(vazio);
+
+  // O cliente só conhece o role de UM uid — o do próprio admin logado (lido em
+  // membershipDoc no boot). Os roles dos demais alunos não estão em memória e não vale
+  // uma leitura nova só pra isso: a barreira de verdade contra rebaixar admin/owner está
+  // no Worker (/gerenciar-professor recusa role 'admin'/'owner'). O que dá pra evitar
+  // aqui é o caso mais fácil de acontecer por engano: o admin se promover a professor.
+  const uidLogado = auth.currentUser ? auth.currentUser.uid : null;
+
+  alunosCache.forEach((aluno) => {
+    if (uidLogado && aluno.id === uidLogado) return;
+    const opcao = document.createElement("option");
+    opcao.value = aluno.id;
+    opcao.textContent = aluno.nome;
+    promoverAlunoSelect.appendChild(opcao);
+  });
+
+  if (anterior) promoverAlunoSelect.value = anterior;
+}
+
+// Tratamento de erro compartilhado pelos dois endpoints de professor — mesma tabela de
+// códigos usada no cadastro de aluno pelo painel.
+async function mensagemErroProfessor(resp, padrao) {
+  if (resp.status === 401) return "Sua sessão expirou. Saia e entre de novo.";
+  if (resp.status === 403) return "Sua conta não tem permissão de administrador nesta academia.";
+  if (resp.status === 409) return "Este e-mail já está cadastrado.";
+  if (resp.status === 501) return "O cadastro de professores ainda não foi configurado nesta academia.";
+  const dados = await resp.json().catch(() => ({}));
+  if (typeof dados.erro === "string" && dados.erro) return dados.erro;
+  if (resp.status === 400) return "Confira os dados informados.";
+  return padrao;
+}
+
+async function cadastrarProfessor() {
+  const nome = professorNome.value.trim();
+  const email = professorEmail.value.trim();
+  const senha = professorSenha.value;
+  const telefone = professorTelefone.value.trim();
+  const equipeId = professorEquipe.value;
+
+  if (nome.length < 1 || nome.length > 99) {
+    mostrarMsgEm(professorCriarMsg, "Informe o nome do professor (até 99 caracteres).", "error");
+    professorNome.focus();
+    return;
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    mostrarMsgEm(professorCriarMsg, "Informe um e-mail válido.", "error");
+    professorEmail.focus();
+    return;
+  }
+  if (senha.length < 6 || senha.length > 128) {
+    mostrarMsgEm(professorCriarMsg, "A senha inicial precisa ter de 6 a 128 caracteres.", "error");
+    professorSenha.focus();
+    return;
+  }
+  if (!WORKER_URL) {
+    mostrarMsgEm(professorCriarMsg, "O cadastro de professores ainda não foi configurado nesta academia.", "error");
+    return;
+  }
+  if (!window.confirm("Criar acesso de professor para " + email + "?")) return;
+
+  professorCriar.disabled = true;
+  professorCriar.textContent = "Cadastrando...";
+  mostrarMsgEm(professorCriarMsg, "Cadastrando...", "info");
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/criar-professor", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken
+      },
+      body: JSON.stringify(tenantPayload({ nome, email, senha, telefone, equipeId }))
+    });
+
+    // A senha já cumpriu o papel dela: sai do DOM antes mesmo de tratar a resposta.
+    professorSenha.value = "";
+
+    if (!resp.ok) {
+      mostrarMsgEm(
+        professorCriarMsg,
+        await mensagemErroProfessor(resp, "Não foi possível cadastrar o professor agora."),
+        "error"
+      );
+      return;
+    }
+
+    professorNome.value = "";
+    professorEmail.value = "";
+    professorTelefone.value = "";
+    professorEquipe.value = "";
+    mostrarMsgEm(professorCriarMsg, "Professor cadastrado.", "success");
+    fecharModalProfessorNovo();
+    await carregarProfessores();
+  } catch (err) {
+    professorSenha.value = "";
+    mostrarMsgEm(professorCriarMsg, "Falha de conexão. Tente de novo em instantes.", "error");
+  } finally {
+    professorCriar.disabled = false;
+    professorCriar.textContent = "Cadastrar professor";
+  }
+}
+
+// Promover/rebaixar quem JÁ pertence à academia. O Worker recusa uid sem membership
+// ativa aqui — não dá pra "importar" um usuário de outro tenant por este caminho.
+async function gerenciarProfessor(acao, uid, nome, equipeId) {
+  if (!WORKER_URL) {
+    mostrarMsgEm(professoresMsg, "A gestão de professores ainda não foi configurada nesta academia.", "error");
+    return;
+  }
+
+  const pergunta = acao === "remover"
+    ? "Remover o acesso de professor de " + nome + "? O cadastro dele continua registrado."
+    : "Dar acesso de professor para " + nome + "?";
+  if (!window.confirm(pergunta)) return;
+
+  const alvoMsg = acao === "remover" ? professoresMsg : promoverMsg;
+  mostrarMsgEm(alvoMsg, "Salvando...", "info");
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/gerenciar-professor", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken
+      },
+      body: JSON.stringify(tenantPayload({ acao, uid, equipeId: equipeId || "" }))
+    });
+
+    if (!resp.ok) {
+      mostrarMsgEm(
+        alvoMsg,
+        await mensagemErroProfessor(resp, "Não foi possível concluir a alteração agora."),
+        "error"
+      );
+      return;
+    }
+
+    mostrarMsgEm(
+      alvoMsg,
+      acao === "remover" ? "Acesso de professor removido." : "Acesso de professor concedido.",
+      "success"
+    );
+    // "remover" vem dos botões da tabela (mensagem no card); "promover" vem do modal.
+    if (acao !== "remover") fecharModalProfessorPromover();
+    await carregarProfessores();
+    // A lista de alunos mostra o vínculo em um <select> montado a partir de
+    // professoresCache: quem acabou de ser removido não pode continuar selecionável.
+    await carregarAlunos();
+  } catch (err) {
+    mostrarMsgEm(alvoMsg, "Falha de conexão. Tente de novo em instantes.", "error");
+  }
+}
+
+async function promoverAlunoAProfessor() {
+  const uid = promoverAlunoSelect.value;
+  if (!uid) {
+    mostrarMsgEm(promoverMsg, "Escolha o aluno que vai virar professor.", "error");
+    promoverAlunoSelect.focus();
+    return;
+  }
+  const aluno = alunosCache.find((item) => item.id === uid);
+  promoverConfirmar.disabled = true;
+  try {
+    await gerenciarProfessor("promover", uid, aluno ? aluno.nome : "este aluno", promoverEquipe.value);
+  } finally {
+    promoverConfirmar.disabled = false;
+  }
+}
+
+professorCriar.addEventListener("click", cadastrarProfessor);
+promoverConfirmar.addEventListener("click", promoverAlunoAProfessor);
+
+// <select> de professor de uma linha da tabela de alunos. Só professores ATIVOS entram
+// como opção — a rule exige que o professorId aponte pra um documento existente, e
+// vincular alguém que perdeu o acesso não faria sentido nenhum.
+function criarSelectProfessorDoAluno(alunoId, aluno) {
+  const select = document.createElement("select");
+  select.className = "select-professor-aluno";
+  select.setAttribute("aria-label", "Professor de " + (aluno.nome || "aluno"));
+
+  const nenhum = document.createElement("option");
+  nenhum.value = "";
+  nenhum.textContent = "Sem professor";
+  select.appendChild(nenhum);
+
+  const ativos = professoresCache.filter((professor) => professor.status !== "inativo");
+  ativos.forEach((professor) => {
+    const opcao = document.createElement("option");
+    opcao.value = professor.id;
+    opcao.textContent = professor.nome || "sem nome";
+    select.appendChild(opcao);
+  });
+
+  // `let`, não `const`: este é o último valor SALVO no Firestore e precisa acompanhar cada
+  // troca bem-sucedida — senão o rollback de uma falha posterior devolveria a UI ao valor
+  // original em vez do vínculo que está de fato gravado.
+  let atual = typeof aluno.professorId === "string" ? aluno.professorId : "";
+  // Professor inativo/apagado que ainda está gravado no aluno: entra como opção extra
+  // pra o select não mentir dizendo "Sem professor".
+  if (atual && !ativos.some((professor) => professor.id === atual)) {
+    const orfao = document.createElement("option");
+    orfao.value = atual;
+    const registro = professoresCache.find((professor) => professor.id === atual);
+    orfao.textContent = (registro ? (registro.nome || "sem nome") : "Professor removido") + " (inativo)";
+    select.appendChild(orfao);
+  }
+  select.value = atual;
+
+  // A linha inteira abre o histórico do aluno no clique: sem isto, mexer no select
+  // abriria o modal por baixo.
+  select.addEventListener("click", (evento) => evento.stopPropagation());
+
+  select.addEventListener("change", async (evento) => {
+    evento.stopPropagation();
+    const novoValor = select.value;
+    select.disabled = true;
+    try {
+      await tenantDocRef("alunos", alunoId).update({
+        // Desvincular = apagar o campo. Assim professorId some de request.resource.data
+        // e o exists() da rule nem chega a ser avaliado.
+        professorId: novoValor || firebase.firestore.FieldValue.delete(),
+        professorAtribuidoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      mostrarMsgEm(professoresMsg, "Vínculo do aluno atualizado.", "success");
+      // Reflete o valor novo no cache local sem recarregar a tabela inteira.
+      aluno.professorId = novoValor || undefined;
+      // Novo ponto de rollback: uma falha na PRÓXIMA troca volta pra cá, não pro original.
+      atual = novoValor;
+    } catch (err) {
+      mostrarMsgEm(professoresMsg, "Não foi possível salvar o vínculo deste aluno.", "error");
+      select.value = atual;
+    } finally {
+      select.disabled = false;
+    }
+  });
+
+  return select;
 }
 
 // ---------------------------------------------------------------------------
@@ -1930,6 +2542,7 @@ function editarEvento(id, evento) {
   eventoCancelar.style.display = "inline-block";
   eventoMsg.className = "msg";
   eventoMsg.textContent = "";
+  abrirModalEvento(true);
   eventoNome.focus();
 }
 
@@ -1990,6 +2603,7 @@ async function salvarEvento() {
       limparFormularioEvento();
       mostrarMsgEvento("Evento cadastrado.", "success");
     }
+    fecharModalEvento();
     carregarEventos();
   } catch (err) {
     const semPermissao = err && err.code === "permission-denied";
@@ -2020,6 +2634,8 @@ async function apagarEvento(id, nome) {
 
 function gerarRelatorio() {
   const linhas = Array.from(tabelaAlunos.querySelectorAll("tr"))
+    // 6 colunas desde que o telefone virou subtítulo da coluna "Aluno"; a linha de
+    // estado vazio ("Nenhum aluno cadastrado") tem uma só e fica de fora.
     .filter((tr) => tr.querySelectorAll("td").length >= 6);
 
   relatorioImpressao.innerHTML = "";
@@ -2046,15 +2662,20 @@ function gerarRelatorio() {
     // Reconstrói cada linha via textContent (nunca innerHTML) — o nome do aluno
     // não é confiável mesmo já tendo passado pela tabela na tela.
     linhas.forEach((tr) => {
+      // Índices das colunas da tabela de alunos na tela: 0 Aluno (avatar + nome +
+      // telefone), 1 Faixa, 2 Nascimento, 3 Presenças, 4 Professor, 5 Mensalidade.
       const celulas = tr.querySelectorAll("td");
       const tagMensalidade = celulas[5].querySelector(".mensalidade-tag");
       const pendente = tagMensalidade && tagMensalidade.classList.contains("pendente");
 
       const linha = document.createElement("tr");
       const tdNome = document.createElement("td");
-      tdNome.textContent = celulas[0].textContent;
+      // O nome mora num span próprio dentro da célula "pessoa" — pegar o
+      // textContent da célula inteira traria também as iniciais do avatar.
+      const spanNomeAluno = celulas[0].querySelector(".linha-pessoa-nome");
+      tdNome.textContent = spanNomeAluno ? spanNomeAluno.textContent : celulas[0].textContent;
       const tdCheckins = document.createElement("td");
-      tdCheckins.textContent = celulas[4].textContent;
+      tdCheckins.textContent = celulas[3].textContent;
       const tdStatus = document.createElement("td");
       tdStatus.textContent = tagMensalidade ? tagMensalidade.textContent : "-";
       if (pendente) tdStatus.className = "relatorio-pendente";
@@ -3225,6 +3846,10 @@ const turmaAtivo = document.getElementById("turma-ativo");
 const turmaSalvar = document.getElementById("turma-salvar");
 const turmaCancelar = document.getElementById("turma-cancelar");
 const turmaMsg = document.getElementById("turma-msg");
+const btnNovaTurma = document.getElementById("btn-nova-turma");
+const turmaBackdrop = document.getElementById("turma-backdrop");
+const turmaClose = document.getElementById("turma-close");
+const turmaTitulo = document.getElementById("turma-titulo");
 
 const tabelaEquipe = document.querySelector("#tabela-equipe tbody");
 const equipeTipo = document.getElementById("equipe-tipo");
@@ -3237,6 +3862,10 @@ const equipeAtivo = document.getElementById("equipe-ativo");
 const equipeSalvar = document.getElementById("equipe-salvar");
 const equipeCancelar = document.getElementById("equipe-cancelar");
 const equipeMsg = document.getElementById("equipe-msg");
+const btnNovoEquipe = document.getElementById("btn-novo-equipe");
+const equipeBackdrop = document.getElementById("equipe-backdrop");
+const equipeClose = document.getElementById("equipe-close");
+const equipeTitulo = document.getElementById("equipe-titulo");
 
 const tabelaHorarios = document.getElementById("tabela-horarios");
 const horarioDia = document.getElementById("horario-dia");
@@ -3250,6 +3879,10 @@ const horarioSalvar = document.getElementById("horario-salvar");
 const horarioCancelar = document.getElementById("horario-cancelar");
 const horarioMsg = document.getElementById("horario-msg");
 const horarioSemTurma = document.getElementById("horario-sem-turma");
+const btnNovoHorario = document.getElementById("btn-novo-horario");
+const horarioBackdrop = document.getElementById("horario-backdrop");
+const horarioClose = document.getElementById("horario-close");
+const horarioTitulo = document.getElementById("horario-titulo");
 
 const perfilEndereco = document.getElementById("perfil-endereco");
 const perfilComplemento = document.getElementById("perfil-complemento");
@@ -3286,12 +3919,126 @@ let membroEditandoId = null;
 let horarioEditandoId = null;
 
 turmaSalvar.addEventListener("click", salvarTurma);
-turmaCancelar.addEventListener("click", limparFormularioTurma);
+turmaCancelar.addEventListener("click", () => {
+  limparFormularioTurma();
+  fecharModalTurma();
+});
 equipeSalvar.addEventListener("click", salvarMembroEquipe);
-equipeCancelar.addEventListener("click", limparFormularioEquipe);
+equipeCancelar.addEventListener("click", () => {
+  limparFormularioEquipe();
+  fecharModalEquipe();
+});
 horarioSalvar.addEventListener("click", salvarHorario);
-horarioCancelar.addEventListener("click", limparFormularioHorario);
+horarioCancelar.addEventListener("click", () => {
+  limparFormularioHorario();
+  fecharModalHorario();
+});
 perfilSalvar.addEventListener("click", salvarPerfilAcademia);
+
+// ---- Modais de cadastro/edição dos cards de gestão --------------------------------
+// Mesmo padrão do modal "Cadastrar aluno": o card mostra só a tabela e um botão que
+// abre a caixa. O formulário é o MESMO em criação e edição — só o título e o texto do
+// botão de salvar mudam (quem cuida do botão continua sendo editarX/limparFormularioX).
+
+function abrirModalTurma(modoEdicao) {
+  turmaTitulo.textContent = modoEdicao ? "Editar turma" : "Cadastrar turma";
+  turmaBackdrop.classList.add("show");
+  turmaNome.focus();
+}
+
+function fecharModalTurma() {
+  turmaBackdrop.classList.remove("show");
+}
+
+function abrirModalEquipe(modoEdicao) {
+  equipeTitulo.textContent = modoEdicao ? "Editar cadastro da equipe" : "Cadastrar na equipe";
+  equipeBackdrop.classList.add("show");
+  equipeNome.focus();
+}
+
+function fecharModalEquipe() {
+  equipeBackdrop.classList.remove("show");
+}
+
+function abrirModalHorario(modoEdicao) {
+  horarioTitulo.textContent = modoEdicao ? "Editar horário" : "Cadastrar horário";
+  horarioBackdrop.classList.add("show");
+  horarioInicio.focus();
+}
+
+function fecharModalHorario() {
+  horarioBackdrop.classList.remove("show");
+}
+
+function abrirModalEvento(modoEdicao) {
+  eventoTitulo.textContent = modoEdicao ? "Editar evento" : "Cadastrar evento";
+  eventoBackdrop.classList.add("show");
+  eventoNome.focus();
+}
+
+function fecharModalEvento() {
+  eventoBackdrop.classList.remove("show");
+}
+
+function abrirModalProfessorNovo() {
+  professorNovoBackdrop.classList.add("show");
+  professorNome.focus();
+}
+
+function fecharModalProfessorNovo() {
+  professorNovoBackdrop.classList.remove("show");
+  // A senha inicial não fica parada no DOM depois que o modal fecha.
+  professorSenha.value = "";
+}
+
+function abrirModalProfessorPromover() {
+  professorPromoverBackdrop.classList.add("show");
+  promoverAlunoSelect.focus();
+}
+
+function fecharModalProfessorPromover() {
+  professorPromoverBackdrop.classList.remove("show");
+}
+
+// Fechar pelo "x": clique e teclado (Enter/Espaço), igual aos modais já existentes.
+function ligarFechamentoModal(backdrop, botaoFechar, fechar) {
+  botaoFechar.addEventListener("click", fechar);
+  botaoFechar.addEventListener("keydown", (evento) => {
+    if (evento.key === "Enter" || evento.key === " ") {
+      evento.preventDefault();
+      fechar();
+    }
+  });
+  backdrop.addEventListener("click", (evento) => {
+    if (evento.target === backdrop) fechar();
+  });
+}
+
+ligarFechamentoModal(turmaBackdrop, turmaClose, fecharModalTurma);
+ligarFechamentoModal(equipeBackdrop, equipeClose, fecharModalEquipe);
+ligarFechamentoModal(horarioBackdrop, horarioClose, fecharModalHorario);
+ligarFechamentoModal(eventoBackdrop, eventoClose, fecharModalEvento);
+ligarFechamentoModal(professorNovoBackdrop, professorNovoClose, fecharModalProfessorNovo);
+ligarFechamentoModal(professorPromoverBackdrop, professorPromoverClose, fecharModalProfessorPromover);
+
+btnNovaTurma.addEventListener("click", () => {
+  limparFormularioTurma();
+  abrirModalTurma(false);
+});
+btnNovoEquipe.addEventListener("click", () => {
+  limparFormularioEquipe();
+  abrirModalEquipe(false);
+});
+btnNovoHorario.addEventListener("click", () => {
+  limparFormularioHorario();
+  abrirModalHorario(false);
+});
+btnNovoEvento.addEventListener("click", () => {
+  limparFormularioEvento();
+  abrirModalEvento(false);
+});
+btnCadastrarProfessor.addEventListener("click", abrirModalProfessorNovo);
+btnPromoverProfessor.addEventListener("click", abrirModalProfessorPromover);
 
 // ---- Utilitários compartilhados pelos quatro cards --------------------------------
 
@@ -3303,6 +4050,50 @@ function mostrarMsgEm(elemento, texto, tipo) {
 function celula(texto) {
   const td = document.createElement("td");
   td.textContent = texto;
+  return td;
+}
+
+// Duas primeiras iniciais do nome, pro avatar das tabelas de gente. Nome com uma
+// palavra só devolve uma letra; nome vazio devolve "?" (nunca string vazia, que
+// deixaria o círculo do avatar em branco).
+function obterIniciais(nome) {
+  const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  const letras = partes.slice(0, 2).map((parte) => parte.charAt(0).toUpperCase());
+  return letras.join("");
+}
+
+// Célula "pessoa": avatar com iniciais + nome e um subtítulo (telefone, e-mail…).
+// Tudo por textContent — nome e telefone são conteúdo livre digitado pelo usuário.
+function celulaPessoa(nome, subtitulo) {
+  const td = document.createElement("td");
+
+  const linha = document.createElement("div");
+  linha.className = "linha-pessoa";
+
+  const avatar = document.createElement("span");
+  avatar.className = "avatar-iniciais";
+  avatar.setAttribute("aria-hidden", "true");
+  avatar.textContent = obterIniciais(nome);
+
+  const textos = document.createElement("div");
+  textos.className = "linha-pessoa-textos";
+
+  const spanNome = document.createElement("span");
+  spanNome.className = "linha-pessoa-nome";
+  spanNome.textContent = nome;
+  textos.appendChild(spanNome);
+
+  if (subtitulo) {
+    const spanSub = document.createElement("span");
+    spanSub.className = "linha-pessoa-sub";
+    spanSub.textContent = subtitulo;
+    spanSub.title = subtitulo;
+    textos.appendChild(spanSub);
+  }
+
+  linha.append(avatar, textos);
+  td.appendChild(linha);
   return td;
 }
 
@@ -3462,6 +4253,7 @@ function editarTurma(turma) {
   turmaSalvar.textContent = "Salvar alterações";
   turmaCancelar.style.display = "inline-block";
   mostrarMsgEm(turmaMsg, "", "");
+  abrirModalTurma(true);
   turmaNome.focus();
 }
 
@@ -3535,6 +4327,7 @@ async function salvarTurma() {
       limparFormularioTurma();
       mostrarMsgEm(turmaMsg, "Turma cadastrada.", "success");
     }
+    fecharModalTurma();
     await carregarTurmas();
   } catch (err) {
     const semPermissao = err && err.code === "permission-denied";
@@ -3585,6 +4378,7 @@ async function carregarEquipe() {
     tabelaEquipe.innerHTML = "";
     tabelaEquipe.appendChild(linhaVazia(6, "Não foi possível carregar a equipe."));
     atualizarSelectProfessores();
+    atualizarSelectsEquipeProfessor();
     return;
   }
 
@@ -3594,6 +4388,11 @@ async function carregarEquipe() {
   renderEquipe();
   atualizarSelectProfessores();
   renderHorarios();
+  // O card de professores usa equipeCache pro nome da equipe vinculada e pros dois
+  // selects de vínculo — as duas leituras são independentes, então a tabela de
+  // professores é redesenhada quando a equipe termina de carregar.
+  atualizarSelectsEquipeProfessor();
+  renderProfessores();
 }
 
 function renderEquipe() {
@@ -3657,6 +4456,7 @@ function editarMembroEquipe(membro) {
   equipeSalvar.textContent = "Salvar alterações";
   equipeCancelar.style.display = "inline-block";
   mostrarMsgEm(equipeMsg, "", "");
+  abrirModalEquipe(true);
   equipeNome.focus();
 }
 
@@ -3745,6 +4545,7 @@ async function salvarMembroEquipe() {
       limparFormularioEquipe();
       mostrarMsgEm(equipeMsg, "Cadastrado na equipe.", "success");
     }
+    fecharModalEquipe();
     await carregarEquipe();
   } catch (err) {
     const semPermissao = err && err.code === "permission-denied";
@@ -3966,6 +4767,7 @@ function editarHorario(horario) {
   horarioSalvar.textContent = "Salvar alterações";
   horarioCancelar.style.display = "inline-block";
   mostrarMsgEm(horarioMsg, "", "");
+  abrirModalHorario(true);
   horarioInicio.focus();
 }
 
@@ -4057,6 +4859,7 @@ async function salvarHorario() {
       limparFormularioHorario();
       mostrarMsgEm(horarioMsg, "Horário cadastrado.", "success");
     }
+    fecharModalHorario();
     await carregarHorarios();
   } catch (err) {
     const semPermissao = err && err.code === "permission-denied";

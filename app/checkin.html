@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Check-in - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260908">
+<link rel="stylesheet" href="app.css?v=20260910">
 </head>
 <body>
 
-<header class="app-header">
+<header class="app-header app-header-auth">
   <div class="logo-wrap">
     <img src="../assets/logo.svg" alt="Logo">
     <h1 id="saudacao">Área do Aluno</h1>
@@ -17,19 +17,23 @@
   <span class="sair" id="btn-sair">Sair</span>
 </header>
 
-<main class="app-main">
-  <div class="status-box" id="mensalidade-box">
-    <div class="big" id="mensalidade-status">Carregando...</div>
-    <div id="mensalidade-mes"></div>
+<main class="app-main app-main-aluno">
+  <!-- Os dois boxes de status lado a lado em telas largas. As classes .status-box
+       continuam nos dois: é nelas que o JS pendura .status-box-alerta. -->
+  <div class="status-grid">
+    <div class="status-box status-box-card" id="mensalidade-box">
+      <div class="big" id="mensalidade-status">Carregando...</div>
+      <div id="mensalidade-mes"></div>
+    </div>
+
+    <div class="status-box status-box-card">
+      <div class="big" id="status-hoje">Carregando...</div>
+      <div id="status-sub"></div>
+    </div>
   </div>
 
-  <div class="status-box">
-    <div class="big" id="status-hoje">Carregando...</div>
-    <div id="status-sub"></div>
-  </div>
-
-  <div class="card" id="pix-pagamento" style="display:none;">
-    <h2>Pagar mensalidade via Pix</h2>
+  <div class="panel" id="pix-pagamento" style="display:none;">
+    <div class="panel-header panel-header-acento"><h2>Pagar mensalidade via Pix</h2></div>
 
     <div id="pix-bloco-codigo" style="display:none;">
       <p>Copie o código abaixo e cole no app do seu banco (Pix Copia e Cola):</p>
@@ -53,8 +57,8 @@
     </p>
   </div>
 
-  <div class="card">
-    <h2>Check-in</h2>
+  <div class="panel">
+    <div class="panel-header panel-header-acento"><h2>Check-in</h2></div>
     <p>O check-in só funciona quando você estiver na escola (dentro de ~150m do endereço).</p>
     <p class="aviso-pendente" id="aviso-mensalidade" style="display:none;">
       Sua mensalidade está pendente. Procure a recepção para regularizar e liberar o check-in.
@@ -63,30 +67,30 @@
     <div class="msg" id="msg"></div>
   </div>
 
-  <div class="card">
-    <h2>Próximos eventos</h2>
-    <ul class="checkin-list" id="lista-eventos">
+  <div class="panel">
+    <div class="panel-header panel-header-acento"><h2>Próximos eventos</h2></div>
+    <ul class="checkin-list panel-lista" id="lista-eventos">
       <li>Carregando...</li>
     </ul>
   </div>
 
-  <div class="card" id="card-grade">
-    <h2>Grade de horários</h2>
+  <div class="panel" id="card-grade">
+    <div class="panel-header panel-header-acento"><h2>Grade de horários</h2></div>
     <div id="grade-horarios">
       <p class="grade-aviso">Carregando...</p>
     </div>
   </div>
 
-  <div class="card" id="card-equipe-app">
-    <h2>Nossa equipe</h2>
+  <div class="panel" id="card-equipe-app">
+    <div class="panel-header panel-header-acento"><h2>Nossa equipe</h2></div>
     <ul class="equipe-lista" id="lista-equipe-app">
       <li class="grade-aviso">Carregando...</li>
     </ul>
   </div>
 
-  <div class="card">
-    <h2>Últimas presenças</h2>
-    <ul class="checkin-list" id="lista-checkins">
+  <div class="panel">
+    <div class="panel-header panel-header-acento"><h2>Últimas presenças</h2></div>
+    <ul class="checkin-list panel-lista" id="lista-checkins">
       <li>Carregando...</li>
     </ul>
   </div>
@@ -95,8 +99,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="firebase-init.js?v=20260908"></script>
-<script src="tenant-context.js?v=20260908"></script>
+<script src="firebase-init.js?v=20260910"></script>
+<script src="tenant-context.js?v=20260910"></script>
 <script>
 const msg = document.getElementById("msg");
 const btnCheckin = document.getElementById("btn-checkin");

@@ -34,7 +34,9 @@ import {
   telefoneValido,
   nascimentoValido,
   faixaValida,
-  senhaInicialValida
+  senhaInicialValida,
+  equipeIdValido,
+  acaoProfessorValida
 } from "./validacao.js";
 import { criarUsuarioAuth } from "./identity.js";
 
@@ -163,20 +165,35 @@ async function exigirOrigemTenant(request, env, tenantId) {
   return json({ erro: "Origem não autorizada para esta academia." }, 403, request, env);
 }
 
-async function criarOuAtualizarMembershipAluno(env, tenantId, uid, dadosExtras = {}) {
+// Grava o membership do usuário nos DOIS espelhos que as rules usam:
+//
+// - tenants/{tenantId}/memberships/{uid} → fonte de autorização (isTenantAluno,
+//   isTenantAdmin, isTenantProfessor em firestore.rules);
+// - users/{uid}/memberships/{tenantId}   → o que o próprio usuário consegue ler pra
+//   descobrir o papel dele naquela academia (login.html/admin.html/professor.html).
+//
+// Os dois são `allow write: if false` para todo cliente. Este é o ÚNICO caminho que
+// escreve um role — é por isso que "virar admin/professor" nunca depende de nada que o
+// navegador mande: só deste handler, atrás de exigirAdminTenant + exigirOrigemTenant.
+async function gravarMembership(env, tenantId, uid, { role, status = "ativo", extras = {} } = {}) {
   const agora = new Date();
   const dados = {
-    role: "aluno",
-    status: "ativo",
+    role,
+    status,
     tenantId,
     uid,
     criadoEm: agora,
     atualizadoEm: agora,
-    ...dadosExtras
+    ...extras
   };
 
   await patchDocument(env, caminhoTenant(tenantId, "memberships/" + uid), dados);
   await patchDocument(env, "users/" + uid + "/memberships/" + tenantId, dados);
+}
+
+// Wrapper fino, mantido pra não mudar as chamadas já existentes do cadastro de aluno.
+async function criarOuAtualizarMembershipAluno(env, tenantId, uid, dadosExtras = {}) {
+  await gravarMembership(env, tenantId, uid, { role: "aluno", status: "ativo", extras: dadosExtras });
 }
 
 async function exigirAdminTenant(request, env, acao, tenantId) {
@@ -986,6 +1003,273 @@ async function handleCompletarCadastroAluno(request, env) {
 }
 
 // ---------------------------------------------------------------------------
+// Papel "professor" — POST /criar-professor e POST /gerenciar-professor.
+//
+// Por que pelo Worker, e não pelo cliente:
+// tenants/{t}/memberships/{uid} e tenants/{t}/professores/{uid} são `allow write: if false`
+// para TODO cliente (inclusive admin) em firestore.rules. Conceder um papel é escalada de
+// privilégio por definição — deixar isso no navegador significaria que a única barreira
+// seria uma rule que precisa, ela mesma, ler o papel de quem escreve. Aqui a barreira é
+// a mesma cadeia dos outros endpoints administrativos:
+//
+//   resolverTenantAtivoDoPayload -> exigirOrigemTenant (fail-closed sem Origin)
+//   -> exigirAdminTenant -> validação -> escrita com service account.
+//
+// O tenantId chega no CORPO da requisição, ou seja, é texto escolhido pelo cliente:
+// sozinho não vale nada. Quem o legitima é exigirOrigemTenant, que resolve o Origin
+// contra tenantDomains/tenantSlugs e só libera se bater com o tenantId do corpo.
+// ---------------------------------------------------------------------------
+
+async function handleCriarProfessor(request, env) {
+  const faltando = credenciaisFaltando(env);
+  if (faltando) {
+    return json(
+      { erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") },
+      501,
+      request,
+      env
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { uid: adminUid, resposta } = await exigirAdminTenant(request, env, "cadastrar professores", tenantId);
+  if (resposta) return resposta;
+
+  const { nome, email, senha, telefone, equipeId } = body;
+
+  // Toda a validação antes de qualquer chamada externa — payload inválido não chega a
+  // criar conta no Google nem a gastar quota.
+  if (!nomeAlunoCadastroValido(nome)) {
+    return json({ erro: "Nome inválido (1 a 99 caracteres)." }, 400, request, env);
+  }
+  if (!emailValido(email)) {
+    return json({ erro: "E-mail inválido." }, 400, request, env);
+  }
+  if (!senhaInicialValida(senha)) {
+    // Nunca ecoar a senha recebida, nem o tamanho dela, em log ou resposta.
+    return json({ erro: "Senha inválida (6 a 128 caracteres)." }, 400, request, env);
+  }
+  const telefoneNormalizado = telefone === undefined || telefone === null ? "" : telefone;
+  if (!telefoneValido(telefoneNormalizado)) {
+    return json({ erro: "Telefone inválido (até 29 caracteres)." }, 400, request, env);
+  }
+
+  const temEquipe = equipeId !== undefined && equipeId !== null && equipeId !== "";
+  if (temEquipe && !equipeIdValido(equipeId)) {
+    return json({ erro: "Perfil da equipe inválido." }, 400, request, env);
+  }
+  if (temEquipe) {
+    // Mesma disciplina do exists() de horarios.turmaId nas rules: vínculo órfão não entra.
+    const equipeDoc = await getDocument(env, caminhoTenant(tenantId, "equipe/" + equipeId));
+    if (!equipeDoc) {
+      return json({ erro: "Perfil da equipe não encontrado nesta academia." }, 400, request, env);
+    }
+  }
+
+  let uid;
+  try {
+    ({ uid } = await criarUsuarioAuth(env, { email, senha, nomeExibicao: nome }));
+  } catch (err) {
+    return respostaErroIdentity(err.codigoGoogle || "ERRO_DESCONHECIDO", request, env);
+  }
+
+  // Defesa em profundidade: o UID vira caminho de documento. Mesmo vindo do Google,
+  // é validado antes de ser concatenado.
+  if (!alunoIdValido(uid)) {
+    console.error("Identity Toolkit devolveu um UID em formato inesperado ao criar professor.");
+    return json(
+      { erro: "Conta criada, mas o cadastro não pôde ser salvo. Contate o suporte." },
+      500,
+      request,
+      env
+    );
+  }
+
+  const agora = new Date();
+  const dadosProfessor = {
+    nome,
+    email,
+    telefone: telefoneNormalizado,
+    status: "ativo",
+    // Professor criado do zero por aqui não tem documento em alunos/{uid}: ele não
+    // treina na academia (ainda). Quem vira professor sendo aluno entra por
+    // /gerenciar-professor, que carimba este campo como true.
+    ehAlunoTambem: false,
+    criadoEm: agora,
+    criadoPorUid: adminUid,
+    atualizadoEm: agora,
+    atualizadoPorUid: adminUid,
+    tenantId
+  };
+  if (temEquipe) dadosProfessor.equipeId = equipeId;
+
+  try {
+    await createDocument(env, caminhoTenant(tenantId, "professores/" + uid), dadosProfessor);
+    await gravarMembership(env, tenantId, uid, {
+      role: "professor",
+      status: "ativo",
+      extras: { criadoPorAdmin: true, criadoPorUid: adminUid }
+    });
+  } catch (err) {
+    // A conta JÁ existe no Auth neste ponto (mesmo caso de handleCriarAluno): devolver
+    // um 500 genérico faria o admin tentar de novo e bater em EMAIL_EXISTS pra sempre.
+    console.error("Professor criado no Auth mas SEM documento no Firestore (uid órfão):", uid, err);
+    return json(
+      {
+        erro:
+          "Conta criada mas cadastro não foi salvo — contate o suporte com este código: " +
+          uid
+      },
+      500,
+      request,
+      env
+    );
+  }
+
+  return json({ ok: true, professorId: uid }, 200, request, env);
+}
+
+async function handleGerenciarProfessor(request, env) {
+  const faltando = credenciaisFaltando(env);
+  if (faltando) {
+    return json(
+      { erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") },
+      501,
+      request,
+      env
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+
+  const { uid: adminUid, resposta } = await exigirAdminTenant(request, env, "gerenciar professores", tenantId);
+  if (resposta) return resposta;
+
+  const { uid, acao, equipeId } = body;
+
+  if (!alunoIdValido(uid)) {
+    return json({ erro: "Usuário inválido." }, 400, request, env);
+  }
+  if (!acaoProfessorValida(acao)) {
+    return json({ erro: "Ação inválida. Use 'promover' ou 'remover'." }, 400, request, env);
+  }
+  const temEquipe = equipeId !== undefined && equipeId !== null && equipeId !== "";
+  if (temEquipe && !equipeIdValido(equipeId)) {
+    return json({ erro: "Perfil da equipe inválido." }, 400, request, env);
+  }
+
+  // O alvo precisa já pertencer a ESTA academia. Sem isso, um admin conseguiria criar
+  // membership (e, portanto, acesso) pra um uid qualquer do projeto Firebase inteiro.
+  const membershipDoc = await getDocument(env, caminhoTenant(tenantId, "memberships/" + uid));
+  if (!membershipDoc || campoString(membershipDoc, "status") !== "ativo") {
+    return json(
+      { erro: "Este usuário não tem cadastro ativo nesta academia." },
+      400,
+      request,
+      env
+    );
+  }
+
+  // Este endpoint só sabe gravar role 'professor' ou 'aluno', e memberships é write:if false
+  // nas rules — ou seja, rebaixar um admin/owner por aqui seria um caminho SEM VOLTA pelo app
+  // (lockout do painel administrativo). Nenhuma das duas ações pode tocar em admin/owner,
+  // nem sobre outro admin nem sobre o próprio autor da chamada.
+  const roleAtual = campoString(membershipDoc, "role");
+  if (roleAtual === "admin" || roleAtual === "owner") {
+    return json(
+      { erro: "Não é possível alterar o papel de um administrador por este endpoint." },
+      403,
+      request,
+      env
+    );
+  }
+
+  if (temEquipe) {
+    const equipeDoc = await getDocument(env, caminhoTenant(tenantId, "equipe/" + equipeId));
+    if (!equipeDoc) {
+      return json({ erro: "Perfil da equipe não encontrado nesta academia." }, 400, request, env);
+    }
+  }
+
+  const agora = new Date();
+  const alunoDoc = await getDocument(env, caminhoTenant(tenantId, "alunos/" + uid));
+
+  if (acao === "remover") {
+    // Remover só faz sentido sobre quem é professor de verdade: sem isso, um patchDocument
+    // criaria um registro órfão em professores/{uid} pra quem nunca deu aula, e ainda
+    // reescreveria a membership de um aluno comum sem motivo.
+    const professorDoc = await getDocument(env, caminhoTenant(tenantId, "professores/" + uid));
+    if (roleAtual !== "professor" && !professorDoc) {
+      return json({ erro: "Este uid não é um professor." }, 400, request, env);
+    }
+  }
+
+  if (acao === "promover") {
+    const dados = {
+      status: "ativo",
+      // Professor que também treina: mantém o documento em alunos/{uid} intacto (é ele
+      // que continua liberando o check-in) e só ganha o papel novo.
+      ehAlunoTambem: !!alunoDoc,
+      atualizadoEm: agora,
+      atualizadoPorUid: adminUid,
+      tenantId
+    };
+    if (alunoDoc) {
+      dados.nome = campoString(alunoDoc, "nome") || "";
+      dados.email = campoString(alunoDoc, "email") || "";
+      dados.telefone = campoString(alunoDoc, "telefone") || "";
+    }
+    if (temEquipe) dados.equipeId = equipeId;
+
+    // Upsert: promover alguém já promovido (ex.: só pra trocar o equipeId) não pode falhar.
+    await patchDocument(env, caminhoTenant(tenantId, "professores/" + uid), dados);
+    await gravarMembership(env, tenantId, uid, { role: "professor", status: "ativo" });
+
+    return json({ ok: true, uid, role: "professor" }, 200, request, env);
+  }
+
+  // acao === "remover": o registro em professores/ NÃO é apagado (é rastro de quem já
+  // deu aula na academia) — vira status 'inativo'. O que muda de verdade é o membership,
+  // que volta a ser 'aluno'. Sem documento em alunos/{uid} a pessoa não treina aqui,
+  // então a membership volta inativa em vez de dar acesso de aluno a quem nunca teve.
+  await patchDocument(env, caminhoTenant(tenantId, "professores/" + uid), {
+    status: "inativo",
+    atualizadoEm: agora,
+    atualizadoPorUid: adminUid,
+    tenantId
+  });
+  await gravarMembership(env, tenantId, uid, {
+    role: "aluno",
+    status: alunoDoc ? "ativo" : "inativo"
+  });
+
+  return json({ ok: true, uid, role: "aluno" }, 200, request, env);
+}
+
+// ---------------------------------------------------------------------------
 // Credencial do Asaas do próprio professor (Fase 5) — /config/credencial-asaas.
 //
 // GET    → metadados (configurada?, últimos 4 dígitos, ambiente, quando)
@@ -1145,6 +1429,15 @@ export default {
       // Cadastro de aluno pelo professor (cria conta no Auth + documento). Só admin.
       if (pathname === "/criar-aluno" && request.method === "POST") {
         return await handleCriarAluno(request, env);
+      }
+      // Papel professor: criar do zero (conta no Auth + professores/{uid} + membership)
+      // ou promover/rebaixar quem já pertence à academia. Só admin — ver o bloco de
+      // comentários acima de handleCriarProfessor.
+      if (pathname === "/criar-professor" && request.method === "POST") {
+        return await handleCriarProfessor(request, env);
+      }
+      if (pathname === "/gerenciar-professor" && request.method === "POST") {
+        return await handleGerenciarProfessor(request, env);
       }
       // Cadastro feito pelo próprio aluno: Auth acontece no navegador, Firestore e
       // memberships são finalizados aqui com service account.

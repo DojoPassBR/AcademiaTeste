@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cadastro de Aluno - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260908">
+<link rel="stylesheet" href="app.css?v=20260910">
 </head>
 <body>
 
-<header class="app-header">
+<header class="app-header app-header-auth">
   <div class="logo-wrap">
     <img src="../assets/logo.svg" alt="Logo">
     <h1>Área do Aluno</h1>
   </div>
 </header>
 
-<main class="app-main">
-  <div class="card">
+<main class="app-main app-main-auth">
+  <div class="card card-auth">
     <h2>Criar Cadastro</h2>
     <form id="form-cadastro">
       <label for="nome">Nome completo</label>
@@ -66,8 +66,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="firebase-init.js?v=20260908"></script>
-<script src="tenant-context.js?v=20260908"></script>
+<script src="firebase-init.js?v=20260910"></script>
+<script src="tenant-context.js?v=20260910"></script>
 <script>
 const form = document.getElementById("form-cadastro");
 const msg = document.getElementById("msg");

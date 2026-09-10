@@ -167,6 +167,23 @@ function senhaInicialValida(v) {
   return typeof v === "string" && v.length >= 6 && v.length <= 128;
 }
 
+// ---------------------------------------------------------------------------
+// Validadores do papel "professor" (POST /criar-professor e /gerenciar-professor).
+// ---------------------------------------------------------------------------
+
+// ID do documento da vitrine pública em equipe/{id} — gerado por .add() do SDK, então
+// é um ID de documento do Firestore (20 chars alfanuméricos), não um UID do Auth.
+// Mesma preocupação de alunoIdValido: o valor é concatenado num caminho de documento,
+// então uma barra aqui levaria a leitura/escrita pra uma coleção arbitrária.
+function equipeIdValido(v) {
+  return typeof v === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(v);
+}
+
+// Ações aceitas por POST /gerenciar-professor. Enum fechado: qualquer outro valor é 400.
+function acaoProfessorValida(v) {
+  return v === "promover" || v === "remover";
+}
+
 
 // Reexportado daqui pro index.js importar todas as validações de um lugar só.
 export { cpfCnpjValido } from "./cpf.js";
@@ -185,6 +202,8 @@ export {
   nascimentoValido,
   faixaValida,
   senhaInicialValida,
+  equipeIdValido,
+  acaoProfessorValida,
   FAIXAS_VALIDAS,
   tenantIdValido,
   tenantSlugValido,

@@ -1,9 +1,20 @@
 :root {
   --black: #111111;
   --red: #d31515;
+  --red-dark: #a10f0f;
+  --red-soft: rgba(211, 21, 21, 0.1);
   --white: #ffffff;
   --gray: #f4f4f4;
   --text: #1a1a1a;
+  --text-muted: #666666;
+  --border: #e4e4e7;
+  --border-strong: #d0d0d3;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 3px rgba(17, 17, 17, 0.07);
+  --shadow-md: 0 10px 28px rgba(17, 17, 17, 0.09);
+  --sidebar-width: 260px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -297,6 +308,14 @@ table.admin-table tr:hover td {
   cursor: pointer;
 }
 
+/* Select de vínculo aluno→professor, dentro de uma linha da tabela de alunos.
+   Menor e mais estreito que os selects de formulário pra não esticar a coluna. */
+.select-professor-aluno {
+  max-width: 170px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
 .belt-tag {
   display: inline-block;
   padding: 3px 10px;
@@ -535,8 +554,7 @@ table.admin-table tr:hover td {
   outline-offset: 4px;
 }
 
-#tela-dashboard:focus-visible,
-#tela-configuracoes:focus-visible {
+#tela-dashboard:focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 4px;
 }
@@ -1107,3 +1125,668 @@ table.admin-table tr:hover td {
   margin-top: 8px;
   font-size: 0.85rem;
 }
+
+/* ---------------------------------------------------------------------------
+   App shell (sidebar + área de conteúdo) — refino visual 2026-09.
+   Substitui o header-topo-sozinho por um shell de "sistema de verdade": sidebar
+   fixa em preto com navegação por seção, área de conteúdo com cabeçalho próprio.
+   Classes aditivas — nada do que já existia (.card, .admin-table, .btn, etc.)
+   foi renomeado, então este bloco pode ser adotado por página sem quebrar nada
+   que ainda não migrou pro shell novo (ex: telas de autenticação continuam com
+   .app-header + .app-main, que seguem funcionando exatamente como antes).
+   --------------------------------------------------------------------------- */
+
+.app-shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--black);
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.app-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 20px 18px;
+}
+
+.app-sidebar-brand img {
+  height: 36px;
+  width: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: var(--white);
+  flex-shrink: 0;
+}
+
+.app-sidebar-brand strong {
+  color: var(--white);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.app-sidebar-brand span {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.app-sidebar-nav {
+  flex: 1;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-sidebar-group-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 16px 14px 6px;
+}
+
+.app-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  font-size: 0.92rem;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+}
+
+.app-sidebar-link .icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+}
+
+.app-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+}
+
+.app-sidebar-link.is-active {
+  background: var(--red);
+  color: var(--white);
+}
+
+.app-sidebar-link:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: -2px;
+}
+
+.app-sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-sidebar-footer .quem {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar-sair {
+  color: #ff8f8f;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* Botão de abrir/fechar a sidebar em telas estreitas — escondido em desktop. */
+.app-sidebar-toggle {
+  display: none;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px clamp(20px, 4vw, 48px) 64px;
+}
+
+.app-content-header {
+  margin-bottom: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-content-header h1 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.app-content-header p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 860px) {
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-md);
+  }
+
+  .app-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .app-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--black);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+
+  .app-shell-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 25;
+  }
+
+  .app-shell-backdrop.is-open {
+    display: block;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Cartões de estatística (dashboard) — ícone + rótulo + valor + variação.
+   Substituem visualmente o .kpi antigo em telas que migrarem pro shell novo;
+   .kpi continua existindo e funcionando para quem ainda não migrou.
+   --------------------------------------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+}
+
+.stat-card-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.stat-card-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.stat-card-delta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   Painéis de conteúdo (substituem .card em telas que migram pro shell novo):
+   mesmo raio/sombra levemente mais discretos, cabeçalho com título + ações.
+   --------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.panel-header h2 {
+  font-size: 1.15rem;
+  border-left: none;
+  padding-left: 0;
+  margin-bottom: 2px;
+}
+
+.panel-header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Tabela dentro de .panel: variante mais discreta do .admin-table (cabeçalho
+   claro com rótulo pequeno, em vez de barra preta) — usada nas telas novas. */
+.panel-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.panel-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+.panel-table tr:last-child td {
+  border-bottom: none;
+}
+
+.panel-table tr:hover td {
+  background: var(--gray);
+}
+
+.panel-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 28px 14px;
+}
+
+/* Avatar circular com iniciais — usado na primeira coluna de tabelas de gente
+   (alunos, professores) pra dar identidade visual sem depender de foto. */
+.avatar-iniciais {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--black);
+  color: var(--white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.linha-pessoa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linha-pessoa-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.linha-pessoa-nome {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.linha-pessoa-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badge de status genérico (ativo/inativo, pago/pendente etc.) — visual mais
+   discreto que os .mensalidade-tag/.belt-tag antigos, pra uso em telas novas. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.badge-neutro {
+  background: var(--gray);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.badge-sucesso {
+  background: #e7f4ec;
+  color: #14612a;
+  border-color: #b7dfc4;
+}
+
+.badge-alerta {
+  background: #fdeaea;
+  color: #9c1010;
+  border-color: #f2c2c2;
+}
+
+.badge-info {
+  background: #eaf1ff;
+  color: #1a4d9c;
+  border-color: #c7d9f7;
+}
+
+/* ---------------------------------------------------------------------------
+   Encaixes do shell novo sobre as classes antigas (admin.html).
+   Os cards/tabelas ganharam .panel/.panel-table SEM perder .card/.admin-table,
+   porque JS e outras regras ainda dependem das classes antigas — então o que
+   está aqui embaixo é só quem precisa vencer a especificidade da regra velha.
+   --------------------------------------------------------------------------- */
+
+/* Título de card que não está dentro de um .panel-header continua com o filete
+   vermelho de `.card h2`; dentro de .panel o cabeçalho é o próprio texto. */
+.panel > h2 {
+  border-left: none;
+  padding-left: 0;
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+
+/* `table.admin-table th` tem especificidade maior que `.panel-table th`, então o
+   cabeçalho preto voltaria por cima do visual discreto. */
+table.admin-table.panel-table th {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+
+table.admin-table.panel-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+table.admin-table.panel-table tr:last-child td {
+  border-bottom: none;
+}
+
+table.admin-table.panel-table tr:hover td {
+  background: var(--gray);
+}
+
+/* Dentro do grid de gráficos o espaçamento é o `gap`; a margem de .panel criaria
+   uma sobra só embaixo de cada figura. */
+.dashboard-graficos .panel,
+.stat-grid .panel {
+  margin-bottom: 0;
+}
+
+/* Complementos do bloco `table.admin-table.panel-table` acima: fundo/raio da
+   própria <table> e o cursor da linha. O .admin-table genérico usa cursor de mão
+   (a tabela de alunos do admin abre um modal ao clicar); nas telas novas a linha
+   não é clicável, então o cursor volta ao padrão. */
+table.admin-table.panel-table {
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
+table.admin-table.panel-table tr:hover td {
+  cursor: default;
+}
+
+.panel-table caption {
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding-bottom: 12px;
+}
+
+/* Rolagem horizontal da tabela em telas estreitas, sem estourar o painel. */
+.panel-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+/* Lista simples dentro de um .panel (eventos do professor): mesmas divisórias
+   discretas das tabelas novas. */
+.panel-lista li {
+  border-bottom-color: var(--border);
+  padding: 14px 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Telas de autenticação (login.html / cadastro.html).
+   Variantes ADITIVAS: .app-header e .card continuam intactas para as telas que
+   ainda não migraram (admin.html), e estas classes só entram nas duas telas de
+   fora do sistema.
+   --------------------------------------------------------------------------- */
+
+.app-header-auth {
+  background: linear-gradient(120deg, #000000 0%, #171717 55%, #2a1113 100%);
+  padding: 20px 24px;
+  border-bottom: 3px solid var(--red);
+}
+
+.app-header-auth h1 {
+  font-size: 1.15rem;
+  letter-spacing: 0.2px;
+}
+
+.app-header-auth img {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+}
+
+.app-main-auth {
+  padding: 48px 20px 72px;
+}
+
+.card-auth {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.card-auth h2 {
+  border-left-width: 4px;
+  font-size: 1.35rem;
+  margin-bottom: 22px;
+}
+
+.card-auth label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 18px;
+}
+
+.card-auth input,
+.card-auth select,
+.card-auth .slug-input-wrap {
+  border-radius: var(--radius-md);
+  border-color: var(--border-strong);
+  background: var(--white);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-auth input:focus,
+.card-auth select:focus,
+.card-auth .slug-input-wrap:focus-within {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-soft);
+}
+
+/* O anel de foco fica no wrapper do slug; o input interno não desenha o seu. */
+.card-auth .slug-input-wrap input:focus {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.card-auth .date-picker-btn {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.card-auth .btn {
+  border-radius: var(--radius-md);
+  padding: 15px 24px;
+  box-shadow: 0 6px 16px rgba(211, 21, 21, 0.24);
+}
+
+.card-auth .btn:hover:not(:disabled) { background: var(--red-dark); }
+.card-auth .btn:disabled { box-shadow: none; }
+
+.card-auth .switch-link {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Área do aluno (checkin.html): tela de uso rápido, sem sidebar, mas com os
+   mesmos painéis do resto do sistema.
+   --------------------------------------------------------------------------- */
+
+.app-main-aluno {
+  max-width: 720px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 620px) {
+  .status-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Dentro da grade os boxes não precisam da margem própria e ficam da mesma
+   altura. O estado de alerta (.status-box.status-box-alerta) tem especificidade
+   maior e continua vencendo o fundo definido aqui. */
+.status-grid .status-box {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.status-box-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 20px;
+}
+
+.status-box-card .big {
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.status-box-card > div:last-child {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Cabeçalho de painel com barrinha vermelha — usado nas telas sem sidebar, onde
+   o título do painel é o único ponto de identidade visual da seção. */
+.panel-header-acento h2 {
+  border-left: 4px solid var(--red);
+  padding-left: 12px;
+}
+
+/* Painel que também é destino de rolagem (âncoras da sidebar do professor). */
+.panel:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+}
+
+/* Base do backdrop do menu mobile: fora do @media (max-width: 860px) ele não tinha
+   regra nenhuma e ficava como uma <div> vazia no fluxo. `display:none` com UMA
+   classe continua perdendo para `.app-shell-backdrop.is-open` (duas classes),
+   então o comportamento de abrir/fechar no mobile segue igual. */
+.app-shell-backdrop { display: none; }
+
+/* Rolagem por âncora da sidebar: sem isto o card fica colado no topo da janela. */
+html { scroll-behavior: smooth; }
+
+.app-content .panel[tabindex="-1"] { scroll-margin-top: 20px; }

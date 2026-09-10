@@ -299,10 +299,18 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(uid));
     }
 
+    // ATENÇÃO ao papel 'professor' neste enum: ele NÃO é só um rótulo. Estar aqui é o
+    // que faz isTenantAluno() devolver true para um professor — ou seja, o professor
+    // ganha TUDO o que um aluno já tem naquela academia: criar check-in (se tiver
+    // documento próprio em alunos/{uid} e mensalidade em dia), ler eventos, ler
+    // config/geral (menos credenciais) e ler/editar o próprio cadastro via isTenantSelf.
+    // Isso é intencional — professor que também treina continua sendo aluno normal —,
+    // mas qualquer papel novo adicionado aqui herda o mesmo pacote. Não amplie este
+    // enum sem revisar todos os usos de isTenantAluno().
     function membershipAtiva(tenantId, uid) {
       return membershipExiste(tenantId, uid)
         && get(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(uid)).data.status == 'ativo'
-        && get(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(uid)).data.role in ['aluno', 'admin', 'owner'];
+        && get(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(uid)).data.role in ['aluno', 'admin', 'owner', 'professor'];
     }
 
     function isTenantAluno(tenantId) {
@@ -313,6 +321,21 @@ service cloud.firestore {
     function isTenantAdmin(tenantId) {
       return isTenantAluno(tenantId)
         && get(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(request.auth.uid)).data.role in ['admin', 'owner'];
+    }
+
+    // Papel bruto do membership. Só chame depois de membershipAtiva()/isTenantAluno():
+    // get() em documento inexistente aborta a avaliação da regra.
+    function roleTenant(tenantId, uid) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)/memberships/$(uid)).data.role;
+    }
+
+    // Professor da academia. NÃO confundir com equipe/{id} (vitrine pública do site,
+    // sem login) nem com admin/owner (que administram a academia inteira).
+    // Na v1 o professor é READ-ONLY: ele lê os alunos vinculados a ele (campo
+    // professorId em alunos/{id}) e nada mais além do que um aluno já lê.
+    function isTenantProfessor(tenantId) {
+      return isTenantAluno(tenantId)
+        && roleTenant(tenantId, request.auth.uid) == 'professor';
     }
 
     function isTenantSelf(tenantId, uid) {
@@ -390,10 +413,36 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Registro do professor da academia. O ID do documento é o UID do Firebase Auth.
+      //
+      // write: if false, pelo mesmo motivo de memberships — quem cria/promove/rebaixa
+      // professor é SÓ o Worker (POST /criar-professor e POST /gerenciar-professor,
+      // worker/src/index.js), via service account, que passa por cima destas rules e
+      // exige admin autenticado + origem casando com o tenant. Se o cliente pudesse
+      // escrever aqui, qualquer admin criaria um "professor" apontando pra um uid
+      // arbitrário e o exists() do update de alunos.professorId abaixo perderia o
+      // sentido (viraria uma checagem contra um documento que o próprio atacante grava).
+      //
+      // O campo equipeId liga este documento ao doc da vitrine pública em equipe/{id} —
+      // é ele, e não o uid, que aparece em horarios.professorId. Ver CONTEXT.md.
+      match /professores/{professorUid} {
+        allow read: if isTenantAdmin(tenantId)
+          || (isSignedIn() && request.auth.uid == professorUid && isTenantAluno(tenantId));
+        allow write: if false;
+      }
+
       match /alunos/{alunoId} {
         allow create: if false;
 
-        allow read: if isTenantSelf(tenantId, alunoId) || isTenantAdmin(tenantId);
+        // O terceiro disjunto é o vínculo professor→aluno. A igualdade por DOCUMENTO
+        // (professorId == uid de quem lê) é o que impede o professor de listar a base
+        // inteira: numa query de list a rule é avaliada documento a documento, então
+        // uma consulta sem .where('professorId','==',uid) bate num aluno de outro
+        // professor e a consulta inteira é negada. Nunca troque isso por um
+        // isTenantProfessor(tenantId) solto — isso vazaria todos os alunos da academia.
+        allow read: if isTenantSelf(tenantId, alunoId)
+          || isTenantAdmin(tenantId)
+          || (isTenantProfessor(tenantId) && resource.data.get('professorId', '') == request.auth.uid);
 
         allow update: if isSignedIn() && (
           (isTenantSelf(tenantId, alunoId)
@@ -406,6 +455,26 @@ service cloud.firestore {
                  .hasOnly(['mensalidadeStatus', 'mensalidadeAtualizadoEm'])
             && request.resource.data.mensalidadeStatus in ['pago', 'pendente']
             && request.resource.data.mensalidadeAtualizadoEm == request.time)
+          ||
+          // Vínculo aluno→professor, atribuído pelo admin no painel (o único update que
+          // o cliente faz nesses dois campos). Fica em um disjunto SEPARADO do de
+          // mensalidade de propósito: juntar os campos num hasOnly só permitiria trocar
+          // mensalidadeStatus e professorId na mesma escrita, misturando duas regras de
+          // negócio (e dois carimbos de tempo) que não têm nada a ver uma com a outra.
+          //
+          // O exists() abaixo espelha o de horarios.turmaId: professorId só pode apontar
+          // pra um professor que existe de verdade em professores/ — nada de referência
+          // órfã pra um uid qualquer. Desvincular = enviar FieldValue.delete(), e aí
+          // professorId some de request.resource.data e o exists() nem é avaliado.
+          // NENHUM disjunto de update é dado a isTenantProfessor: na v1 o professor não
+          // escreve em alunos — nem mensalidade, nem o próprio vínculo.
+          (isTenantAdmin(tenantId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['professorId', 'professorAtribuidoEm'])
+            && request.resource.data.professorAtribuidoEm == request.time
+            && (!('professorId' in request.resource.data)
+                || (request.resource.data.professorId is string
+                    && exists(/databases/$(database)/documents/tenants/$(tenantId)/professores/$(request.resource.data.professorId)))))
         );
 
         allow delete: if false;
