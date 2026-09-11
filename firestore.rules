@@ -92,6 +92,85 @@ service cloud.firestore {
               && dados.checkinRaioMetros <= 1000));
     }
 
+    function responsavelValido(item) {
+      return item is map
+        && item.keys().hasOnly(['nome', 'telefone', 'email', 'parentesco'])
+        && item.keys().hasAll(['nome', 'telefone'])
+        && item.nome is string && item.nome.size() > 0 && item.nome.size() <= 100
+        && item.telefone is string && item.telefone.size() > 0 && item.telefone.size() <= 30
+        && (!('email' in item) || (item.email is string && item.email.size() < 100 && item.email.matches('^[^@]+@[^@]+[.][^@]+$')))
+        && (!('parentesco' in item) || (item.parentesco is string && item.parentesco.size() <= 40));
+    }
+
+    function responsaveisValidos(dados) {
+      return !('responsaveis' in dados) || (
+        dados.responsaveis is list
+        && dados.responsaveis.size() >= 1
+        && dados.responsaveis.size() <= 3
+        && responsavelValido(dados.responsaveis[0])
+        && (dados.responsaveis.size() < 2 || responsavelValido(dados.responsaveis[1]))
+        && (dados.responsaveis.size() < 3 || responsavelValido(dados.responsaveis[2]))
+      );
+    }
+
+    function camposAdminAlunoValidos(tenantId, dados) {
+      return (!('grau' in dados) || (dados.grau is int && dados.grau >= 0 && dados.grau <= 4))
+        && (!('grauAtualizadoEm' in dados) || dados.grauAtualizadoEm is timestamp)
+        && (!('ultimaGraduacaoEm' in dados) || dados.ultimaGraduacaoEm is timestamp)
+        && (!('bolsa' in dados) || dados.bolsa is bool)
+        && (!('valorMensalidade' in dados) || (dados.valorMensalidade is number && dados.valorMensalidade > 0 && dados.valorMensalidade <= 5000))
+        && (!('kids' in dados) || dados.kids is bool)
+        && responsaveisValidos(dados)
+        && (!('parceiroId' in dados) || (dados.parceiroId is string
+            && exists(/databases/$(database)/documents/tenants/$(tenantId)/parceiros/$(dados.parceiroId))));
+    }
+
+    function dadosParceiroValidos(dados) {
+      return dados.nome is string && dados.nome.size() > 0 && dados.nome.size() <= 100
+        && dados.percentual is number && dados.percentual >= 0 && dados.percentual <= 100
+        && dados.status in ['ativo', 'inativo']
+        && (!('contato' in dados) || (dados.contato is string && dados.contato.size() <= 120))
+        && (!('observacao' in dados) || (dados.observacao is string && dados.observacao.size() <= 300));
+    }
+
+    function listaIdsCurtaValida(lista, maximo) {
+      return lista is list
+        && lista.size() <= maximo
+        && (lista.size() < 1 || lista[0] is string)
+        && (lista.size() < 2 || lista[1] is string)
+        && (lista.size() < 3 || lista[2] is string)
+        && (lista.size() < 4 || lista[3] is string)
+        && (lista.size() < 5 || lista[4] is string)
+        && (lista.size() < 6 || lista[5] is string)
+        && (lista.size() < 7 || lista[6] is string)
+        && (lista.size() < 8 || lista[7] is string)
+        && (lista.size() < 9 || lista[8] is string)
+        && (lista.size() < 10 || lista[9] is string);
+    }
+
+    function dadosAgendamentoValidos(dados) {
+      return dados.titulo is string && dados.titulo.size() > 0 && dados.titulo.size() <= 120
+        && dados.tipo in ['aula', 'evento', 'avaliacao', 'outro']
+        && dados.status in ['ativo', 'cancelado']
+        && dados.dataInicio is timestamp
+        && dados.dataFim is timestamp
+        && dados.dataFim > dados.dataInicio
+        && (!('capacidade' in dados) || (dados.capacidade is int && dados.capacidade >= 1 && dados.capacidade <= 500))
+        && (!('alunoIds' in dados) || (
+          listaIdsCurtaValida(dados.alunoIds, 500)
+          && (!('capacidade' in dados) || dados.alunoIds.size() <= dados.capacidade)
+        ))
+        && (!('professorIds' in dados) || listaIdsCurtaValida(dados.professorIds, 20));
+    }
+
+    function podeLerAgendamento(tenantId) {
+      return isTenantAdmin(tenantId)
+        || (isTenantAluno(tenantId)
+          && request.auth.uid in resource.data.get('alunoIds', []))
+        || (isTenantProfessor(tenantId)
+          && request.auth.uid in resource.data.get('professorIds', []));
+    }
+
     // Valida o map opcional 'redes' (links de redes sociais) usado tanto pela equipe
     // quanto pelo perfil público da academia. Só as 6 chaves conhecidas são aceitas
     // (hasOnly), e cada valor presente tem que ser https:// — nada de http:// nem
@@ -442,7 +521,9 @@ service cloud.firestore {
         // isTenantProfessor(tenantId) solto — isso vazaria todos os alunos da academia.
         allow read: if isTenantSelf(tenantId, alunoId)
           || isTenantAdmin(tenantId)
-          || (isTenantProfessor(tenantId) && resource.data.get('professorId', '') == request.auth.uid);
+          || (isTenantProfessor(tenantId)
+              && (resource.data.get('professorId', '') == request.auth.uid
+                  || request.auth.uid in resource.data.get('professorIds', [])));
 
         allow update: if isSignedIn() && (
           (isTenantSelf(tenantId, alunoId)
@@ -470,11 +551,21 @@ service cloud.firestore {
           // escreve em alunos — nem mensalidade, nem o próprio vínculo.
           (isTenantAdmin(tenantId)
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['professorId', 'professorAtribuidoEm'])
+                 .hasOnly(['professorId', 'professorIds', 'professorAtribuidoEm'])
             && request.resource.data.professorAtribuidoEm == request.time
+            && (!('professorIds' in request.resource.data)
+                || (request.resource.data.professorIds is list
+                    && request.resource.data.professorIds.size() <= 10))
             && (!('professorId' in request.resource.data)
                 || (request.resource.data.professorId is string
                     && exists(/databases/$(database)/documents/tenants/$(tenantId)/professores/$(request.resource.data.professorId)))))
+          ||
+          (isTenantAdmin(tenantId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['grau', 'grauAtualizadoEm', 'ultimaGraduacaoEm', 'bolsa', 'parceiroId',
+                           'valorMensalidade', 'kids', 'responsaveis', 'adminAtualizadoEm'])
+            && request.resource.data.adminAtualizadoEm == request.time
+            && camposAdminAlunoValidos(tenantId, request.resource.data))
         );
 
         allow delete: if false;
@@ -533,6 +624,62 @@ service cloud.firestore {
           && request.resource.data.valor <= 5000
           && (!('pixCopiaECola' in request.resource.data) || (request.resource.data.pixCopiaECola is string && request.resource.data.pixCopiaECola.size() <= 500));
         allow delete: if false;
+      }
+
+      match /agendamentos/{agendamentoId} {
+        allow read: if podeLerAgendamento(tenantId);
+        allow create: if isTenantAdmin(tenantId)
+          && request.resource.data.keys().hasOnly(['tipo', 'titulo', 'dataInicio', 'dataFim',
+             'turmaId', 'professorIds', 'capacidade', 'alunoIds', 'status', 'criadoPor',
+             'criadoEm', 'atualizadoEm', 'tenantId'])
+          && request.resource.data.keys().hasAll(['tipo', 'titulo', 'dataInicio', 'dataFim',
+             'status', 'criadoPor', 'criadoEm'])
+          && (!('tenantId' in request.resource.data) || request.resource.data.tenantId == tenantId)
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && dadosAgendamentoValidos(request.resource.data);
+        allow update: if isTenantAdmin(tenantId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['tipo', 'titulo', 'dataInicio', 'dataFim', 'turmaId', 'professorIds',
+                       'capacidade', 'alunoIds', 'status', 'atualizadoEm'])
+          && request.resource.data.atualizadoEm == request.time
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && dadosAgendamentoValidos(request.resource.data);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      match /parceiros/{parceiroId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow create: if isTenantAdmin(tenantId)
+          && request.resource.data.keys().hasOnly(['nome', 'contato', 'percentual', 'status',
+             'observacao', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+          && request.resource.data.keys().hasAll(['nome', 'percentual', 'status', 'criadoPor', 'criadoEm'])
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && dadosParceiroValidos(request.resource.data);
+        allow update: if isTenantAdmin(tenantId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nome', 'contato', 'percentual', 'status', 'observacao', 'atualizadoEm'])
+          && request.resource.data.atualizadoEm == request.time
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && dadosParceiroValidos(request.resource.data);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      match /ranking/{periodo} {
+        allow read: if isTenantAluno(tenantId);
+        allow write: if false;
+        match /alunos/{rankingAlunoId} {
+          allow read: if isTenantAluno(tenantId);
+          allow write: if false;
+        }
+      }
+
+      match /disparos/{disparoId} {
+        allow read: if isTenantAdmin(tenantId);
+        allow write: if false;
       }
 
       match /config/{docId} {

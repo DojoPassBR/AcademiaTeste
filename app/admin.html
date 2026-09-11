@@ -33,6 +33,10 @@
       <a class="app-sidebar-link" id="nav-equipe" data-alvo="card-equipe" href="#card-equipe"><span class="icon" aria-hidden="true">👥</span>Equipe</a>
       <a class="app-sidebar-link" id="nav-horarios" data-alvo="card-horarios" href="#card-horarios"><span class="icon" aria-hidden="true">🗓️</span>Horários</a>
       <a class="app-sidebar-link" id="nav-eventos" data-alvo="card-eventos" href="#card-eventos"><span class="icon" aria-hidden="true">📣</span>Eventos</a>
+      <a class="app-sidebar-link" id="nav-agendamentos" data-alvo="card-agendamentos" href="#card-agendamentos"><span class="icon" aria-hidden="true">📆</span>Agendamentos</a>
+      <a class="app-sidebar-link" id="nav-parceiros" data-alvo="card-parceiros" href="#card-parceiros"><span class="icon" aria-hidden="true">🤝</span>Parceiros</a>
+      <a class="app-sidebar-link" id="nav-progresso" data-alvo="card-progresso" href="#card-progresso"><span class="icon" aria-hidden="true">🏅</span>Progresso</a>
+      <a class="app-sidebar-link" id="nav-relatorios" data-alvo="card-relatorios" href="#card-relatorios"><span class="icon" aria-hidden="true">📄</span>Relatórios</a>
 
       <span class="app-sidebar-group-label">Configurações</span>
       <a class="app-sidebar-link" id="nav-perfil-academia" data-alvo="card-perfil-academia" href="#card-perfil-academia"><span class="icon" aria-hidden="true">🏠</span>Perfil da academia</a>
@@ -367,6 +371,155 @@
       </div>
     </div>
 
+    <div class="card panel" id="card-agendamentos" role="region" aria-label="Agendamentos" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Agendamentos</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="agendamento-novo">Cadastrar agendamento</button>
+        </div>
+      </div>
+      <p>Aulas, eventos internos e reservas que aparecem para os alunos vinculados.</p>
+      <div class="config-form-row" id="agendamento-form" hidden>
+        <div>
+          <label for="agendamento-titulo">Título</label>
+          <input type="text" id="agendamento-titulo" maxlength="120" placeholder="Ex.: Aulão kids">
+        </div>
+        <div>
+          <label for="agendamento-tipo">Tipo</label>
+          <select id="agendamento-tipo">
+            <option value="aula">Aula</option>
+            <option value="evento">Evento</option>
+            <option value="avaliacao">Avaliação</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div>
+          <label for="agendamento-inicio">Início</label>
+          <input type="datetime-local" id="agendamento-inicio">
+        </div>
+        <div>
+          <label for="agendamento-fim">Fim</label>
+          <input type="datetime-local" id="agendamento-fim">
+        </div>
+        <div>
+          <label for="agendamento-capacidade">Capacidade</label>
+          <input type="number" id="agendamento-capacidade" min="1" max="500" step="1" placeholder="Ex.: 30">
+        </div>
+        <div>
+          <label for="agendamento-status">Status</label>
+          <select id="agendamento-status">
+            <option value="ativo">Ativo</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn" id="agendamento-salvar" hidden>Salvar agendamento</button>
+      <button type="button" class="btn-secundario" id="agendamento-cancelar" hidden>Cancelar</button>
+      <div class="msg" id="agendamento-msg" role="status" aria-live="polite"></div>
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table panel-table" id="tabela-agendamentos">
+          <thead><tr><th>Título</th><th>Quando</th><th>Tipo</th><th>Reservas</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="6">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card panel" id="card-parceiros" role="region" aria-label="Parceiros" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Parceiros</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="parceiro-novo">Cadastrar parceiro</button>
+        </div>
+      </div>
+      <div class="config-form-row" id="parceiro-form" hidden>
+        <div>
+          <label for="parceiro-nome">Nome</label>
+          <input type="text" id="parceiro-nome" maxlength="100" placeholder="Ex.: Empresa parceira">
+        </div>
+        <div>
+          <label for="parceiro-contato">Contato</label>
+          <input type="text" id="parceiro-contato" maxlength="120" placeholder="WhatsApp, e-mail ou responsável">
+        </div>
+        <div>
+          <label for="parceiro-percentual">Percentual (%)</label>
+          <input type="number" id="parceiro-percentual" min="0" max="100" step="0.01" placeholder="Ex.: 15">
+        </div>
+        <div>
+          <label for="parceiro-status">Status</label>
+          <select id="parceiro-status">
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+      <label for="parceiro-observacao" id="parceiro-observacao-label" hidden>Observação</label>
+      <textarea id="parceiro-observacao" class="config-textarea" maxlength="300" rows="2" hidden></textarea>
+      <button type="button" class="btn" id="parceiro-salvar" hidden>Salvar parceiro</button>
+      <button type="button" class="btn-secundario" id="parceiro-cancelar" hidden>Cancelar</button>
+      <div class="msg" id="parceiro-msg" role="status" aria-live="polite"></div>
+      <div style="overflow-x:auto;margin-top:24px;">
+        <table class="admin-table panel-table" id="tabela-parceiros">
+          <thead><tr><th>Parceiro</th><th>Percentual</th><th>Status</th><th>Alunos</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card panel" id="card-progresso" role="region" aria-label="Progresso dos alunos" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Progresso, ranking e aniversários</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="ranking-recalcular">Recalcular ranking</button>
+        </div>
+      </div>
+      <div class="dashboard-listas">
+        <div>
+          <h3>Ranking local</h3>
+          <ol class="checkin-list" id="ranking-lista"><li>Carregando...</li></ol>
+        </div>
+        <div>
+          <h3>Aniversariantes</h3>
+          <ul class="checkin-list" id="aniversariantes-lista"><li>Carregando...</li></ul>
+        </div>
+      </div>
+      <div class="msg" id="progresso-msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="card panel" id="card-relatorios" role="region" aria-label="Relatórios e disparo" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <h2>Relatórios e disparo</h2>
+        <div class="card-header-acoes">
+          <button type="button" class="btn-secundario" id="relatorio-csv-alunos">CSV alunos</button>
+          <button type="button" class="btn-secundario" id="relatorio-csv-financeiro">CSV pagamentos</button>
+        </div>
+      </div>
+      <div class="config-form-row">
+        <div>
+          <label for="disparo-filtro">Destinatários</label>
+          <select id="disparo-filtro">
+            <option value="todos">Todos os alunos</option>
+            <option value="pendentes">Mensalidade pendente</option>
+            <option value="professor">Alunos de um professor</option>
+            <option value="parceiro">Alunos de um parceiro</option>
+          </select>
+        </div>
+        <div>
+          <label for="disparo-professor">Professor</label>
+          <select id="disparo-professor"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="disparo-parceiro">Parceiro</label>
+          <select id="disparo-parceiro"><option value="">Todos</option></select>
+        </div>
+      </div>
+      <label for="disparo-texto">Mensagem</label>
+      <textarea id="disparo-texto" class="config-textarea" maxlength="500" rows="4"
+        placeholder="Ex.: Olá {nome}, temos um aviso importante da academia."></textarea>
+      <button type="button" class="btn" id="disparo-gerar">Gerar links de WhatsApp</button>
+      <div class="msg" id="disparo-msg" role="status" aria-live="polite"></div>
+      <ul class="checkin-list" id="disparo-links"></ul>
+    </div>
+
     <div class="card panel" id="card-configuracoes" role="region" aria-label="Configurações" tabindex="-1" hidden>
       <h2>Configurações</h2>
       <p>Ajustes gerais da academia: como a mensalidade é cobrada e como os alunos são lembrados do vencimento.</p>
@@ -593,6 +746,30 @@
       <option value="Marrom">Marrom</option>
       <option value="Preta">Preta</option>
     </select>
+
+    <div class="config-form-row">
+      <div>
+        <label for="novo-aluno-grau">Grau atual</label>
+        <input type="number" id="novo-aluno-grau" min="0" max="4" step="1" value="0">
+      </div>
+      <div>
+        <label for="novo-aluno-valor">Mensalidade individual (R$)</label>
+        <input type="number" id="novo-aluno-valor" min="0" max="5000" step="0.01" placeholder="Opcional">
+      </div>
+    </div>
+
+    <fieldset class="config-toggles">
+      <legend>Aluno kids</legend>
+      <label class="config-check"><input type="checkbox" id="novo-aluno-kids"> Cadastro kids</label>
+      <label for="novo-aluno-responsavel-nome">Nome do responsável</label>
+      <input type="text" id="novo-aluno-responsavel-nome" maxlength="100" placeholder="Obrigatório para kids">
+      <label for="novo-aluno-responsavel-telefone">Telefone do responsável</label>
+      <input type="tel" id="novo-aluno-responsavel-telefone" maxlength="30" placeholder="Obrigatório para kids">
+      <label for="novo-aluno-responsavel-email">E-mail do responsável (opcional)</label>
+      <input type="email" id="novo-aluno-responsavel-email" maxlength="100">
+      <label for="novo-aluno-responsavel-parentesco">Parentesco</label>
+      <input type="text" id="novo-aluno-responsavel-parentesco" maxlength="40" placeholder="Ex.: mãe, pai, avó">
+    </fieldset>
 
     <button type="button" class="btn" id="novo-aluno-criar">Criar conta do aluno</button>
 
@@ -885,6 +1062,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script src="firebase-init.js?v=20260909"></script>
 <script src="tenant-context.js?v=20260909"></script>
+<script src="student-metrics.js?v=20260910"></script>
+<script src="reports-export.js?v=20260910"></script>
 <script>
 const btnSair = document.getElementById("btn-sair");
 const cardNegado = document.getElementById("card-negado");
@@ -925,6 +1104,13 @@ const novoAlunoSenha = document.getElementById("novo-aluno-senha");
 const novoAlunoTelefone = document.getElementById("novo-aluno-telefone");
 const novoAlunoNascimento = document.getElementById("novo-aluno-nascimento");
 const novoAlunoFaixa = document.getElementById("novo-aluno-faixa");
+const novoAlunoGrau = document.getElementById("novo-aluno-grau");
+const novoAlunoValor = document.getElementById("novo-aluno-valor");
+const novoAlunoKids = document.getElementById("novo-aluno-kids");
+const novoAlunoResponsavelNome = document.getElementById("novo-aluno-responsavel-nome");
+const novoAlunoResponsavelTelefone = document.getElementById("novo-aluno-responsavel-telefone");
+const novoAlunoResponsavelEmail = document.getElementById("novo-aluno-responsavel-email");
+const novoAlunoResponsavelParentesco = document.getElementById("novo-aluno-responsavel-parentesco");
 const novoAlunoCriar = document.getElementById("novo-aluno-criar");
 const novoAlunoMsg = document.getElementById("novo-aluno-msg");
 // ---- Professores (card-professores) ------------------------------------------------
@@ -1024,6 +1210,43 @@ const manualValor = document.getElementById("manual-valor");
 const manualPix = document.getElementById("manual-pix");
 const manualConfirmar = document.getElementById("manual-confirmar");
 const manualMsg = document.getElementById("manual-msg");
+const tabelaAgendamentos = document.querySelector("#tabela-agendamentos tbody");
+const agendamentoNovo = document.getElementById("agendamento-novo");
+const agendamentoForm = document.getElementById("agendamento-form");
+const agendamentoTitulo = document.getElementById("agendamento-titulo");
+const agendamentoTipo = document.getElementById("agendamento-tipo");
+const agendamentoInicio = document.getElementById("agendamento-inicio");
+const agendamentoFim = document.getElementById("agendamento-fim");
+const agendamentoCapacidade = document.getElementById("agendamento-capacidade");
+const agendamentoStatus = document.getElementById("agendamento-status");
+const agendamentoSalvar = document.getElementById("agendamento-salvar");
+const agendamentoCancelar = document.getElementById("agendamento-cancelar");
+const agendamentoMsg = document.getElementById("agendamento-msg");
+const tabelaParceiros = document.querySelector("#tabela-parceiros tbody");
+const parceiroNovo = document.getElementById("parceiro-novo");
+const parceiroForm = document.getElementById("parceiro-form");
+const parceiroNome = document.getElementById("parceiro-nome");
+const parceiroContato = document.getElementById("parceiro-contato");
+const parceiroPercentual = document.getElementById("parceiro-percentual");
+const parceiroStatus = document.getElementById("parceiro-status");
+const parceiroObservacao = document.getElementById("parceiro-observacao");
+const parceiroObservacaoLabel = document.getElementById("parceiro-observacao-label");
+const parceiroSalvar = document.getElementById("parceiro-salvar");
+const parceiroCancelar = document.getElementById("parceiro-cancelar");
+const parceiroMsg = document.getElementById("parceiro-msg");
+const rankingLista = document.getElementById("ranking-lista");
+const aniversariantesLista = document.getElementById("aniversariantes-lista");
+const rankingRecalcular = document.getElementById("ranking-recalcular");
+const progressoMsg = document.getElementById("progresso-msg");
+const relatorioCsvAlunos = document.getElementById("relatorio-csv-alunos");
+const relatorioCsvFinanceiro = document.getElementById("relatorio-csv-financeiro");
+const disparoFiltro = document.getElementById("disparo-filtro");
+const disparoProfessor = document.getElementById("disparo-professor");
+const disparoParceiro = document.getElementById("disparo-parceiro");
+const disparoTexto = document.getElementById("disparo-texto");
+const disparoGerar = document.getElementById("disparo-gerar");
+const disparoMsg = document.getElementById("disparo-msg");
+const disparoLinks = document.getElementById("disparo-links");
 
 // ---------------------------------------------------------------------------
 // Navegação do painel: cada item da sidebar mostra UMA seção e esconde todas as
@@ -1033,7 +1256,8 @@ const manualMsg = document.getElementById("manual-msg");
 // ---------------------------------------------------------------------------
 const TODAS_SECOES = [
   "tela-dashboard", "card-alunos", "card-professores", "card-turmas", "card-equipe",
-  "card-horarios", "card-perfil-academia", "card-eventos", "card-configuracoes"
+  "card-horarios", "card-perfil-academia", "card-eventos", "card-agendamentos",
+  "card-parceiros", "card-progresso", "card-relatorios", "card-configuracoes"
 ];
 
 const linksNavegacao = Array.from(document.querySelectorAll(".app-sidebar-link[data-alvo]"));
@@ -1533,6 +1757,16 @@ conviteCopiar.addEventListener("click", copiarLinkConvite);
 conviteWhatsapp.addEventListener("click", enviarConvitePorWhatsapp);
 manualClose.addEventListener("click", fecharModalManual);
 manualConfirmar.addEventListener("click", confirmarCobrancaManual);
+agendamentoNovo.addEventListener("click", () => abrirFormularioAgendamento());
+agendamentoSalvar.addEventListener("click", salvarAgendamento);
+agendamentoCancelar.addEventListener("click", fecharFormularioAgendamento);
+parceiroNovo.addEventListener("click", () => abrirFormularioParceiro());
+parceiroSalvar.addEventListener("click", salvarParceiro);
+parceiroCancelar.addEventListener("click", fecharFormularioParceiro);
+rankingRecalcular.addEventListener("click", recalcularRankingWorker);
+relatorioCsvAlunos.addEventListener("click", exportarCsvAlunos);
+relatorioCsvFinanceiro.addEventListener("click", exportarCsvFinanceiro);
+disparoGerar.addEventListener("click", gerarDisparoWhatsApp);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -1575,6 +1809,8 @@ auth.onAuthStateChanged(async (user) => {
   carregarEventos();
   carregarCredencialAsaas();
   carregarConteudoPublico();
+  carregarParceiros();
+  carregarAgendamentos();
   carregarCheckins7Dias();
   contarCobrancasPorStatus();
 });
@@ -1582,9 +1818,10 @@ auth.onAuthStateChanged(async (user) => {
 async function carregarAlunos() {
   const snap = await tenantCollection("alunos").orderBy("nome").get();
 
-  // Cache usado pelo <select> "Promover aluno existente a professor" (card-professores).
-  alunosCache = snap.docs.map((doc) => ({ id: doc.id, nome: doc.data().nome || "sem nome" }));
+  // Cache usado por promoção, relatórios, ranking, aniversários e disparos.
+  alunosCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
   atualizarSelectPromoverAluno();
+  atualizarSelectsDisparo();
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
@@ -1615,6 +1852,10 @@ async function carregarAlunos() {
         .catch(() => null)
     )
   );
+  contagensCheckinsCache = {};
+  snap.docs.forEach((doc, indice) => {
+    contagensCheckinsCache[doc.id] = contagens[indice] || 0;
+  });
 
   // Cobranças com comprovante anexado esperando o "ok" do professor. Uma única consulta
   // pra tabela inteira (índice de campo único em status), em vez de uma por aluno.
@@ -1640,6 +1881,7 @@ async function carregarAlunos() {
     beltTag.style.background = cor;
     beltTag.textContent = aluno.faixa;
     tdFaixa.appendChild(beltTag);
+    tdFaixa.appendChild(criarControlesProgressoAluno(doc.id, aluno));
 
     const tdNascimento = document.createElement("td");
     tdNascimento.textContent = aluno.nascimento
@@ -1671,6 +1913,7 @@ async function carregarAlunos() {
     mensalidadeTag.className = classesTag;
     mensalidadeTag.textContent = emDia ? "Em dia" : textoPendencia(diasPendente);
     tdMensalidade.appendChild(mensalidadeTag);
+    tdMensalidade.appendChild(criarControlesFinanceirosAluno(doc.id, aluno));
 
     if (!emDia && configGeral.lembreteWhatsappAtivo) {
       tdMensalidade.appendChild(criarBotaoWhatsapp(aluno));
@@ -1753,6 +1996,7 @@ async function carregarAlunos() {
   });
 
   renderDashboard();
+  renderRankingEAniversarios();
 }
 
 // ---------------------------------------------------------------------------
@@ -1771,6 +2015,11 @@ async function carregarAlunos() {
 let professoresCache = [];
 // [{ id, nome }] dos alunos já carregados — alimenta o select de promoção.
 let alunosCache = [];
+let contagensCheckinsCache = {};
+let parceirosCache = [];
+let agendamentosCache = [];
+let agendamentoEditandoId = null;
+let parceiroEditandoId = null;
 // true quando a leitura de professores falhou: a tabela precisa dizer "falhou" em vez
 // de "nenhum professor cadastrado" (que seria mentira e levaria a cadastrar duplicado).
 let professoresFalhouLeitura = false;
@@ -1793,6 +2042,7 @@ async function carregarProfessores() {
     String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
 
   renderProfessores();
+  atualizarSelectsDisparo();
 }
 
 // Nome do perfil da vitrine pública ligado ao professor. equipeCache pode ainda não
@@ -2062,10 +2312,17 @@ promoverConfirmar.addEventListener("click", promoverAlunoAProfessor);
 // <select> de professor de uma linha da tabela de alunos. Só professores ATIVOS entram
 // como opção — a rule exige que o professorId aponte pra um documento existente, e
 // vincular alguém que perdeu o acesso não faria sentido nenhum.
+function professoresDoAluno(aluno) {
+  if (Array.isArray(aluno.professorIds)) return aluno.professorIds.filter(Boolean);
+  return typeof aluno.professorId === "string" && aluno.professorId ? [aluno.professorId] : [];
+}
+
 function criarSelectProfessorDoAluno(alunoId, aluno) {
   const select = document.createElement("select");
   select.className = "select-professor-aluno";
-  select.setAttribute("aria-label", "Professor de " + (aluno.nome || "aluno"));
+  select.multiple = true;
+  select.size = 3;
+  select.setAttribute("aria-label", "Professores de " + (aluno.nome || "aluno"));
 
   const nenhum = document.createElement("option");
   nenhum.value = "";
@@ -2083,17 +2340,20 @@ function criarSelectProfessorDoAluno(alunoId, aluno) {
   // `let`, não `const`: este é o último valor SALVO no Firestore e precisa acompanhar cada
   // troca bem-sucedida — senão o rollback de uma falha posterior devolveria a UI ao valor
   // original em vez do vínculo que está de fato gravado.
-  let atual = typeof aluno.professorId === "string" ? aluno.professorId : "";
+  let atual = professoresDoAluno(aluno);
   // Professor inativo/apagado que ainda está gravado no aluno: entra como opção extra
   // pra o select não mentir dizendo "Sem professor".
-  if (atual && !ativos.some((professor) => professor.id === atual)) {
+  atual.forEach((professorIdAtual) => {
+    if (!professorIdAtual || ativos.some((professor) => professor.id === professorIdAtual)) return;
     const orfao = document.createElement("option");
-    orfao.value = atual;
-    const registro = professoresCache.find((professor) => professor.id === atual);
+    orfao.value = professorIdAtual;
+    const registro = professoresCache.find((professor) => professor.id === professorIdAtual);
     orfao.textContent = (registro ? (registro.nome || "sem nome") : "Professor removido") + " (inativo)";
     select.appendChild(orfao);
-  }
-  select.value = atual;
+  });
+  Array.from(select.options).forEach((opcao) => {
+    opcao.selected = opcao.value ? atual.includes(opcao.value) : atual.length === 0;
+  });
 
   // A linha inteira abre o histórico do aluno no clique: sem isto, mexer no select
   // abriria o modal por baixo.
@@ -2101,23 +2361,26 @@ function criarSelectProfessorDoAluno(alunoId, aluno) {
 
   select.addEventListener("change", async (evento) => {
     evento.stopPropagation();
-    const novoValor = select.value;
+    const novoValor = Array.from(select.selectedOptions).map((opcao) => opcao.value).filter(Boolean);
+    const legado = novoValor[0] || "";
     select.disabled = true;
     try {
       await tenantDocRef("alunos", alunoId).update({
-        // Desvincular = apagar o campo. Assim professorId some de request.resource.data
-        // e o exists() da rule nem chega a ser avaliado.
-        professorId: novoValor || firebase.firestore.FieldValue.delete(),
+        professorIds: novoValor.length ? novoValor : firebase.firestore.FieldValue.delete(),
+        professorId: legado || firebase.firestore.FieldValue.delete(),
         professorAtribuidoEm: firebase.firestore.FieldValue.serverTimestamp()
       });
       mostrarMsgEm(professoresMsg, "Vínculo do aluno atualizado.", "success");
       // Reflete o valor novo no cache local sem recarregar a tabela inteira.
-      aluno.professorId = novoValor || undefined;
+      aluno.professorIds = novoValor.length ? novoValor : undefined;
+      aluno.professorId = legado || undefined;
       // Novo ponto de rollback: uma falha na PRÓXIMA troca volta pra cá, não pro original.
       atual = novoValor;
     } catch (err) {
       mostrarMsgEm(professoresMsg, "Não foi possível salvar o vínculo deste aluno.", "error");
-      select.value = atual;
+      Array.from(select.options).forEach((opcao) => {
+        opcao.selected = opcao.value ? atual.includes(opcao.value) : atual.length === 0;
+      });
     } finally {
       select.disabled = false;
     }
@@ -2272,8 +2535,8 @@ function mesAtualPtBr() {
   return mes.charAt(0).toUpperCase() + mes.slice(1);
 }
 
-function valorMensalidadeTexto() {
-  const valor = configGeral.valorMensalidadePadrao;
+function valorMensalidadeTexto(valorOverride) {
+  const valor = typeof valorOverride === "number" ? valorOverride : configGeral.valorMensalidadePadrao;
   if (typeof valor !== "number" || !isFinite(valor) || valor <= 0) return "a combinar";
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -3280,6 +3543,566 @@ function enviarConvitePorWhatsapp() {
   window.open(link, "_blank", "noopener");
 }
 
+// ---- Gestão ampliada: graduação, parceiros, agenda, ranking, CSV e disparos --------
+
+function parceiroNomePorId(id) {
+  const parceiro = parceirosCache.find((item) => item.id === id);
+  return parceiro ? parceiro.nome || "sem nome" : id;
+}
+
+function professoresNomePorIds(ids) {
+  return (ids || []).map((id) => {
+    const professor = professoresCache.find((item) => item.id === id);
+    return professor ? professor.nome || "sem nome" : id;
+  }).join(", ");
+}
+
+function criarControlesProgressoAluno(alunoId, aluno) {
+  const wrap = document.createElement("div");
+  wrap.className = "mini-controles-aluno";
+
+  const progresso = window.DojoStudentMetrics.calcularProgressoGraduacao(aluno);
+  const resumo = document.createElement("span");
+  resumo.className = "config-dica";
+  resumo.textContent = "Grau " + progresso.grau + " · " +
+    (progresso.diasNoGrau === null ? "sem data" : progresso.diasNoGrau + " dias no grau");
+
+  const grau = document.createElement("select");
+  grau.setAttribute("aria-label", "Grau de " + (aluno.nome || "aluno"));
+  for (let i = 0; i <= 4; i++) {
+    const opcao = document.createElement("option");
+    opcao.value = String(i);
+    opcao.textContent = "Grau " + i;
+    grau.appendChild(opcao);
+  }
+  grau.value = String(progresso.grau);
+  grau.addEventListener("click", (evento) => evento.stopPropagation());
+  grau.addEventListener("change", async (evento) => {
+    evento.stopPropagation();
+    const novoGrau = parseInt(grau.value, 10);
+    await salvarCamposAdministrativosAluno(alunoId, aluno, {
+      grau: novoGrau,
+      grauAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      ultimaGraduacaoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, "Graduação atualizada.");
+    aluno.grau = novoGrau;
+    aluno.grauAtualizadoEm = new Date();
+    renderRankingEAniversarios();
+  });
+
+  const bolsa = document.createElement("label");
+  bolsa.className = "config-check mini-check";
+  const bolsaInput = document.createElement("input");
+  bolsaInput.type = "checkbox";
+  bolsaInput.checked = aluno.bolsa === true;
+  bolsaInput.addEventListener("click", (evento) => evento.stopPropagation());
+  bolsaInput.addEventListener("change", async (evento) => {
+    evento.stopPropagation();
+    await salvarCamposAdministrativosAluno(alunoId, aluno, { bolsa: bolsaInput.checked }, "Bolsa atualizada.");
+    aluno.bolsa = bolsaInput.checked;
+  });
+  bolsa.append(bolsaInput, " Bolsista");
+
+  wrap.append(resumo, grau, bolsa);
+  return wrap;
+}
+
+function criarControlesFinanceirosAluno(alunoId, aluno) {
+  const wrap = document.createElement("div");
+  wrap.className = "mini-controles-aluno";
+
+  const parceiro = document.createElement("select");
+  parceiro.setAttribute("aria-label", "Parceiro de " + (aluno.nome || "aluno"));
+  const nenhum = document.createElement("option");
+  nenhum.value = "";
+  nenhum.textContent = "Sem parceiro";
+  parceiro.appendChild(nenhum);
+  parceirosCache.forEach((item) => {
+    const opcao = document.createElement("option");
+    opcao.value = item.id;
+    opcao.textContent = item.nome || "sem nome";
+    parceiro.appendChild(opcao);
+  });
+  parceiro.value = aluno.parceiroId || "";
+  parceiro.addEventListener("click", (evento) => evento.stopPropagation());
+  parceiro.addEventListener("change", async (evento) => {
+    evento.stopPropagation();
+    const valor = parceiro.value;
+    await salvarCamposAdministrativosAluno(alunoId, aluno, {
+      parceiroId: valor || firebase.firestore.FieldValue.delete()
+    }, "Parceiro do aluno atualizado.");
+    aluno.parceiroId = valor || undefined;
+    renderParceiros();
+  });
+
+  const valor = document.createElement("input");
+  valor.type = "number";
+  valor.min = "0";
+  valor.max = "5000";
+  valor.step = "0.01";
+  valor.placeholder = "R$";
+  valor.className = "input-mini";
+  valor.value = typeof aluno.valorMensalidade === "number" ? String(aluno.valorMensalidade) : "";
+  valor.setAttribute("aria-label", "Mensalidade individual de " + (aluno.nome || "aluno"));
+  valor.addEventListener("click", (evento) => evento.stopPropagation());
+  valor.addEventListener("change", async (evento) => {
+    evento.stopPropagation();
+    const texto = valor.value.trim();
+    const numero = texto ? parseFloat(texto) : null;
+    if (texto && (!isFinite(numero) || numero <= 0 || numero > 5000)) {
+      mostrarMsgEm(professoresMsg, "Valor individual deve ficar entre R$ 0,01 e R$ 5.000.", "error");
+      return;
+    }
+    await salvarCamposAdministrativosAluno(alunoId, aluno, {
+      valorMensalidade: numero === null ? firebase.firestore.FieldValue.delete() : numero
+    }, "Valor individual atualizado.");
+    aluno.valorMensalidade = numero === null ? undefined : numero;
+  });
+
+  wrap.append(parceiro, valor);
+  return wrap;
+}
+
+async function salvarCamposAdministrativosAluno(alunoId, aluno, campos, sucesso) {
+  try {
+    await tenantDocRef("alunos", alunoId).update(Object.assign({}, campos, {
+      adminAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    mostrarMsgEm(professoresMsg, sucesso || "Aluno atualizado.", "success");
+  } catch (err) {
+    mostrarMsgEm(professoresMsg, "Não foi possível atualizar este aluno.", "error");
+    throw err;
+  }
+}
+
+function abrirFormularioAgendamento(item) {
+  agendamentoEditandoId = item ? item.id : null;
+  agendamentoTitulo.value = item?.titulo || "";
+  agendamentoTipo.value = item?.tipo || "aula";
+  agendamentoInicio.value = item?.dataInicioLocal || "";
+  agendamentoFim.value = item?.dataFimLocal || "";
+  agendamentoCapacidade.value = typeof item?.capacidade === "number" ? String(item.capacidade) : "";
+  agendamentoStatus.value = item?.status || "ativo";
+  agendamentoForm.hidden = false;
+  agendamentoSalvar.hidden = false;
+  agendamentoCancelar.hidden = false;
+  agendamentoTitulo.focus();
+}
+
+function fecharFormularioAgendamento() {
+  agendamentoEditandoId = null;
+  agendamentoForm.hidden = true;
+  agendamentoSalvar.hidden = true;
+  agendamentoCancelar.hidden = true;
+  mostrarMsgEm(agendamentoMsg, "", "");
+}
+
+function datetimeLocalParaDate(valor) {
+  const data = valor ? new Date(valor) : null;
+  return data && !Number.isNaN(data.getTime()) ? data : null;
+}
+
+function dateParaInputLocal(valor) {
+  const data = valor && typeof valor.toDate === "function" ? valor.toDate() : valor;
+  if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "";
+  const local = new Date(data.getTime() - data.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+async function carregarAgendamentos() {
+  try {
+    const snap = await tenantCollection("agendamentos").orderBy("dataInicio", "asc").limit(200).get();
+    agendamentosCache = snap.docs.map((doc) => {
+      const dados = Object.assign({ id: doc.id }, doc.data());
+      dados.dataInicioLocal = dateParaInputLocal(dados.dataInicio);
+      dados.dataFimLocal = dateParaInputLocal(dados.dataFim);
+      return dados;
+    });
+    renderAgendamentos();
+  } catch (err) {
+    tabelaAgendamentos.innerHTML = "<tr><td colspan='6'>Não foi possível carregar agendamentos.</td></tr>";
+  }
+}
+
+function renderAgendamentos() {
+  tabelaAgendamentos.innerHTML = "";
+  if (agendamentosCache.length === 0) {
+    tabelaAgendamentos.appendChild(linhaVazia(6, "Nenhum agendamento cadastrado."));
+    return;
+  }
+  agendamentosCache.forEach((item) => {
+    const inicio = item.dataInicio && item.dataInicio.toDate ? item.dataInicio.toDate() : null;
+    const fim = item.dataFim && item.dataFim.toDate ? item.dataFim.toDate() : null;
+    const tr = document.createElement("tr");
+    tr.append(
+      celula(item.titulo || "-"),
+      celula((inicio ? inicio.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "-") +
+        (fim ? " até " + fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "")),
+      celula(item.tipo || "-"),
+      celula(String(Array.isArray(item.alunoIds) ? item.alunoIds.length : 0) + "/" + (item.capacidade || "∞")),
+      celula(item.status || "ativo")
+    );
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(
+      botaoAcao("Editar", "Editar agendamento", () => abrirFormularioAgendamento(item)),
+      " ",
+      botaoAcao("Apagar", "Apagar agendamento", () => apagarAgendamento(item.id, item.titulo || "agendamento"))
+    );
+    tr.appendChild(tdAcoes);
+    tabelaAgendamentos.appendChild(tr);
+  });
+}
+
+async function salvarAgendamento() {
+  const titulo = agendamentoTitulo.value.trim();
+  const inicio = datetimeLocalParaDate(agendamentoInicio.value);
+  const fim = datetimeLocalParaDate(agendamentoFim.value);
+  const capacidadeTexto = agendamentoCapacidade.value.trim();
+  const capacidade = capacidadeTexto ? parseInt(capacidadeTexto, 10) : null;
+  if (!titulo || titulo.length > 120 || !inicio || !fim || fim <= inicio) {
+    mostrarMsgEm(agendamentoMsg, "Informe título, início e fim válidos.", "error");
+    return;
+  }
+  if (capacidade !== null && (!Number.isInteger(capacidade) || capacidade < 1 || capacidade > 500)) {
+    mostrarMsgEm(agendamentoMsg, "Capacidade deve ficar entre 1 e 500.", "error");
+    return;
+  }
+  const payload = {
+    titulo,
+    tipo: agendamentoTipo.value,
+    dataInicio: firebase.firestore.Timestamp.fromDate(inicio),
+    dataFim: firebase.firestore.Timestamp.fromDate(fim),
+    status: agendamentoStatus.value,
+    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (capacidade !== null) payload.capacidade = capacidade;
+  try {
+    if (agendamentoEditandoId) {
+      await tenantCollection("agendamentos").doc(agendamentoEditandoId).update(payload);
+    } else {
+      payload.alunoIds = [];
+      payload.criadoPor = auth.currentUser.uid;
+      payload.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+      await tenantCollection("agendamentos").add(payload);
+    }
+    fecharFormularioAgendamento();
+    mostrarMsgEm(agendamentoMsg, "Agendamento salvo.", "success");
+    await carregarAgendamentos();
+  } catch (err) {
+    mostrarMsgEm(agendamentoMsg, "Não foi possível salvar o agendamento.", "error");
+  }
+}
+
+async function apagarAgendamento(id, titulo) {
+  if (!confirm('Apagar "' + titulo + '"?')) return;
+  try {
+    await tenantCollection("agendamentos").doc(id).delete();
+    await carregarAgendamentos();
+  } catch (err) {
+    mostrarMsgEm(agendamentoMsg, "Não foi possível apagar o agendamento.", "error");
+  }
+}
+
+function abrirFormularioParceiro(item) {
+  parceiroEditandoId = item ? item.id : null;
+  parceiroNome.value = item?.nome || "";
+  parceiroContato.value = item?.contato || "";
+  parceiroPercentual.value = typeof item?.percentual === "number" ? String(item.percentual) : "";
+  parceiroStatus.value = item?.status || "ativo";
+  parceiroObservacao.value = item?.observacao || "";
+  parceiroForm.hidden = false;
+  parceiroObservacao.hidden = false;
+  parceiroObservacaoLabel.hidden = false;
+  parceiroSalvar.hidden = false;
+  parceiroCancelar.hidden = false;
+  parceiroNome.focus();
+}
+
+function fecharFormularioParceiro() {
+  parceiroEditandoId = null;
+  parceiroForm.hidden = true;
+  parceiroObservacao.hidden = true;
+  parceiroObservacaoLabel.hidden = true;
+  parceiroSalvar.hidden = true;
+  parceiroCancelar.hidden = true;
+  mostrarMsgEm(parceiroMsg, "", "");
+}
+
+async function carregarParceiros() {
+  try {
+    const snap = await tenantCollection("parceiros").orderBy("nome").get();
+    parceirosCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    renderParceiros();
+    atualizarSelectsDisparo();
+  } catch (err) {
+    tabelaParceiros.innerHTML = "<tr><td colspan='5'>Não foi possível carregar parceiros.</td></tr>";
+  }
+}
+
+function renderParceiros() {
+  tabelaParceiros.innerHTML = "";
+  if (parceirosCache.length === 0) {
+    tabelaParceiros.appendChild(linhaVazia(5, "Nenhum parceiro cadastrado."));
+    return;
+  }
+  parceirosCache.forEach((item) => {
+    const totalAlunos = alunosCache.filter((aluno) => aluno.parceiroId === item.id).length;
+    const tr = document.createElement("tr");
+    tr.append(
+      celulaPessoa(item.nome || "sem nome", item.contato || item.observacao || ""),
+      celula((typeof item.percentual === "number" ? item.percentual : 0) + "%"),
+      celula(item.status || "ativo"),
+      celula(String(totalAlunos))
+    );
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(
+      botaoAcao("Editar", "Editar parceiro", () => abrirFormularioParceiro(item)),
+      " ",
+      botaoAcao("Apagar", "Apagar parceiro", () => apagarParceiro(item.id, item.nome || "parceiro"))
+    );
+    tr.appendChild(tdAcoes);
+    tabelaParceiros.appendChild(tr);
+  });
+}
+
+async function salvarParceiro() {
+  const nome = parceiroNome.value.trim();
+  const contato = parceiroContato.value.trim();
+  const percentual = parseFloat(parceiroPercentual.value);
+  const observacao = parceiroObservacao.value.trim();
+  if (!nome || nome.length > 100 || !isFinite(percentual) || percentual < 0 || percentual > 100) {
+    mostrarMsgEm(parceiroMsg, "Informe nome e percentual entre 0 e 100.", "error");
+    return;
+  }
+  const payload = {
+    nome,
+    percentual,
+    status: parceiroStatus.value,
+    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (contato) payload.contato = contato;
+  if (observacao) payload.observacao = observacao;
+  try {
+    if (parceiroEditandoId) {
+      await tenantCollection("parceiros").doc(parceiroEditandoId).update(payload);
+    } else {
+      payload.criadoPor = auth.currentUser.uid;
+      payload.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+      await tenantCollection("parceiros").add(payload);
+    }
+    fecharFormularioParceiro();
+    mostrarMsgEm(parceiroMsg, "Parceiro salvo.", "success");
+    await carregarParceiros();
+    carregarAlunos();
+  } catch (err) {
+    mostrarMsgEm(parceiroMsg, "Não foi possível salvar o parceiro.", "error");
+  }
+}
+
+async function apagarParceiro(id, nome) {
+  const usados = alunosCache.filter((aluno) => aluno.parceiroId === id).length;
+  if (usados > 0) {
+    mostrarMsgEm(parceiroMsg, "Remova este parceiro dos alunos antes de apagar.", "error");
+    return;
+  }
+  if (!confirm('Apagar "' + nome + '"?')) return;
+  try {
+    await tenantCollection("parceiros").doc(id).delete();
+    await carregarParceiros();
+  } catch (err) {
+    mostrarMsgEm(parceiroMsg, "Não foi possível apagar o parceiro.", "error");
+  }
+}
+
+function renderRankingEAniversarios() {
+  if (!rankingLista || !aniversariantesLista) return;
+  rankingLista.innerHTML = "";
+  const ranking = window.DojoStudentMetrics.montarRankingLocal(alunosCache, contagensCheckinsCache).slice(0, 20);
+  if (ranking.length === 0) {
+    rankingLista.appendChild(criarLiTexto("Nenhum aluno no ranking."));
+  } else {
+    ranking.forEach((item, indice) => {
+      const li = document.createElement("li");
+      li.textContent = (indice + 1) + ". " + item.nomePublico + " - " + item.pontos + " pts (" + item.totalCheckins + " check-ins)";
+      rankingLista.appendChild(li);
+    });
+  }
+
+  aniversariantesLista.innerHTML = "";
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth() + 1;
+  const aniversariantes = alunosCache
+    .filter((aluno) => typeof aluno.nascimento === "string" && Number(aluno.nascimento.slice(5, 7)) === mesAtual)
+    .sort((a, b) => a.nascimento.slice(5).localeCompare(b.nascimento.slice(5)));
+  if (aniversariantes.length === 0) {
+    aniversariantesLista.appendChild(criarLiTexto("Nenhum aniversariante neste mês."));
+  } else {
+    aniversariantes.forEach((aluno) => {
+      const li = document.createElement("li");
+      li.textContent = (aluno.nome || "Aluno") + " - " + aluno.nascimento.slice(8, 10) + "/" + aluno.nascimento.slice(5, 7);
+      aniversariantesLista.appendChild(li);
+    });
+  }
+}
+
+function criarLiTexto(texto) {
+  const li = document.createElement("li");
+  li.textContent = texto;
+  return li;
+}
+
+async function recalcularRankingWorker() {
+  if (!WORKER_URL) {
+    mostrarMsgEm(progressoMsg, "Worker não configurado.", "error");
+    return;
+  }
+  rankingRecalcular.disabled = true;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const resp = await fetch(WORKER_URL + "/recalcular-ranking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(tenantPayload({ periodo: new Date().toISOString().slice(0, 7) }))
+    });
+    if (!resp.ok) throw new Error("falha");
+    mostrarMsgEm(progressoMsg, "Ranking recalculado.", "success");
+  } catch (err) {
+    mostrarMsgEm(progressoMsg, "Não foi possível recalcular pelo servidor; ranking local segue atualizado.", "error");
+  } finally {
+    rankingRecalcular.disabled = false;
+  }
+}
+
+function mapaProfessores() {
+  const mapa = {};
+  professoresCache.forEach((prof) => { mapa[prof.id] = prof.nome || prof.id; });
+  return mapa;
+}
+
+function mapaParceiros() {
+  const mapa = {};
+  parceirosCache.forEach((parceiro) => { mapa[parceiro.id] = parceiro.nome || parceiro.id; });
+  return mapa;
+}
+
+function exportarCsvAlunos() {
+  const linhas = window.DojoReports.montarLinhasAlunosRelatorio(alunosCache, {
+    contagens: contagensCheckinsCache,
+    professores: mapaProfessores(),
+    parceiros: mapaParceiros()
+  });
+  window.DojoReports.baixarCsv("alunos-dojopass.csv", Object.keys(linhas[0] || { "Aluno": "" }), linhas);
+}
+
+async function exportarCsvFinanceiro() {
+  let snap;
+  try {
+    snap = await tenantCollection("cobrancas").orderBy("criadoEm", "desc").limit(500).get();
+  } catch (err) {
+    mostrarMsgEm(disparoMsg, "Não foi possível carregar cobranças para CSV.", "error");
+    return;
+  }
+  const linhas = snap.docs.map((doc) => {
+    const item = doc.data();
+    return {
+      "Aluno": item.alunoNome || item.alunoId || "",
+      "Mês": item.mesReferencia || "",
+      "Valor": typeof item.valor === "number" ? item.valor.toFixed(2).replace(".", ",") : "",
+      "Status": item.status || "",
+      "Origem": item.origem || "asaas",
+      "Criado em": window.DojoReports.dataCurtaCsv(item.criadoEm),
+      "Pago em": window.DojoReports.dataCurtaCsv(item.pagoEm)
+    };
+  });
+  window.DojoReports.baixarCsv("pagamentos-dojopass.csv", ["Aluno", "Mês", "Valor", "Status", "Origem", "Criado em", "Pago em"], linhas);
+}
+
+function atualizarSelectsDisparo() {
+  if (!disparoProfessor || !disparoParceiro) return;
+  const professorAtual = disparoProfessor.value;
+  disparoProfessor.innerHTML = "<option value=\"\">Todos</option>";
+  professoresCache.filter((prof) => prof.status !== "inativo").forEach((prof) => {
+    const opcao = document.createElement("option");
+    opcao.value = prof.id;
+    opcao.textContent = prof.nome || "sem nome";
+    disparoProfessor.appendChild(opcao);
+  });
+  disparoProfessor.value = professorAtual;
+
+  const parceiroAtual = disparoParceiro.value;
+  disparoParceiro.innerHTML = "<option value=\"\">Todos</option>";
+  parceirosCache.filter((parceiro) => parceiro.status !== "inativo").forEach((parceiro) => {
+    const opcao = document.createElement("option");
+    opcao.value = parceiro.id;
+    opcao.textContent = parceiro.nome || "sem nome";
+    disparoParceiro.appendChild(opcao);
+  });
+  disparoParceiro.value = parceiroAtual;
+}
+
+function alunosFiltradosDisparo() {
+  const filtro = disparoFiltro.value;
+  return alunosCache.filter((aluno) => {
+    if (filtro === "pendentes" && (aluno.mensalidadeStatus || "pendente") === "pago") return false;
+    if (filtro === "professor") {
+      const ids = professoresDoAluno(aluno);
+      if (!disparoProfessor.value || !ids.includes(disparoProfessor.value)) return false;
+    }
+    if (filtro === "parceiro" && (!disparoParceiro.value || aluno.parceiroId !== disparoParceiro.value)) return false;
+    return true;
+  });
+}
+
+async function gerarDisparoWhatsApp() {
+  const template = disparoTexto.value.trim();
+  if (!template || template.length > 500) {
+    mostrarMsgEm(disparoMsg, "Escreva uma mensagem de até 500 caracteres.", "error");
+    return;
+  }
+  const alunos = alunosFiltradosDisparo();
+  disparoLinks.innerHTML = "";
+  let gerados = 0;
+  alunos.forEach((aluno) => {
+    const texto = preencherTemplate(template, {
+      nome: aluno.nome || "",
+      mes: mesAtualPtBr(),
+      valor: valorMensalidadeTexto(aluno.valorMensalidade || configGeral.valorMensalidadePadrao),
+      academia: configGeral.academiaNome || "academia",
+      pix: configGeral.pixChaveManual || ""
+    });
+    const link = montarLinkWhatsapp(aluno.telefone, texto);
+    if (!link) return;
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = link;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "Enviar para " + (aluno.nome || "aluno");
+    li.appendChild(a);
+    disparoLinks.appendChild(li);
+    gerados += 1;
+  });
+  mostrarMsgEm(disparoMsg, gerados + " link(s) gerado(s). O envio acontece pelo WhatsApp do professor.", gerados ? "success" : "error");
+
+  if (WORKER_URL && gerados > 0) {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(WORKER_URL + "/disparo-massa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(tenantPayload({
+          canal: "whatsapp-link",
+          filtro: disparoFiltro.value,
+          totalDestinatarios: gerados,
+          mensagemPreview: template.slice(0, 120)
+        }))
+      });
+    } catch (err) {
+      // Auditoria falhou, mas os links manuais continuam úteis.
+    }
+  }
+}
+
 // ---- Cadastro de aluno pelo professor ---------------------------------------------
 // Quem cria a conta de verdade é o Worker (POST /criar-aluno) — pelo SDK, o
 // createUserWithEmailAndPassword trocaria a sessão do navegador pelo aluno recém-criado
@@ -3312,6 +4135,13 @@ function abrirModalNovoAluno() {
   novoAlunoTelefone.value = "";
   novoAlunoNascimento.value = "";
   novoAlunoFaixa.value = "";
+  novoAlunoGrau.value = "0";
+  novoAlunoValor.value = "";
+  novoAlunoKids.checked = false;
+  novoAlunoResponsavelNome.value = "";
+  novoAlunoResponsavelTelefone.value = "";
+  novoAlunoResponsavelEmail.value = "";
+  novoAlunoResponsavelParentesco.value = "";
   limparSenhaNovoAluno();
   mostrarMsgNovoAluno("", "");
   novoAlunoBackdrop.classList.add("show");
@@ -3338,6 +4168,14 @@ async function criarAlunoPeloProfessor() {
   const telefone = novoAlunoTelefone.value.trim();
   const nascimento = novoAlunoNascimento.value;
   const faixa = novoAlunoFaixa.value;
+  const grau = parseInt(novoAlunoGrau.value || "0", 10);
+  const valorTexto = novoAlunoValor.value.trim();
+  const valorMensalidade = valorTexto ? parseFloat(valorTexto) : null;
+  const kids = novoAlunoKids.checked;
+  const responsavelNome = novoAlunoResponsavelNome.value.trim();
+  const responsavelTelefone = novoAlunoResponsavelTelefone.value.trim();
+  const responsavelEmail = novoAlunoResponsavelEmail.value.trim();
+  const responsavelParentesco = novoAlunoResponsavelParentesco.value.trim();
 
   if (!nome || nome.length > NOVO_ALUNO_NOME_MAX) {
     mostrarMsgNovoAluno("Informe o nome do aluno (até 99 caracteres).", "error");
@@ -3369,6 +4207,21 @@ async function criarAlunoPeloProfessor() {
     novoAlunoFaixa.focus();
     return;
   }
+  if (!Number.isInteger(grau) || grau < 0 || grau > 4) {
+    mostrarMsgNovoAluno("Grau deve ficar entre 0 e 4.", "error");
+    novoAlunoGrau.focus();
+    return;
+  }
+  if (valorTexto && (!isFinite(valorMensalidade) || valorMensalidade <= 0 || valorMensalidade > 5000)) {
+    mostrarMsgNovoAluno("Mensalidade individual deve ficar entre R$ 0,01 e R$ 5.000.", "error");
+    novoAlunoValor.focus();
+    return;
+  }
+  if (kids && (!responsavelNome || !responsavelTelefone)) {
+    mostrarMsgNovoAluno("Para cadastro kids, informe nome e telefone do responsável.", "error");
+    novoAlunoResponsavelNome.focus();
+    return;
+  }
 
   if (!WORKER_URL) {
     mostrarMsgNovoAluno("O cadastro pelo painel ainda não foi configurado pra esta academia.", "error");
@@ -3390,7 +4243,23 @@ async function criarAlunoPeloProfessor() {
         "Content-Type": "application/json",
         Authorization: "Bearer " + idToken
       },
-      body: JSON.stringify(tenantPayload({ nome, email, senha, telefone, nascimento, faixa }))
+      body: JSON.stringify(tenantPayload({
+        nome,
+        email,
+        senha,
+        telefone,
+        nascimento,
+        faixa,
+        grau,
+        valorMensalidade: valorMensalidade === null ? undefined : valorMensalidade,
+        kids,
+        responsaveis: kids ? [{
+          nome: responsavelNome,
+          telefone: responsavelTelefone,
+          email: responsavelEmail || undefined,
+          parentesco: responsavelParentesco || undefined
+        }] : undefined
+      }))
     });
 
     // A senha já cumpriu o papel dela: sai do DOM antes mesmo de tratar a resposta.

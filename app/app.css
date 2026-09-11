@@ -1790,3 +1790,71 @@ table.admin-table.panel-table tr:hover td {
 html { scroll-behavior: smooth; }
 
 .app-content .panel[tabindex="-1"] { scroll-margin-top: 20px; }
+
+.mini-controles-aluno {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  min-width: 150px;
+}
+
+.mini-controles-aluno select,
+.mini-controles-aluno input {
+  width: 100%;
+  min-height: 34px;
+  font-size: 0.85rem;
+}
+
+.mini-check {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.input-mini {
+  max-width: 140px;
+}
+
+.panel-dopamina {
+  border-color: rgba(211, 21, 21, 0.35);
+}
+
+.student-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.student-progress-grid > div {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.student-progress-grid strong {
+  display: block;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.student-progress-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.progress-bar {
+  height: 12px;
+  background: #eeeeee;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+.progress-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--red), #111);
+  transition: width 0.25s ease;
+}

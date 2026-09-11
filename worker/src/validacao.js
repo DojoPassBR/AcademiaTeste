@@ -160,6 +160,30 @@ function faixaValida(v) {
   return typeof v === "string" && FAIXAS_VALIDAS.includes(v);
 }
 
+function grauValido(v) {
+  return v === undefined || v === null || (Number.isInteger(v) && v >= 0 && v <= 4);
+}
+
+function valorMensalidadeValido(v) {
+  return v === undefined || v === null || valorValido(v);
+}
+
+function responsaveisValidos(v) {
+  if (v === undefined || v === null) return true;
+  if (!Array.isArray(v) || v.length < 1 || v.length > 3) return false;
+  return v.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const nome = item.nome;
+    const telefone = item.telefone;
+    const email = item.email;
+    const parentesco = item.parentesco;
+    return typeof nome === "string" && nome.length > 0 && nome.length <= 100
+      && typeof telefone === "string" && telefone.length > 0 && telefone.length <= 30
+      && (email === undefined || email === null || emailValido(email))
+      && (parentesco === undefined || parentesco === null || (typeof parentesco === "string" && parentesco.length <= 40));
+  });
+}
+
 // Senha inicial escolhida pelo professor. Mínimo 6 é o piso do Firebase Auth (abaixo
 // disso o Identity Toolkit devolve WEAK_PASSWORD); o teto de 128 é sanitário.
 // O VALOR nunca é logado em lugar nenhum — só o resultado booleano desta função.
@@ -201,6 +225,9 @@ export {
   telefoneValido,
   nascimentoValido,
   faixaValida,
+  grauValido,
+  valorMensalidadeValido,
+  responsaveisValidos,
   senhaInicialValida,
   equipeIdValido,
   acaoProfessorValida,

@@ -139,21 +139,29 @@ function tenantPath(tenantId, path) {
   return "tenants/" + tenantId + "/" + path;
 }
 
-// Converte um objeto JS simples (sem aninhamento) pro formato de "fields" da REST API do Firestore.
+function toFirestoreValue(value) {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (typeof value === "string") return { stringValue: value };
+  if (typeof value === "number") {
+    if (Number.isInteger(value)) return { integerValue: String(value) };
+    return { doubleValue: value };
+  }
+  if (typeof value === "boolean") return { booleanValue: value };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(toFirestoreValue) } };
+  if (typeof value === "object") {
+    const fields = {};
+    for (const [key, child] of Object.entries(value)) fields[key] = toFirestoreValue(child);
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(value) };
+}
+
+// Converte um objeto JS pro formato de "fields" da REST API do Firestore.
 function toFirestoreFields(obj) {
   const fields = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (value === null || value === undefined) {
-      fields[key] = { nullValue: null };
-    } else if (typeof value === "string") {
-      fields[key] = { stringValue: value };
-    } else if (typeof value === "number") {
-      fields[key] = { doubleValue: value };
-    } else if (typeof value === "boolean") {
-      fields[key] = { booleanValue: value };
-    } else if (value instanceof Date) {
-      fields[key] = { timestampValue: value.toISOString() };
-    }
+    fields[key] = toFirestoreValue(value);
   }
   return fields;
 }
@@ -183,6 +191,56 @@ async function getDocument(env, path) {
     throw new Error("Falha ao ler no Firestore.");
   }
   return resp.json();
+}
+
+function fromFirestoreValue(value) {
+  if (!value) return undefined;
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return Number(value.doubleValue);
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("timestampValue" in value) return new Date(value.timestampValue);
+  if ("nullValue" in value) return null;
+  if ("arrayValue" in value) return (value.arrayValue.values || []).map(fromFirestoreValue);
+  if ("mapValue" in value) {
+    const out = {};
+    const fields = value.mapValue.fields || {};
+    for (const [key, child] of Object.entries(fields)) out[key] = fromFirestoreValue(child);
+    return out;
+  }
+  return undefined;
+}
+
+function fromFirestoreFields(doc) {
+  const out = {};
+  const fields = doc?.fields || {};
+  for (const [key, value] of Object.entries(fields)) out[key] = fromFirestoreValue(value);
+  return out;
+}
+
+function docIdFromName(name) {
+  return String(name || "").split("/").pop();
+}
+
+async function listDocuments(env, path, { pageSize = 300 } = {}) {
+  const accessToken = await getAccessToken(env);
+  let pageToken = "";
+  const docs = [];
+  do {
+    const params = new URLSearchParams({ pageSize: String(pageSize) });
+    if (pageToken) params.set("pageToken", pageToken);
+    const resp = await fetch(baseUrl(env, path) + "?" + params.toString(), {
+      headers: { Authorization: "Bearer " + accessToken }
+    });
+    if (!resp.ok) {
+      console.error("Falha ao listar no Firestore (" + path + "):", await resp.text());
+      throw new Error("Falha ao listar no Firestore.");
+    }
+    const data = await resp.json();
+    (data.documents || []).forEach((doc) => docs.push({ id: docIdFromName(doc.name), data: fromFirestoreFields(doc), raw: doc }));
+    pageToken = data.nextPageToken || "";
+  } while (pageToken);
+  return docs;
 }
 
 // Cria um documento com ID definido pelo chamador (o último segmento de `path`),
@@ -250,6 +308,8 @@ async function patchDocument(env, path, data, opcoes = {}) {
 
 export {
   getDocument,
+  listDocuments,
+  fromFirestoreFields,
   createDocument,
   patchDocument,
   tenantPath,

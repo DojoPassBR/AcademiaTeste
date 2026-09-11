@@ -46,6 +46,19 @@
         <option value="Preta">Preta</option>
       </select>
 
+      <fieldset class="config-toggles">
+        <legend>Cadastro kids</legend>
+        <label class="config-check"><input type="checkbox" id="kids"> Sou responsável por uma criança</label>
+        <label for="responsavel-nome">Nome do responsável</label>
+        <input type="text" id="responsavel-nome" maxlength="100" placeholder="Obrigatório para kids">
+        <label for="responsavel-telefone">Telefone do responsável</label>
+        <input type="tel" id="responsavel-telefone" maxlength="30" placeholder="Obrigatório para kids">
+        <label for="responsavel-email">E-mail do responsável (opcional)</label>
+        <input type="email" id="responsavel-email" maxlength="100">
+        <label for="responsavel-parentesco">Parentesco</label>
+        <input type="text" id="responsavel-parentesco" maxlength="40" placeholder="Ex.: mãe, pai, avó">
+      </fieldset>
+
       <label for="email">E-mail</label>
       <input type="email" id="email" required>
 
@@ -157,12 +170,21 @@ form.addEventListener("submit", async (e) => {
   const telefone = document.getElementById("telefone").value.trim();
   const nascimento = document.getElementById("nascimento").value;
   const faixa = document.getElementById("faixa").value;
+  const kids = document.getElementById("kids").checked;
+  const responsavelNome = document.getElementById("responsavel-nome").value.trim();
+  const responsavelTelefone = document.getElementById("responsavel-telefone").value.trim();
+  const responsavelEmail = document.getElementById("responsavel-email").value.trim();
+  const responsavelParentesco = document.getElementById("responsavel-parentesco").value.trim();
   const email = document.getElementById("email").value.trim();
   const senha = document.getElementById("senha").value;
   const senha2 = document.getElementById("senha2").value;
 
   if (senha !== senha2) {
     showMsg("As senhas não coincidem.", "error");
+    return;
+  }
+  if (kids && (!responsavelNome || !responsavelTelefone)) {
+    showMsg("Para cadastro kids, informe nome e telefone do responsável.", "error");
     return;
   }
 
@@ -184,7 +206,14 @@ form.addEventListener("submit", async (e) => {
         telefone,
         nascimento,
         faixa,
-        email
+        email,
+        kids,
+        responsaveis: kids ? [{
+          nome: responsavelNome,
+          telefone: responsavelTelefone,
+          email: responsavelEmail || undefined,
+          parentesco: responsavelParentesco || undefined
+        }] : undefined
       }))
     });
     const data = await resp.json().catch(() => ({}));

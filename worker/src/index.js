@@ -1,4 +1,4 @@
-import { getDocument, createDocument, patchDocument, tenantPath } from "./firestore.js";
+import { getDocument, listDocuments, createDocument, patchDocument, tenantPath } from "./firestore.js";
 import {
   criarCustomer,
   criarPagamentoPix,
@@ -34,6 +34,9 @@ import {
   telefoneValido,
   nascimentoValido,
   faixaValida,
+  grauValido,
+  valorMensalidadeValido,
+  responsaveisValidos,
   senhaInicialValida,
   equipeIdValido,
   acaoProfessorValida
@@ -221,6 +224,11 @@ function credenciaisFaltando(env) {
     "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY"
   ].filter((k) => !env[k]);
+  return faltando.length ? faltando : null;
+}
+
+function credenciaisFirebaseFaltando(env) {
+  const faltando = ["FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"].filter((k) => !env[k]);
   return faltando.length ? faltando : null;
 }
 
@@ -820,7 +828,7 @@ async function handleCriarAluno(request, env) {
   const { uid: adminUid, resposta } = await exigirAdminTenant(request, env, "cadastrar alunos", tenantId);
   if (resposta) return resposta;
 
-  const { nome, email, senha, telefone, nascimento, faixa } = body;
+  const { nome, email, senha, telefone, nascimento, faixa, grau, valorMensalidade, kids, responsaveis } = body;
 
   // 2) TODA a validação acontece antes de qualquer chamada externa — um payload inválido
   // não chega a criar conta no Google nem a gastar quota.
@@ -842,6 +850,21 @@ async function handleCriarAluno(request, env) {
   }
   if (!faixaValida(faixa)) {
     return json({ erro: "Faixa inválida." }, 400, request, env);
+  }
+  if (!grauValido(grau)) {
+    return json({ erro: "Grau inválido." }, 400, request, env);
+  }
+  if (!valorMensalidadeValido(valorMensalidade)) {
+    return json({ erro: "Mensalidade individual inválida." }, 400, request, env);
+  }
+  if (kids !== undefined && kids !== null && typeof kids !== "boolean") {
+    return json({ erro: "Campo kids inválido." }, 400, request, env);
+  }
+  if (!responsaveisValidos(responsaveis)) {
+    return json({ erro: "Dados do responsável inválidos." }, 400, request, env);
+  }
+  if (kids === true && (!Array.isArray(responsaveis) || responsaveis.length === 0)) {
+    return json({ erro: "Cadastro kids exige ao menos um responsável." }, 400, request, env);
   }
 
   // 3) Conta no Firebase Auth.
@@ -867,7 +890,7 @@ async function handleCriarAluno(request, env) {
   // 5) Documento do aluno. Os campos de dados espelham exatamente dadosAlunoValidos das
   // rules, pra que o aluno consiga editar o próprio cadastro depois.
   try {
-    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), {
+    const alunoDados = {
       nome,
       telefone,
       nascimento,
@@ -877,7 +900,18 @@ async function handleCriarAluno(request, env) {
       criadoPorAdmin: true,
       criadoPorUid: adminUid,
       tenantId
-    });
+    };
+    if (grau !== undefined && grau !== null) {
+      alunoDados.grau = grau;
+      alunoDados.grauAtualizadoEm = new Date();
+      alunoDados.ultimaGraduacaoEm = new Date();
+    }
+    if (valorMensalidade !== undefined && valorMensalidade !== null) alunoDados.valorMensalidade = valorMensalidade;
+    if (kids === true) {
+      alunoDados.kids = true;
+      alunoDados.responsaveis = responsaveis;
+    }
+    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), alunoDados);
     await criarOuAtualizarMembershipAluno(env, tenantId, uid, {
       criadoPorAdmin: true,
       criadoPorUid: adminUid
@@ -955,7 +989,7 @@ async function handleCompletarCadastroAluno(request, env) {
   const origemNegada = await exigirOrigemTenant(request, env, tenantId);
   if (origemNegada) return origemNegada;
 
-  const { nome, email, telefone, nascimento, faixa } = body;
+  const { nome, email, telefone, nascimento, faixa, kids, responsaveis } = body;
   if (!alunoIdValido(uid)) {
     return json({ erro: "Usuário inválido." }, 400, request, env);
   }
@@ -974,9 +1008,18 @@ async function handleCompletarCadastroAluno(request, env) {
   if (!faixaValida(faixa)) {
     return json({ erro: "Faixa inválida." }, 400, request, env);
   }
+  if (kids !== undefined && kids !== null && typeof kids !== "boolean") {
+    return json({ erro: "Campo kids inválido." }, 400, request, env);
+  }
+  if (!responsaveisValidos(responsaveis)) {
+    return json({ erro: "Dados do responsável inválidos." }, 400, request, env);
+  }
+  if (kids === true && (!Array.isArray(responsaveis) || responsaveis.length === 0)) {
+    return json({ erro: "Cadastro kids exige ao menos um responsável." }, 400, request, env);
+  }
 
   try {
-    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), {
+    const alunoDados = {
       nome,
       telefone,
       nascimento,
@@ -984,7 +1027,12 @@ async function handleCompletarCadastroAluno(request, env) {
       email,
       criadoEm: new Date(),
       tenantId
-    });
+    };
+    if (kids === true) {
+      alunoDados.kids = true;
+      alunoDados.responsaveis = responsaveis;
+    }
+    await createDocument(env, caminhoTenant(tenantId, "alunos/" + uid), alunoDados);
     await criarOuAtualizarMembershipAluno(env, tenantId, uid, {
       criadoPorAdmin: false
     });
@@ -1269,6 +1317,134 @@ async function handleGerenciarProfessor(request, env) {
   return json({ ok: true, uid, role: "aluno" }, 200, request, env);
 }
 
+async function handleDisparoMassa(request, env) {
+  const faltando = credenciaisFirebaseFaltando(env);
+  if (faltando) {
+    return json({ erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") }, 501, request, env);
+  }
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+  const { uid, resposta } = await exigirAdminTenant(request, env, "registrar disparos", tenantId);
+  if (resposta) return resposta;
+
+  const canal = body.canal === "whatsapp-link" ? "whatsapp-link" : null;
+  const filtros = ["todos", "pendentes", "professor", "parceiro"];
+  const filtro = filtros.includes(body.filtro) ? body.filtro : null;
+  const total = Number(body.totalDestinatarios);
+  const preview = typeof body.mensagemPreview === "string" ? body.mensagemPreview : "";
+  if (!canal || !filtro || !Number.isInteger(total) || total < 1 || total > 2000 || preview.length > 120) {
+    return json({ erro: "Payload de disparo inválido." }, 400, request, env);
+  }
+
+  const id = crypto.randomUUID();
+  const agora = new Date();
+  await createDocument(env, caminhoTenant(tenantId, "disparos/" + id), {
+    canal,
+    filtro,
+    totalDestinatarios: total,
+    mensagemPreview: preview,
+    status: "links_gerados",
+    criadoPorUid: uid,
+    criadoEm: agora,
+    tenantId
+  });
+  return json({ ok: true, disparoId: id }, 200, request, env);
+}
+
+function dataCampo(doc, nome) {
+  const valor = doc?.data?.[nome];
+  return valor instanceof Date ? valor : null;
+}
+
+async function handleRecalcularRanking(request, env) {
+  const faltando = credenciaisFirebaseFaltando(env);
+  if (faltando) {
+    return json({ erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") }, 501, request, env);
+  }
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  let tenantId;
+  try {
+    tenantId = await resolverTenantAtivoDoPayload(body, env);
+  } catch (err) {
+    return json({ erro: "Academia inválida." }, 400, request, env);
+  }
+  const origemNegada = await exigirOrigemTenant(request, env, tenantId);
+  if (origemNegada) return origemNegada;
+  const { uid, resposta } = await exigirAdminTenant(request, env, "recalcular ranking", tenantId);
+  if (resposta) return resposta;
+
+  const periodo = typeof body.periodo === "string" && /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(body.periodo)
+    ? body.periodo
+    : new Date().toISOString().slice(0, 7);
+
+  const [alunos, checkins] = await Promise.all([
+    listDocuments(env, caminhoTenant(tenantId, "alunos")),
+    listDocuments(env, caminhoTenant(tenantId, "checkins"))
+  ]);
+
+  const inicio = new Date(periodo + "-01T00:00:00.000Z");
+  const fim = new Date(inicio);
+  fim.setUTCMonth(fim.getUTCMonth() + 1);
+  const contagens = {};
+  checkins.forEach((doc) => {
+    const alunoId = doc.data.alunoId;
+    const timestamp = dataCampo(doc, "timestamp");
+    if (typeof alunoId !== "string" || !timestamp || timestamp < inicio || timestamp >= fim) return;
+    contagens[alunoId] = (contagens[alunoId] || 0) + 1;
+  });
+
+  const agora = new Date();
+  const itens = alunos.map((doc) => {
+    const aluno = doc.data;
+    const totalCheckins = contagens[doc.id] || 0;
+    const pago = (aluno.mensalidadeStatus || "pendente") === "pago";
+    const pontos = totalCheckins * 10 + (pago ? 15 : 0);
+    return {
+      id: doc.id,
+      nomePublico: aluno.nome || "Aluno",
+      faixa: aluno.faixa || "",
+      grau: Number.isInteger(aluno.grau) ? aluno.grau : 0,
+      totalCheckins,
+      pontos,
+      atualizadoEm: agora,
+      atualizadoPorUid: uid,
+      tenantId
+    };
+  }).sort((a, b) => b.pontos - a.pontos || a.nomePublico.localeCompare(b.nomePublico));
+
+  await patchDocument(env, caminhoTenant(tenantId, "ranking/" + periodo), {
+    periodo,
+    totalAlunos: itens.length,
+    atualizadoEm: agora,
+    atualizadoPorUid: uid,
+    tenantId
+  });
+  await Promise.all(itens.map((item, indice) => patchDocument(env, caminhoTenant(tenantId, "ranking/" + periodo + "/alunos/" + item.id), {
+    nomePublico: item.nomePublico,
+    faixa: item.faixa,
+    grau: item.grau,
+    totalCheckins: item.totalCheckins,
+    pontos: item.pontos,
+    posicao: indice + 1,
+    atualizadoEm: item.atualizadoEm,
+    atualizadoPorUid: item.atualizadoPorUid,
+    tenantId
+  })));
+
+  return json({ ok: true, periodo, total: itens.length }, 200, request, env);
+}
+
 // ---------------------------------------------------------------------------
 // Credencial do Asaas do próprio professor (Fase 5) — /config/credencial-asaas.
 //
@@ -1438,6 +1614,12 @@ export default {
       }
       if (pathname === "/gerenciar-professor" && request.method === "POST") {
         return await handleGerenciarProfessor(request, env);
+      }
+      if (pathname === "/disparo-massa" && request.method === "POST") {
+        return await handleDisparoMassa(request, env);
+      }
+      if (pathname === "/recalcular-ranking" && request.method === "POST") {
+        return await handleRecalcularRanking(request, env);
       }
       // Cadastro feito pelo próprio aluno: Auth acontece no navegador, Firestore e
       // memberships são finalizados aqui com service account.

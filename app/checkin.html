@@ -32,6 +32,29 @@
     </div>
   </div>
 
+  <div class="panel panel-dopamina" id="card-progresso-aluno">
+    <div class="panel-header panel-header-acento"><h2>Seu progresso</h2></div>
+    <div class="student-progress-grid">
+      <div>
+        <strong id="aluno-faixa-grau">Carregando...</strong>
+        <span id="aluno-tempo-grau">—</span>
+      </div>
+      <div>
+        <strong id="aluno-total-checkins">—</strong>
+        <span>check-ins registrados</span>
+      </div>
+      <div>
+        <strong id="aluno-ranking-posicao">—</strong>
+        <span>no ranking</span>
+      </div>
+      <div>
+        <strong id="aluno-valor-checkin">—</strong>
+        <span>valor por check-in</span>
+      </div>
+    </div>
+    <div class="progress-bar" aria-label="Progresso no grau"><span id="aluno-progress-bar"></span></div>
+  </div>
+
   <div class="panel" id="pix-pagamento" style="display:none;">
     <div class="panel-header panel-header-acento"><h2>Pagar mensalidade via Pix</h2></div>
 
@@ -74,6 +97,13 @@
     </ul>
   </div>
 
+  <div class="panel" id="card-agenda-aluno">
+    <div class="panel-header panel-header-acento"><h2>Minha agenda</h2></div>
+    <ul class="checkin-list panel-lista" id="lista-agendamentos">
+      <li>Carregando...</li>
+    </ul>
+  </div>
+
   <div class="panel" id="card-grade">
     <div class="panel-header panel-header-acento"><h2>Grade de horários</h2></div>
     <div id="grade-horarios">
@@ -94,6 +124,13 @@
       <li>Carregando...</li>
     </ul>
   </div>
+
+  <div class="panel">
+    <div class="panel-header panel-header-acento"><h2>Pagamentos</h2></div>
+    <ul class="checkin-list panel-lista" id="lista-pagamentos">
+      <li>Carregando...</li>
+    </ul>
+  </div>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -101,6 +138,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js?v=20260910"></script>
 <script src="tenant-context.js?v=20260910"></script>
+<script src="student-metrics.js?v=20260910"></script>
 <script>
 const msg = document.getElementById("msg");
 const btnCheckin = document.getElementById("btn-checkin");
@@ -116,6 +154,14 @@ const mensalidadeStatusEl = document.getElementById("mensalidade-status");
 const mensalidadeMesEl = document.getElementById("mensalidade-mes");
 const avisoMensalidade = document.getElementById("aviso-mensalidade");
 const mensalidadeBox = document.getElementById("mensalidade-box");
+const alunoFaixaGrau = document.getElementById("aluno-faixa-grau");
+const alunoTempoGrau = document.getElementById("aluno-tempo-grau");
+const alunoTotalCheckins = document.getElementById("aluno-total-checkins");
+const alunoRankingPosicao = document.getElementById("aluno-ranking-posicao");
+const alunoValorCheckin = document.getElementById("aluno-valor-checkin");
+const alunoProgressBar = document.getElementById("aluno-progress-bar");
+const listaAgendamentos = document.getElementById("lista-agendamentos");
+const listaPagamentos = document.getElementById("lista-pagamentos");
 // Texto original do aviso (sem contagem de dias), restaurado quando não há atraso longo.
 const AVISO_MENSALIDADE_PADRAO =
   "Sua mensalidade está pendente. Procure a recepção para regularizar e liberar o check-in.";
@@ -138,6 +184,7 @@ const COMPROVANTE_TAMANHO_MAXIMO = 5 * 1024 * 1024;
 let cobrancaManualPendenteId = null;
 
 let alunoNome = "";
+let alunoAtual = null;
 let mensalidadeEmDia = false;
 let bloqueadoPorIntervalo = false;
 let mensalidadeModo = "manual";
@@ -158,6 +205,103 @@ function showMsg(text, type) {
   msg.className = "msg show " + type;
 }
 
+function textoMoeda(valor) {
+  if (typeof valor !== "number" || !Number.isFinite(valor)) return "—";
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+async function carregarResumoProgresso(uid) {
+  if (!alunoAtual || !window.DojoStudentMetrics) return;
+  const progresso = window.DojoStudentMetrics.calcularProgressoGraduacao(alunoAtual);
+  alunoFaixaGrau.textContent = progresso.faixa + " · grau " + progresso.grau;
+  alunoTempoGrau.textContent = progresso.diasNoGrau === null
+    ? "Tempo no grau ainda não iniciado"
+    : progresso.diasNoGrau + " dia(s) no grau";
+  alunoProgressBar.style.width = progresso.percentualTempo + "%";
+
+  let total = 0;
+  try {
+    const agg = await tenantCollection("checkins").where("alunoId", "==", uid).count().get();
+    total = agg.data().count || 0;
+  } catch (err) {
+    total = 0;
+  }
+  alunoTotalCheckins.textContent = String(total);
+  alunoValorCheckin.textContent = textoMoeda(window.DojoStudentMetrics.valorPorCheckin(alunoAtual, total));
+
+  try {
+    const periodo = new Date().toISOString().slice(0, 7);
+    const snap = await tenantCollection("ranking").doc(periodo).collection("alunos")
+      .orderBy("pontos", "desc")
+      .limit(100)
+      .get();
+    let posicao = null;
+    snap.docs.forEach((doc, indice) => {
+      if (doc.id === uid) posicao = indice + 1;
+    });
+    alunoRankingPosicao.textContent = posicao ? "#" + posicao : "Sem posição";
+  } catch (err) {
+    alunoRankingPosicao.textContent = "Calculando";
+  }
+}
+
+async function carregarAgendamentosAluno(uid) {
+  let snap;
+  try {
+    snap = await tenantCollection("agendamentos")
+      .where("alunoIds", "array-contains", uid)
+      .where("status", "==", "ativo")
+      .orderBy("dataInicio", "asc")
+      .limit(20)
+      .get();
+  } catch (err) {
+    avisoNoContainer(listaAgendamentos, "li", "Não foi possível carregar sua agenda.");
+    return;
+  }
+  limparNode(listaAgendamentos);
+  let total = 0;
+  snap.forEach((doc) => {
+    const item = doc.data() || {};
+    const inicio = item.dataInicio && item.dataInicio.toDate ? item.dataInicio.toDate() : null;
+    const li = document.createElement("li");
+    li.append(
+      criarEl("span", "", item.titulo || "Agendamento"),
+      criarEl("span", "", inicio ? inicio.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "")
+    );
+    listaAgendamentos.appendChild(li);
+    total += 1;
+  });
+  if (total === 0) listaAgendamentos.appendChild(criarEl("li", "grade-aviso", "Nenhum agendamento para você no momento."));
+}
+
+async function carregarPagamentosAluno(uid) {
+  let snap;
+  try {
+    snap = await tenantCollection("cobrancas")
+      .where("alunoId", "==", uid)
+      .orderBy("mesReferencia", "desc")
+      .limit(12)
+      .get();
+  } catch (err) {
+    avisoNoContainer(listaPagamentos, "li", "Não foi possível carregar pagamentos.");
+    return;
+  }
+  limparNode(listaPagamentos);
+  if (snap.empty) {
+    listaPagamentos.appendChild(criarEl("li", "grade-aviso", "Nenhum pagamento registrado ainda."));
+    return;
+  }
+  snap.forEach((doc) => {
+    const item = doc.data() || {};
+    const li = document.createElement("li");
+    li.append(
+      criarEl("span", "", (item.mesReferencia || "Mensalidade") + " · " + (item.status || "pendente")),
+      criarEl("span", "", typeof item.valor === "number" ? textoMoeda(item.valor) : "")
+    );
+    listaPagamentos.appendChild(li);
+  });
+}
+
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 
 auth.onAuthStateChanged(async (user) => {
@@ -171,6 +315,7 @@ auth.onAuthStateChanged(async (user) => {
   const alunoDoc = await tenantCollection("alunos").doc(user.uid).get();
   if (alunoDoc.exists) {
     const alunoData = alunoDoc.data();
+    alunoAtual = Object.assign({ id: user.uid }, alunoData);
     alunoNome = alunoData.nome;
     saudacao.textContent = "Olá, " + alunoNome.split(" ")[0];
     mensalidadeEmDia = (alunoData.mensalidadeStatus || "pendente") === "pago";
@@ -194,6 +339,9 @@ auth.onAuthStateChanged(async (user) => {
   if (modoUsaPix(mensalidadeModo) && !mensalidadeEmDia) carregarCobrancaPendente(user.uid);
   carregarUltimoCheckin(user.uid);
   carregarHistorico(user.uid);
+  carregarResumoProgresso(user.uid);
+  carregarAgendamentosAluno(user.uid);
+  carregarPagamentosAluno(user.uid);
   // Mural de eventos: carga independente e não bloqueante — se falhar (rules, rede,
   // índice), o check-in em si continua funcionando normalmente.
   carregarEventos();

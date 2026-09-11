@@ -349,16 +349,15 @@ auth.onAuthStateChanged(async (user) => {
   carregarEventos();
 });
 
-// A rule de leitura de alunos exige a igualdade professorId == uid POR DOCUMENTO —
-// uma consulta sem este .where() bate num aluno de outro professor e é negada
-// inteira. O .where não é conveniência de UI: é o que torna a consulta permitida.
+// A rule de leitura de alunos exige vínculo POR DOCUMENTO: professorIds contém uid
+// (novo) ou professorId == uid (legado). As duas consultas são mescladas sem duplicar.
 async function carregarMeusAlunos(uid) {
-  let snap;
+  let snaps;
   try {
-    snap = await tenantCollection("alunos")
-      .where("professorId", "==", uid)
-      .orderBy("nome")
-      .get();
+    snaps = await Promise.all([
+      tenantCollection("alunos").where("professorIds", "array-contains", uid).get(),
+      tenantCollection("alunos").where("professorId", "==", uid).get()
+    ]);
   } catch (err) {
     limparNode(tabelaAlunos);
     tabelaAlunos.appendChild(linhaVazia(4, "Não foi possível carregar seus alunos."));
@@ -369,13 +368,18 @@ async function carregarMeusAlunos(uid) {
   limparNode(tabelaAlunos);
   mostrarMsgEm(alunosMsg, "", "");
 
-  if (snap.empty) {
+  const porId = new Map();
+  snaps.forEach((snap) => snap.forEach((doc) => porId.set(doc.id, doc.data() || {})));
+  const alunos = Array.from(porId.entries())
+    .map(([id, dados]) => Object.assign({ id }, dados))
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+
+  if (alunos.length === 0) {
     tabelaAlunos.appendChild(linhaVazia(4, "Nenhum aluno vinculado a você ainda."));
     return;
   }
 
-  snap.forEach((doc) => {
-    const aluno = doc.data() || {};
+  alunos.forEach((aluno) => {
     const emDia = (aluno.mensalidadeStatus || "pendente") === "pago";
     const tr = document.createElement("tr");
     tr.append(
