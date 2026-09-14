@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Check-in - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260910">
+<link rel="stylesheet" href="app.css?v=20260913">
 </head>
 <body>
 
@@ -104,6 +104,54 @@
     </ul>
   </div>
 
+  <div class="panel" id="card-aulas-disponiveis">
+    <div class="panel-header panel-header-acento"><h2>Aulas disponíveis</h2></div>
+    <ul class="checkin-list panel-lista scheduler-list" id="lista-aulas-disponiveis">
+      <li>Carregando...</li>
+    </ul>
+    <div class="msg" id="aulas-disponiveis-msg" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" id="card-evolucao-aluno">
+    <div class="panel-header panel-header-acento"><h2>Minha evolução</h2></div>
+    <div class="dashboard-listas evolution-lists">
+      <div>
+        <h3>Metas</h3>
+        <ul class="checkin-list panel-lista evolution-list" id="lista-metas-aluno">
+          <li>Carregando...</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Técnicas recentes</h3>
+        <ul class="checkin-list panel-lista evolution-list" id="lista-evolucoes-aluno">
+          <li>Carregando...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel panel-dopamina" id="card-conquistas-aluno">
+    <div class="panel-header panel-header-acento"><h2>Conquistas</h2></div>
+    <div class="achievement-score">
+      <strong id="aluno-pontos-conquistas">—</strong>
+      <span>pontos conquistados</span>
+    </div>
+    <div class="dashboard-listas achievement-student-grid">
+      <div>
+        <h3>Desbloqueadas</h3>
+        <ul class="checkin-list panel-lista achievement-list" id="lista-conquistas-aluno">
+          <li>Carregando...</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Desafios ativos</h3>
+        <ul class="checkin-list panel-lista achievement-list" id="lista-desafios-aluno">
+          <li>Carregando...</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <div class="panel" id="card-grade">
     <div class="panel-header panel-header-acento"><h2>Grade de horários</h2></div>
     <div id="grade-horarios">
@@ -139,6 +187,9 @@
 <script src="firebase-init.js?v=20260910"></script>
 <script src="tenant-context.js?v=20260910"></script>
 <script src="student-metrics.js?v=20260910"></script>
+<script src="student-evolution.js?v=20260911"></script>
+<script src="gamification.js?v=20260911"></script>
+<script src="class-scheduler.js?v=20260911"></script>
 <script>
 const msg = document.getElementById("msg");
 const btnCheckin = document.getElementById("btn-checkin");
@@ -161,6 +212,13 @@ const alunoRankingPosicao = document.getElementById("aluno-ranking-posicao");
 const alunoValorCheckin = document.getElementById("aluno-valor-checkin");
 const alunoProgressBar = document.getElementById("aluno-progress-bar");
 const listaAgendamentos = document.getElementById("lista-agendamentos");
+const listaAulasDisponiveis = document.getElementById("lista-aulas-disponiveis");
+const aulasDisponiveisMsg = document.getElementById("aulas-disponiveis-msg");
+const listaMetasAluno = document.getElementById("lista-metas-aluno");
+const listaEvolucoesAluno = document.getElementById("lista-evolucoes-aluno");
+const alunoPontosConquistas = document.getElementById("aluno-pontos-conquistas");
+const listaConquistasAluno = document.getElementById("lista-conquistas-aluno");
+const listaDesafiosAluno = document.getElementById("lista-desafios-aluno");
 const listaPagamentos = document.getElementById("lista-pagamentos");
 // Texto original do aviso (sem contagem de dias), restaurado quando não há atraso longo.
 const AVISO_MENSALIDADE_PADRAO =
@@ -203,6 +261,12 @@ function modoUsaPix(modo) {
 function showMsg(text, type) {
   msg.textContent = text;
   msg.className = "msg show " + type;
+}
+
+function mostrarMsgEm(elemento, texto, tipo) {
+  if (!elemento) return;
+  elemento.textContent = texto || "";
+  elemento.className = texto ? "msg show " + tipo : "msg";
 }
 
 function textoMoeda(valor) {
@@ -302,6 +366,245 @@ async function carregarPagamentosAluno(uid) {
   });
 }
 
+function badgeEvolucaoAluno(info) {
+  const badge = document.createElement("span");
+  badge.className = "badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function renderMetaAluno(item) {
+  const progresso = window.DojoStudentEvolution.normalizeProgress(item.progresso);
+  const li = document.createElement("li");
+  li.className = "evolution-item";
+  const topo = document.createElement("div");
+  topo.className = "evolution-item-top";
+  topo.append(
+    criarEl("strong", "", item.titulo || "Meta"),
+    badgeEvolucaoAluno(window.DojoStudentEvolution.statusMetaInfo(item.status))
+  );
+  const detalhes = [];
+  detalhes.push(window.DojoStudentEvolution.tipoMetaLabel(item.tipo));
+  if (item.prazo) detalhes.push(window.DojoStudentEvolution.prazoResumo(item.prazo));
+  if (item.alvo) detalhes.push(item.alvo);
+  const meta = criarEl("span", "config-dica", detalhes.filter(Boolean).join(" · "));
+  const barra = document.createElement("div");
+  barra.className = "progress-bar evolution-progress";
+  const preenchimento = document.createElement("span");
+  preenchimento.style.width = progresso + "%";
+  barra.appendChild(preenchimento);
+  li.append(topo, meta, barra, criarEl("span", "", progresso + "% concluído"));
+  return li;
+}
+
+function renderEvolucaoAluno(item) {
+  const li = document.createElement("li");
+  li.className = "evolution-item";
+  const topo = document.createElement("div");
+  topo.className = "evolution-item-top";
+  topo.append(
+    criarEl("strong", "", item.titulo || "Registro técnico"),
+    badgeEvolucaoAluno(window.DojoStudentEvolution.statusTecnicoInfo(item.status))
+  );
+  const data = window.DojoStudentEvolution.formatDate(item.atualizadoEm || item.criadoEm);
+  li.append(topo, criarEl("span", "config-dica", data || "sem data"));
+  if (item.observacao) li.appendChild(criarEl("p", "", item.observacao));
+  return li;
+}
+
+async function carregarEvolucaoAluno(uid) {
+  try {
+    const [metasSnap, evolucoesSnap] = await Promise.all([
+      tenantCollection("metasAluno").where("alunoId", "==", uid).orderBy("status").limit(20).get(),
+      tenantCollection("evolucoes").where("alunoId", "==", uid).orderBy("atualizadoEm", "desc").limit(20).get()
+    ]);
+
+    limparNode(listaMetasAluno);
+    if (metasSnap.empty) {
+      listaMetasAluno.appendChild(criarEl("li", "grade-aviso", "Nenhuma meta ativa por enquanto."));
+    } else {
+      metasSnap.docs
+        .map((doc) => Object.assign({ id: doc.id }, doc.data()))
+        .forEach((item) => listaMetasAluno.appendChild(renderMetaAluno(item)));
+    }
+
+    limparNode(listaEvolucoesAluno);
+    if (evolucoesSnap.empty) {
+      listaEvolucoesAluno.appendChild(criarEl("li", "grade-aviso", "Nenhuma evolução registrada ainda."));
+    } else {
+      evolucoesSnap.docs
+        .map((doc) => Object.assign({ id: doc.id }, doc.data()))
+        .forEach((item) => listaEvolucoesAluno.appendChild(renderEvolucaoAluno(item)));
+    }
+  } catch (err) {
+    avisoNoContainer(listaMetasAluno, "li", "Não foi possível carregar suas metas.");
+    avisoNoContainer(listaEvolucoesAluno, "li", "Não foi possível carregar sua evolução.");
+  }
+}
+
+function badgeConquistaAluno(info) {
+  const badge = document.createElement("span");
+  badge.className = "badge achievement-badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function renderConquistaAluno(item, catalogoPorId) {
+  const catalogo = catalogoPorId[item.conquistaId] || {};
+  const li = document.createElement("li");
+  li.className = "achievement-item";
+  const topo = document.createElement("div");
+  topo.className = "achievement-item-top";
+  topo.append(
+    criarEl("strong", "", catalogo.titulo || item.titulo || "Conquista"),
+    badgeConquistaAluno(window.DojoGamification.tipoInfo(catalogo.tipo || item.tipo))
+  );
+  const detalhes = [];
+  detalhes.push(window.DojoGamification.formatPoints(item.pontos));
+  const data = window.DojoGamification.formatDate(item.desbloqueadoEm);
+  if (data) detalhes.push(data);
+  li.append(topo, criarEl("span", "config-dica", detalhes.join(" · ")));
+  return li;
+}
+
+function renderDesafioAluno(item, desbloqueadasPorId) {
+  const li = document.createElement("li");
+  li.className = "achievement-item" + (desbloqueadasPorId[item.id] ? " achievement-item-unlocked" : "");
+  const topo = document.createElement("div");
+  topo.className = "achievement-item-top";
+  topo.append(
+    criarEl("strong", "", item.titulo || "Desafio"),
+    badgeConquistaAluno(window.DojoGamification.tipoInfo(item.tipo))
+  );
+  if (item.descricao) li.append(topo, criarEl("p", "", item.descricao));
+  else li.appendChild(topo);
+  const resumo = window.DojoGamification.resumoDesafio(item);
+  if (resumo) li.appendChild(criarEl("span", "config-dica", resumo));
+  if (desbloqueadasPorId[item.id]) li.appendChild(criarEl("span", "achievement-unlocked-label", "Já desbloqueada"));
+  return li;
+}
+
+async function carregarConquistasAluno(uid) {
+  try {
+    const [catalogoSnap, alunoSnap] = await Promise.all([
+      tenantCollection("conquistas").where("ativo", "==", true).orderBy("titulo", "asc").limit(100).get(),
+      tenantCollection("conquistasAluno").where("alunoId", "==", uid).orderBy("desbloqueadoEm", "desc").limit(100).get()
+    ]);
+    const catalogo = catalogoSnap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    const desbloqueadas = alunoSnap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    const catalogoPorId = window.DojoGamification.mapById(catalogo);
+    const desbloqueadasPorId = window.DojoGamification.unlockedIds(desbloqueadas);
+
+    alunoPontosConquistas.textContent = String(window.DojoGamification.totalPoints(desbloqueadas));
+
+    limparNode(listaConquistasAluno);
+    if (desbloqueadas.length === 0) {
+      listaConquistasAluno.appendChild(criarEl("li", "grade-aviso", "Nenhuma conquista desbloqueada ainda."));
+    } else {
+      window.DojoGamification.sortUnlockedFirst(desbloqueadas)
+        .forEach((item) => listaConquistasAluno.appendChild(renderConquistaAluno(item, catalogoPorId)));
+    }
+
+    limparNode(listaDesafiosAluno);
+    const desafiosDisponiveis = window.DojoGamification.activeChallenges(catalogo)
+      .filter((item) => !desbloqueadasPorId[item.id]);
+    if (desafiosDisponiveis.length === 0) {
+      listaDesafiosAluno.appendChild(criarEl("li", "grade-aviso", "Nenhum desafio ativo no momento."));
+    } else {
+      desafiosDisponiveis
+        .forEach((item) => listaDesafiosAluno.appendChild(renderDesafioAluno(item, desbloqueadasPorId)));
+    }
+  } catch (err) {
+    alunoPontosConquistas.textContent = "—";
+    avisoNoContainer(listaConquistasAluno, "li", "Não foi possível carregar suas conquistas.");
+    avisoNoContainer(listaDesafiosAluno, "li", "Não foi possível carregar os desafios.");
+  }
+}
+
+function renderAulaDisponivel(ocorrencia, reservasPorChave) {
+  const turma = ocorrencia.turma;
+  const chave = window.DojoClassScheduler.reservationKey(turma.id, auth.currentUser.uid, ocorrencia.startsAt);
+  const reserva = reservasPorChave[chave] || null;
+  const li = document.createElement("li");
+  li.className = "scheduler-item";
+
+  const bloco = document.createElement("span");
+  bloco.appendChild(criarEl("strong", "", turma.nome || "Turma"));
+  bloco.appendChild(criarEl(
+    "span",
+    "config-dica",
+    window.DojoClassScheduler.formatDate(ocorrencia.startsAt) + " · " +
+      window.DojoClassScheduler.formatTimeRange(turma) + " · " +
+      window.DojoClassScheduler.modalityLabel(turma.modalidade)
+  ));
+
+  const acao = document.createElement("button");
+  acao.type = "button";
+  acao.className = "mensalidade-btn";
+  if (reserva) {
+    acao.disabled = true;
+    acao.textContent = window.DojoClassScheduler.statusInfo(reserva.status).label;
+  } else {
+    acao.textContent = "Solicitar vaga";
+    acao.addEventListener("click", () => solicitarReservaAula(ocorrencia, chave));
+  }
+  li.append(bloco, acao);
+  return li;
+}
+
+async function carregarAulasDisponiveis(uid) {
+  let turmasSnap;
+  let reservasSnap;
+  try {
+    [turmasSnap, reservasSnap] = await Promise.all([
+      tenantCollection("turmas").where("ativo", "==", true).limit(80).get(),
+      tenantCollection("reservasAula").where("alunoId", "==", uid).orderBy("dataAula", "desc").limit(100).get()
+    ]);
+  } catch (err) {
+    avisoNoContainer(listaAulasDisponiveis, "li", "Não foi possível carregar aulas disponíveis.");
+    return;
+  }
+
+  const reservasPorChave = {};
+  reservasSnap.forEach((doc) => { reservasPorChave[doc.id] = Object.assign({ id: doc.id }, doc.data()); });
+
+  const ocorrencias = [];
+  turmasSnap.forEach((doc) => {
+    const turma = Object.assign({ id: doc.id }, doc.data());
+    window.DojoClassScheduler.nextOccurrences(turma, { daysAhead: 14, limit: 3 })
+      .forEach((ocorrencia) => ocorrencias.push(ocorrencia));
+  });
+  ocorrencias.sort((a, b) => a.startsAt - b.startsAt);
+
+  limparNode(listaAulasDisponiveis);
+  if (ocorrencias.length === 0) {
+    listaAulasDisponiveis.appendChild(criarEl("li", "grade-aviso", "Nenhuma aula recorrente disponível no momento."));
+    return;
+  }
+  ocorrencias.slice(0, 12).forEach((ocorrencia) => {
+    listaAulasDisponiveis.appendChild(renderAulaDisponivel(ocorrencia, reservasPorChave));
+  });
+}
+
+async function solicitarReservaAula(ocorrencia, reservaId) {
+  const turma = ocorrencia.turma;
+  try {
+    await tenantCollection("reservasAula").doc(reservaId).set({
+      alunoId: auth.currentUser.uid,
+      turmaId: turma.id,
+      dataAula: firebase.firestore.Timestamp.fromDate(ocorrencia.startsAt),
+      status: "solicitada",
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    mostrarMsgEm(aulasDisponiveisMsg, "Solicitação enviada para confirmação da equipe.", "success");
+    carregarAulasDisponiveis(auth.currentUser.uid);
+  } catch (err) {
+    mostrarMsgEm(aulasDisponiveisMsg, "Não foi possível solicitar esta aula.", "error");
+  }
+}
+
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 
 auth.onAuthStateChanged(async (user) => {
@@ -341,6 +644,9 @@ auth.onAuthStateChanged(async (user) => {
   carregarHistorico(user.uid);
   carregarResumoProgresso(user.uid);
   carregarAgendamentosAluno(user.uid);
+  carregarAulasDisponiveis(user.uid);
+  carregarEvolucaoAluno(user.uid);
+  carregarConquistasAluno(user.uid);
   carregarPagamentosAluno(user.uid);
   // Mural de eventos: carga independente e não bloqueante — se falhar (rules, rede,
   // índice), o check-in em si continua funcionando normalmente.

@@ -25,6 +25,7 @@
          padrão da .admin-nav antiga. -->
     <nav class="app-sidebar-nav" aria-label="Seções do painel">
       <a class="app-sidebar-link" href="#card-meus-alunos"><span class="icon" aria-hidden="true">👥</span>Meus alunos</a>
+      <a class="app-sidebar-link" href="#card-crm-professor"><span class="icon" aria-hidden="true">☎</span>CRM</a>
       <a class="app-sidebar-link" href="#card-minhas-aulas"><span class="icon" aria-hidden="true">🗓️</span>Minhas aulas</a>
       <a class="app-sidebar-link" href="#card-eventos"><span class="icon" aria-hidden="true">🏆</span>Eventos</a>
     </nav>
@@ -97,6 +98,100 @@
         </div>
       </div>
 
+      <div class="panel" id="card-crm-professor" tabindex="-1">
+        <div class="panel-header panel-header-acento">
+          <div>
+            <h2>CRM dos meus alunos</h2>
+            <p>Registre contatos individuais e acompanhe apenas os alunos vinculados a você.</p>
+          </div>
+        </div>
+        <div class="config-form-row crm-filters">
+          <div>
+            <label for="prof-crm-filtro">Lista</label>
+            <select id="prof-crm-filtro">
+              <option value="todos">Todos</option>
+              <option value="inadimplentes">Inadimplentes</option>
+            </select>
+          </div>
+          <div>
+            <label for="prof-crm-status-filtro">Status comercial</label>
+            <select id="prof-crm-status-filtro">
+              <option value="">Todos</option>
+              <option value="ativo">Ativo</option>
+              <option value="acompanhar">Acompanhar</option>
+              <option value="risco">Risco</option>
+              <option value="recuperacao">Recuperação</option>
+              <option value="pausado">Pausado</option>
+              <option value="convertido">Convertido</option>
+            </select>
+          </div>
+          <div>
+            <label for="prof-crm-tag-filtro">Tag</label>
+            <input type="text" id="prof-crm-tag-filtro" maxlength="24" placeholder="Ex.: manhã">
+          </div>
+        </div>
+
+        <div class="crm-layout">
+          <div>
+            <h3>Alunos vinculados</h3>
+            <ul class="checkin-list panel-lista crm-list" id="prof-crm-lista">
+              <li>Carregando...</li>
+            </ul>
+          </div>
+          <div class="crm-register">
+            <h3>Registrar interação</h3>
+            <div class="config-form-row">
+              <div>
+                <label for="prof-crm-aluno">Aluno</label>
+                <select id="prof-crm-aluno"><option value="">Escolha um aluno</option></select>
+              </div>
+              <div>
+                <label for="prof-crm-canal">Canal</label>
+                <select id="prof-crm-canal">
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="telefone">Telefone</option>
+                  <option value="presencial">Presencial</option>
+                  <option value="email">E-mail</option>
+                </select>
+              </div>
+              <div>
+                <label for="prof-crm-interacao-status">Status da interação</label>
+                <select id="prof-crm-interacao-status">
+                  <option value="aberto">Aberto</option>
+                  <option value="respondido">Respondido</option>
+                  <option value="resolvido">Resolvido</option>
+                  <option value="sem_resposta">Sem resposta</option>
+                </select>
+              </div>
+              <div>
+                <label for="prof-crm-status-comercial">Status comercial</label>
+                <select id="prof-crm-status-comercial">
+                  <option value="ativo">Ativo</option>
+                  <option value="acompanhar">Acompanhar</option>
+                  <option value="risco">Risco</option>
+                  <option value="recuperacao">Recuperação</option>
+                  <option value="pausado">Pausado</option>
+                  <option value="convertido">Convertido</option>
+                </select>
+              </div>
+            </div>
+            <label for="prof-crm-tags">Tags</label>
+            <input type="text" id="prof-crm-tags" maxlength="220" placeholder="Ex.: sumido, retorno">
+            <label for="prof-crm-mensagem">Mensagem ou observação</label>
+            <textarea id="prof-crm-mensagem" class="config-textarea" maxlength="500" rows="4"></textarea>
+            <div class="card-header-acoes crm-actions">
+              <button type="button" class="btn-secundario" id="prof-crm-whatsapp">Abrir WhatsApp</button>
+              <button type="button" class="btn" id="prof-crm-registrar">Registrar interação</button>
+            </div>
+            <div class="msg" id="prof-crm-msg" role="status" aria-live="polite"></div>
+            <h3>Histórico recente</h3>
+            <ul class="checkin-list panel-lista crm-history" id="prof-crm-historico">
+              <li>Escolha um aluno.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div class="panel" id="card-minhas-aulas" tabindex="-1">
         <div class="panel-header panel-header-acento">
           <div>
@@ -142,6 +237,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js?v=20260910"></script>
 <script src="tenant-context.js?v=20260910"></script>
+<script src="crm-tools.js?v=20260911"></script>
 <script>
 // ---------------------------------------------------------------------------
 // Menu lateral em telas estreitas. Bloco isolado (IIFE) de propósito: nada aqui
@@ -177,12 +273,13 @@
 </script>
 <script>
 // ---------------------------------------------------------------------------
-// Painel do professor — v1 SOMENTE LEITURA.
+// Painel do professor — leitura dos dados principais e registro de CRM.
 //
 // Existe separado de admin.html de propósito: o painel do admin escreve em alunos,
-// cobrancas, config e nas quatro coleções públicas. O professor não escreve em nada.
-// Manter dois arquivos evita que um `if (ehProfessor)` esquecido em algum canto do
-// admin.html vire escrita indevida — as rules já negam, mas a tela também nega.
+// cobrancas, config e nas quatro coleções públicas. O professor só registra CRM
+// dos alunos vinculados. Manter dois arquivos evita que um `if (ehProfessor)`
+// esquecido em algum canto do admin.html vire escrita indevida — as rules já negam,
+// mas a tela também reduz a superfície.
 //
 // Nada de innerHTML com dado do Firestore em lugar nenhum deste arquivo: nome de
 // aluno, turma e evento são texto livre digitado por outra pessoa.
@@ -211,6 +308,22 @@ const listaEventos = document.getElementById("lista-eventos");
 const alunosMsg = document.getElementById("alunos-msg");
 const aulasMsg = document.getElementById("aulas-msg");
 const eventosMsg = document.getElementById("eventos-msg");
+const profCrmFiltro = document.getElementById("prof-crm-filtro");
+const profCrmStatusFiltro = document.getElementById("prof-crm-status-filtro");
+const profCrmTagFiltro = document.getElementById("prof-crm-tag-filtro");
+const profCrmLista = document.getElementById("prof-crm-lista");
+const profCrmAluno = document.getElementById("prof-crm-aluno");
+const profCrmCanal = document.getElementById("prof-crm-canal");
+const profCrmInteracaoStatus = document.getElementById("prof-crm-interacao-status");
+const profCrmStatusComercial = document.getElementById("prof-crm-status-comercial");
+const profCrmTags = document.getElementById("prof-crm-tags");
+const profCrmMensagem = document.getElementById("prof-crm-mensagem");
+const profCrmWhatsapp = document.getElementById("prof-crm-whatsapp");
+const profCrmRegistrar = document.getElementById("prof-crm-registrar");
+const profCrmMsg = document.getElementById("prof-crm-msg");
+const profCrmHistorico = document.getElementById("prof-crm-historico");
+
+let meusAlunosCache = [];
 
 function mostrarMsgEm(elemento, texto, tipo) {
   elemento.textContent = texto;
@@ -284,6 +397,18 @@ function limparNode(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+function criarElTexto(tag, texto) {
+  const el = document.createElement(tag);
+  el.textContent = texto;
+  return el;
+}
+
+function criarLiTexto(texto) {
+  const li = document.createElement("li");
+  li.textContent = texto;
+  return li;
+}
+
 // Volta pro login preservando a academia atual na query string: sem isso, quem chega
 // por link direto perde o slug e cai no tenant padrão.
 function urlLogin() {
@@ -294,6 +419,13 @@ function urlLogin() {
 btnSair.addEventListener("click", () => {
   auth.signOut().then(() => { window.location.href = urlLogin(); });
 });
+
+profCrmFiltro.addEventListener("change", renderCrmProfessor);
+profCrmStatusFiltro.addEventListener("change", renderCrmProfessor);
+profCrmTagFiltro.addEventListener("input", renderCrmProfessor);
+profCrmAluno.addEventListener("change", () => selecionarAlunoCrmProfessor(profCrmAluno.value));
+profCrmWhatsapp.addEventListener("click", abrirWhatsappCrmProfessor);
+profCrmRegistrar.addEventListener("click", registrarInteracaoCrmProfessor);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -373,6 +505,9 @@ async function carregarMeusAlunos(uid) {
   const alunos = Array.from(porId.entries())
     .map(([id, dados]) => Object.assign({ id }, dados))
     .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+  meusAlunosCache = alunos;
+  atualizarSelectCrmProfessor();
+  renderCrmProfessor();
 
   if (alunos.length === 0) {
     tabelaAlunos.appendChild(linhaVazia(4, "Nenhum aluno vinculado a você ainda."));
@@ -391,6 +526,195 @@ async function carregarMeusAlunos(uid) {
     );
     tabelaAlunos.appendChild(tr);
   });
+}
+
+function alunoCrmProfessorSelecionado() {
+  const alunoId = profCrmAluno ? profCrmAluno.value : "";
+  return meusAlunosCache.find((aluno) => aluno.id === alunoId) || null;
+}
+
+function atualizarSelectCrmProfessor() {
+  const atual = profCrmAluno.value;
+  profCrmAluno.innerHTML = "";
+  const vazio = document.createElement("option");
+  vazio.value = "";
+  vazio.textContent = meusAlunosCache.length === 0 ? "Nenhum aluno vinculado" : "Escolha um aluno";
+  profCrmAluno.appendChild(vazio);
+  meusAlunosCache.forEach((aluno) => {
+    const opcao = document.createElement("option");
+    opcao.value = aluno.id;
+    opcao.textContent = aluno.nome || "Aluno sem nome";
+    profCrmAluno.appendChild(opcao);
+  });
+  if (atual && meusAlunosCache.some((aluno) => aluno.id === atual)) profCrmAluno.value = atual;
+}
+
+function criarBadgeCrmProfessor(status) {
+  const info = window.DojoCrmTools.statusComercialInfo(status || "ativo");
+  const badge = document.createElement("span");
+  badge.className = "badge crm-badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function alunoPassaFiltroCrmProfessor(aluno) {
+  if (profCrmFiltro.value === "inadimplentes" && (aluno.mensalidadeStatus || "pendente") === "pago") return false;
+  if (profCrmStatusFiltro.value && (aluno.statusComercial || "ativo") !== profCrmStatusFiltro.value) return false;
+  const tag = window.DojoCrmTools.normalizeTags(profCrmTagFiltro.value)[0] || "";
+  if (tag && window.DojoCrmTools.normalizeTags(aluno.tagsCrm).indexOf(tag) === -1) return false;
+  return true;
+}
+
+function renderCrmProfessor() {
+  limparNode(profCrmLista);
+  const alunos = meusAlunosCache.filter(alunoPassaFiltroCrmProfessor);
+  if (alunos.length === 0) {
+    profCrmLista.appendChild(criarLiTexto("Nenhum aluno encontrado para este filtro."));
+    return;
+  }
+  alunos.forEach((aluno) => {
+    const li = document.createElement("li");
+    li.className = "crm-item";
+    const topo = document.createElement("div");
+    topo.className = "crm-item-top";
+    topo.append(criarElTexto("strong", aluno.nome || "Aluno sem nome"), criarBadgeCrmProfessor(aluno.statusComercial));
+    const detalhes = [];
+    detalhes.push((aluno.mensalidadeStatus || "pendente") === "pago" ? "mensalidade em dia" : "mensalidade pendente");
+    if (aluno.ultimaInteracaoEm) detalhes.push("último contato há " + window.DojoCrmTools.daysSince(aluno.ultimaInteracaoEm) + " dia(s)");
+    const meta = criarElTexto("span", detalhes.join(" · "));
+    meta.className = "config-dica";
+    const tags = window.DojoCrmTools.normalizeTags(aluno.tagsCrm);
+    const tagsWrap = document.createElement("div");
+    tagsWrap.className = "crm-tags";
+    tags.forEach((tag) => {
+      const chip = document.createElement("span");
+      chip.className = "crm-chip";
+      chip.textContent = tag;
+      tagsWrap.appendChild(chip);
+    });
+    const acoes = document.createElement("div");
+    acoes.className = "crm-item-actions";
+    const selecionar = document.createElement("button");
+    selecionar.type = "button";
+    selecionar.className = "mensalidade-btn";
+    selecionar.textContent = "Selecionar";
+    selecionar.addEventListener("click", () => selecionarAlunoCrmProfessor(aluno.id));
+    acoes.appendChild(selecionar);
+    li.append(topo, meta);
+    if (tags.length > 0) li.appendChild(tagsWrap);
+    li.appendChild(acoes);
+    profCrmLista.appendChild(li);
+  });
+}
+
+function selecionarAlunoCrmProfessor(alunoId) {
+  profCrmAluno.value = alunoId || "";
+  const aluno = alunoCrmProfessorSelecionado();
+  if (!aluno) return;
+  profCrmStatusComercial.value = aluno.statusComercial || "acompanhar";
+  profCrmTags.value = window.DojoCrmTools.tagsToText(aluno.tagsCrm);
+  profCrmMensagem.value = window.DojoCrmTools.mensagemWhatsApp(aluno, "acompanhamento", { academia: "academia" });
+  carregarHistoricoCrmProfessor();
+}
+
+async function carregarHistoricoCrmProfessor() {
+  const aluno = alunoCrmProfessorSelecionado();
+  limparNode(profCrmHistorico);
+  if (!aluno) {
+    profCrmHistorico.appendChild(criarLiTexto("Escolha um aluno."));
+    return;
+  }
+  try {
+    const snap = await tenantCollection("crmInteracoes")
+      .where("alunoId", "==", aluno.id)
+      .orderBy("criadoEm", "desc")
+      .limit(10)
+      .get();
+    if (snap.empty) {
+      profCrmHistorico.appendChild(criarLiTexto("Nenhuma interação registrada."));
+      return;
+    }
+    snap.forEach((docInteracao) => {
+      const item = docInteracao.data() || {};
+      const li = document.createElement("li");
+      li.className = "crm-history-item";
+      const topo = document.createElement("div");
+      topo.className = "crm-item-top";
+      topo.append(
+        criarElTexto("strong", window.DojoCrmTools.canalLabel(item.canal)),
+        criarElTexto("span", window.DojoCrmTools.statusInteracaoLabel(item.status))
+      );
+      const data = criarElTexto("span", formatarDataHora(item.criadoEm) || "sem data");
+      data.className = "config-dica";
+      li.append(topo, data, criarElTexto("p", item.mensagem || ""));
+      profCrmHistorico.appendChild(li);
+    });
+  } catch (err) {
+    profCrmHistorico.appendChild(criarLiTexto("Não foi possível carregar o histórico."));
+  }
+}
+
+async function registrarInteracaoCrmProfessor() {
+  const aluno = alunoCrmProfessorSelecionado();
+  const mensagem = window.DojoCrmTools.normalizeText(profCrmMensagem.value, 500);
+  if (!aluno) {
+    mostrarMsgEm(profCrmMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  if (!mensagem) {
+    mostrarMsgEm(profCrmMsg, "Escreva uma mensagem ou observação.", "error");
+    profCrmMensagem.focus();
+    return;
+  }
+
+  const tags = window.DojoCrmTools.normalizeTags(profCrmTags.value);
+  profCrmRegistrar.disabled = true;
+  try {
+    await tenantCollection("crmInteracoes").add({
+      alunoId: aluno.id,
+      canal: profCrmCanal.value,
+      status: profCrmInteracaoStatus.value,
+      mensagem,
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await tenantDocRef("alunos", aluno.id).update({
+      statusComercial: profCrmStatusComercial.value,
+      tagsCrm: tags,
+      ultimaInteracaoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      crmAtualizadoPor: auth.currentUser.uid,
+      crmAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Object.assign(aluno, {
+      statusComercial: profCrmStatusComercial.value,
+      tagsCrm: tags,
+      ultimaInteracaoEm: new Date(),
+      crmAtualizadoPor: auth.currentUser.uid
+    });
+    mostrarMsgEm(profCrmMsg, "Interação registrada.", "success");
+    renderCrmProfessor();
+    await carregarHistoricoCrmProfessor();
+  } catch (err) {
+    mostrarMsgEm(profCrmMsg, "Não foi possível registrar a interação.", "error");
+  } finally {
+    profCrmRegistrar.disabled = false;
+  }
+}
+
+function abrirWhatsappCrmProfessor() {
+  const aluno = alunoCrmProfessorSelecionado();
+  if (!aluno) {
+    mostrarMsgEm(profCrmMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  const mensagem = window.DojoCrmTools.normalizeText(profCrmMensagem.value, 500)
+    || window.DojoCrmTools.mensagemWhatsApp(aluno, "acompanhamento", { academia: "academia" });
+  const link = montarLinkWhatsapp(aluno.telefone, mensagem);
+  if (!link) {
+    mostrarMsgEm(profCrmMsg, "Este aluno não tem telefone válido para WhatsApp.", "error");
+    return;
+  }
+  window.open(link, "_blank", "noopener");
 }
 
 // turmas e horarios são leitura pública (allow read: if true), então o professor lê

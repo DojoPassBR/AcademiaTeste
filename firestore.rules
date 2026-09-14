@@ -212,7 +212,24 @@ service cloud.firestore {
         && (!('descricao' in dados) || (dados.descricao is string && dados.descricao.size() <= 300))
         && dados.nivel in ['Infantil', 'Juvenil', 'Iniciante', 'Intermediario', 'Avancado',
              'Competicao', 'Misto', 'Feminino', 'Livre']
+        && (!('modalidade' in dados) || dados.modalidade in ['jiu-jitsu', 'judo', 'muay-thai', 'boxe', 'mma', 'kids', 'funcional', 'outro'])
         && dados.cor in ['red', 'yellow', 'pink', 'white']
+        && (!('diasSemana' in dados) || (
+          dados.diasSemana is list
+          && dados.diasSemana.size() > 0
+          && dados.diasSemana.size() <= 7
+          && (dados.diasSemana.size() < 1 || (dados.diasSemana[0] is int && dados.diasSemana[0] >= 0 && dados.diasSemana[0] <= 6))
+          && (dados.diasSemana.size() < 2 || (dados.diasSemana[1] is int && dados.diasSemana[1] >= 0 && dados.diasSemana[1] <= 6))
+          && (dados.diasSemana.size() < 3 || (dados.diasSemana[2] is int && dados.diasSemana[2] >= 0 && dados.diasSemana[2] <= 6))
+          && (dados.diasSemana.size() < 4 || (dados.diasSemana[3] is int && dados.diasSemana[3] >= 0 && dados.diasSemana[3] <= 6))
+          && (dados.diasSemana.size() < 5 || (dados.diasSemana[4] is int && dados.diasSemana[4] >= 0 && dados.diasSemana[4] <= 6))
+          && (dados.diasSemana.size() < 6 || (dados.diasSemana[5] is int && dados.diasSemana[5] >= 0 && dados.diasSemana[5] <= 6))
+          && (dados.diasSemana.size() < 7 || (dados.diasSemana[6] is int && dados.diasSemana[6] >= 0 && dados.diasSemana[6] <= 6))
+        ))
+        && (!('horarioInicio' in dados) || (dados.horarioInicio is string && dados.horarioInicio.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && (!('horarioFim' in dados) || (dados.horarioFim is string && dados.horarioFim.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') && dados.horarioFim > dados.horarioInicio))
+        && (!('capacidade' in dados) || (dados.capacidade is int && dados.capacidade >= 1 && dados.capacidade <= 500))
+        && (!('professorIds' in dados) || listaIdsCurtaValida(dados.professorIds, 20))
         && dados.ativo is bool
         && dados.ordem is int && dados.ordem >= 0 && dados.ordem <= 99;
     }
@@ -251,7 +268,9 @@ service cloud.firestore {
 
 
     function turmaPublicaValida(dados) {
-      return dados.keys().hasOnly(['nome', 'descricao', 'nivel', 'cor', 'ativo', 'ordem', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+      return dados.keys().hasOnly(['nome', 'descricao', 'nivel', 'modalidade', 'cor', 'diasSemana',
+          'horarioInicio', 'horarioFim', 'capacidade', 'professorIds', 'ativo', 'ordem',
+          'criadoPor', 'criadoEm', 'atualizadoEm'])
         && dados.keys().hasAll(['nome', 'nivel', 'cor', 'ativo', 'ordem', 'criadoPor', 'criadoEm'])
         && dados.ativo == true
         && dados.criadoPor is string
@@ -451,6 +470,156 @@ service cloud.firestore {
         && (!('dueDate' in dados) || (dados.dueDate is string && dados.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
     }
 
+    function alunoTecnicoExiste(tenantId, alunoId) {
+      return alunoId is string
+        && exists(/databases/$(database)/documents/tenants/$(tenantId)/alunos/$(alunoId));
+    }
+
+    function professorVinculadoAoAluno(tenantId, alunoId) {
+      return isTenantProfessor(tenantId)
+        && alunoTecnicoExiste(tenantId, alunoId)
+        && (get(/databases/$(database)/documents/tenants/$(tenantId)/alunos/$(alunoId)).data.get('professorId', '') == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/tenants/$(tenantId)/alunos/$(alunoId)).data.get('professorIds', []));
+    }
+
+    function podeLerEvolucaoAluno(tenantId, alunoId) {
+      return isTenantSelf(tenantId, alunoId)
+        || isTenantAdmin(tenantId)
+        || professorVinculadoAoAluno(tenantId, alunoId);
+    }
+
+    function podeGerenciarEvolucaoAluno(tenantId, alunoId) {
+      return isTenantAdmin(tenantId)
+        || professorVinculadoAoAluno(tenantId, alunoId);
+    }
+
+    function dadosEvolucaoValidos(tenantId, dados) {
+      return dados.keys().hasOnly(['alunoId', 'titulo', 'status', 'observacao', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && dados.keys().hasAll(['alunoId', 'titulo', 'status', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && alunoTecnicoExiste(tenantId, dados.alunoId)
+        && dados.titulo is string && dados.titulo.size() > 0 && dados.titulo.size() <= 120
+        && dados.status in ['desenvolvimento', 'apto', 'revisar']
+        && (!('observacao' in dados) || (dados.observacao is string && dados.observacao.size() <= 500))
+        && dados.criadoPor is string
+        && dados.criadoEm is timestamp
+        && dados.atualizadoEm is timestamp;
+    }
+
+    function dadosMetaAlunoValidos(tenantId, dados) {
+      return dados.keys().hasOnly(['alunoId', 'tipo', 'titulo', 'status', 'progresso', 'alvo', 'prazo', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && dados.keys().hasAll(['alunoId', 'tipo', 'titulo', 'status', 'progresso', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && alunoTecnicoExiste(tenantId, dados.alunoId)
+        && dados.tipo in ['tecnica', 'frequencia', 'graduacao', 'outro']
+        && dados.titulo is string && dados.titulo.size() > 0 && dados.titulo.size() <= 120
+        && dados.status in ['ativa', 'concluida', 'pausada']
+        && dados.progresso is number && dados.progresso >= 0 && dados.progresso <= 100
+        && (!('alvo' in dados) || (dados.alvo is string && dados.alvo.size() <= 120))
+        && (!('prazo' in dados) || dados.prazo is timestamp)
+        && dados.criadoPor is string
+        && dados.criadoEm is timestamp
+        && dados.atualizadoEm is timestamp;
+    }
+
+    function dadosConquistaValidos(dados) {
+      return dados.keys().hasOnly(['titulo', 'descricao', 'tipo', 'regra', 'pontos', 'ativo', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && dados.keys().hasAll(['titulo', 'tipo', 'pontos', 'ativo', 'criadoPor', 'criadoEm', 'atualizadoEm'])
+        && dados.titulo is string && dados.titulo.size() > 0 && dados.titulo.size() <= 80
+        && (!('descricao' in dados) || (dados.descricao is string && dados.descricao.size() <= 240))
+        && dados.tipo in ['frequencia', 'streak', 'graduacao', 'manual', 'evento', 'outro']
+        && (!('regra' in dados) || (dados.regra is string && dados.regra.size() <= 120))
+        && dados.pontos is int && dados.pontos >= 0 && dados.pontos <= 10000
+        && dados.ativo is bool
+        && dados.criadoPor is string
+        && dados.criadoEm is timestamp
+        && dados.atualizadoEm is timestamp;
+    }
+
+    function conquistaAtivaExiste(tenantId, conquistaId) {
+      return conquistaId is string
+        && exists(/databases/$(database)/documents/tenants/$(tenantId)/conquistas/$(conquistaId))
+        && get(/databases/$(database)/documents/tenants/$(tenantId)/conquistas/$(conquistaId)).data.ativo == true;
+    }
+
+    function dadosConquistaAlunoValidos(tenantId, dados) {
+      return dados.keys().hasOnly(['alunoId', 'conquistaId', 'pontos', 'origem', 'desbloqueadoPor', 'desbloqueadoEm'])
+        && dados.keys().hasAll(['alunoId', 'conquistaId', 'pontos', 'origem', 'desbloqueadoPor', 'desbloqueadoEm'])
+        && alunoTecnicoExiste(tenantId, dados.alunoId)
+        && conquistaAtivaExiste(tenantId, dados.conquistaId)
+        && dados.pontos is int
+        && dados.pontos == get(/databases/$(database)/documents/tenants/$(tenantId)/conquistas/$(dados.conquistaId)).data.pontos
+        && dados.origem == 'manual'
+        && dados.desbloqueadoPor is string
+        && dados.desbloqueadoEm is timestamp;
+    }
+
+    function tagCrmValida(tag) {
+      return tag is string
+        && tag.size() > 0
+        && tag.size() <= 24
+        && tag.matches('^[a-z0-9][a-z0-9 _-]*$');
+    }
+
+    function tagsCrmValidas(tags) {
+      return tags is list
+        && tags.size() <= 8
+        && (tags.size() < 1 || tagCrmValida(tags[0]))
+        && (tags.size() < 2 || tagCrmValida(tags[1]))
+        && (tags.size() < 3 || tagCrmValida(tags[2]))
+        && (tags.size() < 4 || tagCrmValida(tags[3]))
+        && (tags.size() < 5 || tagCrmValida(tags[4]))
+        && (tags.size() < 6 || tagCrmValida(tags[5]))
+        && (tags.size() < 7 || tagCrmValida(tags[6]))
+        && (tags.size() < 8 || tagCrmValida(tags[7]));
+    }
+
+    function podeGerenciarCrmAluno(tenantId, alunoId) {
+      return isTenantAdmin(tenantId)
+        || professorVinculadoAoAluno(tenantId, alunoId);
+    }
+
+    function camposCrmAlunoValidos(dados) {
+      return (!('statusComercial' in dados) || dados.statusComercial in ['ativo', 'acompanhar', 'risco', 'recuperacao', 'pausado', 'convertido'])
+        && (!('tagsCrm' in dados) || tagsCrmValidas(dados.tagsCrm))
+        && (!('ultimaInteracaoEm' in dados) || dados.ultimaInteracaoEm is timestamp)
+        && (!('crmAtualizadoPor' in dados) || dados.crmAtualizadoPor is string)
+        && (!('crmAtualizadoEm' in dados) || dados.crmAtualizadoEm is timestamp);
+    }
+
+    function dadosCrmInteracaoValidos(tenantId, dados) {
+      return dados.keys().hasOnly(['alunoId', 'canal', 'status', 'mensagem', 'criadoPor', 'criadoEm'])
+        && dados.keys().hasAll(['alunoId', 'canal', 'status', 'mensagem', 'criadoPor', 'criadoEm'])
+        && alunoTecnicoExiste(tenantId, dados.alunoId)
+        && dados.canal in ['whatsapp', 'telefone', 'presencial', 'email']
+        && dados.status in ['aberto', 'respondido', 'resolvido', 'sem_resposta']
+        && dados.mensagem is string
+        && dados.mensagem.size() > 0
+        && dados.mensagem.size() <= 500
+        && dados.criadoPor is string
+        && dados.criadoEm is timestamp;
+    }
+
+    function dadosReservaAulaValidos(tenantId, dados) {
+      return dados.keys().hasOnly(['alunoId', 'turmaId', 'dataAula', 'status', 'observacao',
+          'criadoPor', 'criadoEm', 'atualizadoEm', 'gerenciadoPor', 'gerenciadoEm'])
+        && dados.keys().hasAll(['alunoId', 'turmaId', 'dataAula', 'status', 'criadoPor', 'criadoEm'])
+        && alunoTecnicoExiste(tenantId, dados.alunoId)
+        && dados.turmaId is string
+        && exists(/databases/$(database)/documents/tenants/$(tenantId)/turmas/$(dados.turmaId))
+        && dados.dataAula is timestamp
+        && dados.status in ['solicitada', 'confirmada', 'lista_espera', 'cancelada', 'recusada']
+        && (!('observacao' in dados) || (dados.observacao is string && dados.observacao.size() <= 300))
+        && dados.criadoPor is string
+        && dados.criadoEm is timestamp
+        && (!('atualizadoEm' in dados) || dados.atualizadoEm is timestamp)
+        && (!('gerenciadoPor' in dados) || dados.gerenciadoPor is string)
+        && (!('gerenciadoEm' in dados) || dados.gerenciadoEm is timestamp);
+    }
+
+    function podeGerenciarReservaAula(tenantId, alunoId) {
+      return isTenantAdmin(tenantId)
+        || professorVinculadoAoAluno(tenantId, alunoId);
+    }
+
     match /tenantSlugs/{slug} {
       allow read: if tenantSlugValido(slug)
         && resource.data.keys().hasOnly(['tenantId', 'tenantSlug', 'status', 'dominioPrincipal', 'atualizadoEm'])
@@ -566,6 +735,14 @@ service cloud.firestore {
                            'valorMensalidade', 'kids', 'responsaveis', 'adminAtualizadoEm'])
             && request.resource.data.adminAtualizadoEm == request.time
             && camposAdminAlunoValidos(tenantId, request.resource.data))
+          ||
+          (podeGerenciarCrmAluno(tenantId, alunoId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['statusComercial', 'tagsCrm', 'ultimaInteracaoEm', 'crmAtualizadoPor', 'crmAtualizadoEm'])
+            && request.resource.data.crmAtualizadoPor == request.auth.uid
+            && request.resource.data.crmAtualizadoEm == request.time
+            && request.resource.data.ultimaInteracaoEm == request.time
+            && camposCrmAlunoValidos(request.resource.data))
         );
 
         allow delete: if false;
@@ -624,6 +801,78 @@ service cloud.firestore {
           && request.resource.data.valor <= 5000
           && (!('pixCopiaECola' in request.resource.data) || (request.resource.data.pixCopiaECola is string && request.resource.data.pixCopiaECola.size() <= 500));
         allow delete: if false;
+      }
+
+      match /evolucoes/{evolucaoId} {
+        allow read: if podeLerEvolucaoAluno(tenantId, resource.data.alunoId);
+        allow create: if podeGerenciarEvolucaoAluno(tenantId, request.resource.data.alunoId)
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && request.resource.data.atualizadoEm == request.time
+          && dadosEvolucaoValidos(tenantId, request.resource.data);
+        allow update: if podeGerenciarEvolucaoAluno(tenantId, resource.data.alunoId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['titulo', 'status', 'observacao', 'atualizadoEm'])
+          && request.resource.data.alunoId == resource.data.alunoId
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && request.resource.data.atualizadoEm == request.time
+          && dadosEvolucaoValidos(tenantId, request.resource.data);
+        allow delete: if podeGerenciarEvolucaoAluno(tenantId, resource.data.alunoId);
+      }
+
+      match /metasAluno/{metaId} {
+        allow read: if podeLerEvolucaoAluno(tenantId, resource.data.alunoId);
+        allow create: if podeGerenciarEvolucaoAluno(tenantId, request.resource.data.alunoId)
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && request.resource.data.atualizadoEm == request.time
+          && dadosMetaAlunoValidos(tenantId, request.resource.data);
+        allow update: if podeGerenciarEvolucaoAluno(tenantId, resource.data.alunoId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['tipo', 'titulo', 'status', 'progresso', 'alvo', 'prazo', 'atualizadoEm'])
+          && request.resource.data.alunoId == resource.data.alunoId
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && request.resource.data.atualizadoEm == request.time
+          && dadosMetaAlunoValidos(tenantId, request.resource.data);
+        allow delete: if podeGerenciarEvolucaoAluno(tenantId, resource.data.alunoId);
+      }
+
+      match /conquistas/{conquistaId} {
+        allow read: if isTenantAluno(tenantId);
+        allow create: if isTenantAdmin(tenantId)
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && request.resource.data.atualizadoEm == request.time
+          && dadosConquistaValidos(request.resource.data);
+        allow update: if isTenantAdmin(tenantId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['titulo', 'descricao', 'tipo', 'regra', 'pontos', 'ativo', 'atualizadoEm'])
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && request.resource.data.atualizadoEm == request.time
+          && dadosConquistaValidos(request.resource.data);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      match /conquistasAluno/{conquistaAlunoId} {
+        allow read: if podeLerEvolucaoAluno(tenantId, resource.data.alunoId);
+        allow create: if podeGerenciarEvolucaoAluno(tenantId, request.resource.data.alunoId)
+          && request.resource.data.desbloqueadoPor == request.auth.uid
+          && request.resource.data.desbloqueadoEm == request.time
+          && dadosConquistaAlunoValidos(tenantId, request.resource.data);
+        allow update: if false;
+        allow delete: if podeGerenciarEvolucaoAluno(tenantId, resource.data.alunoId);
+      }
+
+      match /crmInteracoes/{interacaoId} {
+        allow read: if podeGerenciarCrmAluno(tenantId, resource.data.alunoId);
+        allow create: if podeGerenciarCrmAluno(tenantId, request.resource.data.alunoId)
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && dadosCrmInteracaoValidos(tenantId, request.resource.data);
+        allow update, delete: if false;
       }
 
       match /agendamentos/{agendamentoId} {
@@ -698,17 +947,48 @@ service cloud.firestore {
         allow get: if isTenantAdmin(tenantId) || (tenantAtivo(tenantId) && turmaPublicaValida(resource.data));
         allow list: if isTenantAdmin(tenantId) || tenantAtivo(tenantId);
         allow create: if isTenantAdmin(tenantId)
-          && request.resource.data.keys().hasOnly(['nome', 'descricao', 'nivel', 'cor', 'ativo', 'ordem', 'criadoPor', 'criadoEm'])
+          && request.resource.data.keys().hasOnly(['nome', 'descricao', 'nivel', 'modalidade', 'cor',
+             'diasSemana', 'horarioInicio', 'horarioFim', 'capacidade', 'professorIds',
+             'ativo', 'ordem', 'criadoPor', 'criadoEm'])
           && request.resource.data.keys().hasAll(['nome', 'nivel', 'cor', 'ativo', 'ordem', 'criadoPor', 'criadoEm'])
           && request.resource.data.criadoPor == request.auth.uid
           && request.resource.data.criadoEm == request.time
           && dadosTurmaValidos(request.resource.data);
         allow update: if isTenantAdmin(tenantId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome', 'descricao', 'nivel', 'cor', 'ativo', 'ordem', 'atualizadoEm'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome', 'descricao', 'nivel',
+             'modalidade', 'cor', 'diasSemana', 'horarioInicio', 'horarioFim', 'capacidade',
+             'professorIds', 'ativo', 'ordem', 'atualizadoEm'])
           && request.resource.data.atualizadoEm == request.time
           && request.resource.data.criadoPor == resource.data.criadoPor
           && request.resource.data.criadoEm == resource.data.criadoEm
           && dadosTurmaValidos(request.resource.data);
+        allow delete: if isTenantAdmin(tenantId);
+      }
+
+      match /reservasAula/{reservaId} {
+        allow read: if isTenantAdmin(tenantId)
+          || (isTenantAluno(tenantId) && resource.data.alunoId == request.auth.uid)
+          || professorVinculadoAoAluno(tenantId, resource.data.alunoId);
+        allow create: if isTenantAluno(tenantId)
+          && request.resource.data.alunoId == request.auth.uid
+          && request.resource.data.status == 'solicitada'
+          && request.resource.data.criadoPor == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && !('gerenciadoPor' in request.resource.data)
+          && !('gerenciadoEm' in request.resource.data)
+          && dadosReservaAulaValidos(tenantId, request.resource.data);
+        allow update: if podeGerenciarReservaAula(tenantId, resource.data.alunoId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'gerenciadoPor', 'gerenciadoEm', 'atualizadoEm'])
+          && request.resource.data.alunoId == resource.data.alunoId
+          && request.resource.data.turmaId == resource.data.turmaId
+          && request.resource.data.dataAula == resource.data.dataAula
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.criadoEm == resource.data.criadoEm
+          && request.resource.data.gerenciadoPor == request.auth.uid
+          && request.resource.data.gerenciadoEm == request.time
+          && request.resource.data.atualizadoEm == request.time
+          && dadosReservaAulaValidos(tenantId, request.resource.data);
         allow delete: if isTenantAdmin(tenantId);
       }
 

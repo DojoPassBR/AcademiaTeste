@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel do Professor - DojoPass</title>
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
-<link rel="stylesheet" href="app.css?v=20260912">
+<link rel="stylesheet" href="app.css?v=20260913">
 </head>
-<body>
+<body class="admin-premium-page">
 
 <div class="app-shell">
 
@@ -16,9 +16,9 @@
        de agrupamento, sem comportamento de clique. -->
   <aside class="app-sidebar" id="app-sidebar">
     <div class="app-sidebar-brand">
-      <img src="../assets/logo.svg" alt="Logo">
+      <span class="sidebar-brand-mark" aria-hidden="true">A</span>
       <div>
-        <strong>DojoPass</strong>
+        <strong>Dojo<span>Pass</span></strong>
         <span>Painel administrativo</span>
       </div>
     </div>
@@ -28,6 +28,7 @@
 
       <span class="app-sidebar-group-label">Gestão</span>
       <a class="app-sidebar-link" id="nav-alunos" data-alvo="card-alunos" href="#card-alunos"><span class="icon" aria-hidden="true">🧑‍🎓</span>Alunos</a>
+      <a class="app-sidebar-link" id="nav-crm" data-alvo="card-crm" href="#card-crm"><span class="icon" aria-hidden="true">☎</span>CRM</a>
       <a class="app-sidebar-link" id="nav-professores" data-alvo="card-professores" href="#card-professores"><span class="icon" aria-hidden="true">🧑‍🏫</span>Professores</a>
       <a class="app-sidebar-link" id="nav-turmas" data-alvo="card-turmas" href="#card-turmas"><span class="icon" aria-hidden="true">🥋</span>Turmas</a>
       <a class="app-sidebar-link" id="nav-equipe" data-alvo="card-equipe" href="#card-equipe"><span class="icon" aria-hidden="true">👥</span>Equipe</a>
@@ -36,12 +37,20 @@
       <a class="app-sidebar-link" id="nav-agendamentos" data-alvo="card-agendamentos" href="#card-agendamentos"><span class="icon" aria-hidden="true">📆</span>Agendamentos</a>
       <a class="app-sidebar-link" id="nav-parceiros" data-alvo="card-parceiros" href="#card-parceiros"><span class="icon" aria-hidden="true">🤝</span>Parceiros</a>
       <a class="app-sidebar-link" id="nav-progresso" data-alvo="card-progresso" href="#card-progresso"><span class="icon" aria-hidden="true">🏅</span>Progresso</a>
+      <a class="app-sidebar-link" id="nav-evolucao" data-alvo="card-evolucao" href="#card-evolucao"><span class="icon" aria-hidden="true">📈</span>Evolução</a>
+      <a class="app-sidebar-link" id="nav-conquistas" data-alvo="card-conquistas" href="#card-conquistas"><span class="icon" aria-hidden="true">★</span>Conquistas</a>
       <a class="app-sidebar-link" id="nav-relatorios" data-alvo="card-relatorios" href="#card-relatorios"><span class="icon" aria-hidden="true">📄</span>Relatórios</a>
 
       <span class="app-sidebar-group-label">Configurações</span>
       <a class="app-sidebar-link" id="nav-perfil-academia" data-alvo="card-perfil-academia" href="#card-perfil-academia"><span class="icon" aria-hidden="true">🏠</span>Perfil da academia</a>
       <a class="app-sidebar-link" id="nav-configuracoes" data-alvo="card-configuracoes" href="#card-configuracoes"><span class="icon" aria-hidden="true">⚙️</span>Configurações</a>
     </nav>
+
+    <div class="app-sidebar-academy-card">
+      <strong>DojoPass Academy</strong>
+      <span>Jiu-Jitsu · Disciplina · Evolução</span>
+      <p>“Artes marciais formam pessoas melhores.”</p>
+    </div>
 
     <div class="app-sidebar-footer">
       <span class="quem" id="sidebar-usuario"></span>
@@ -55,9 +64,34 @@
     <button type="button" class="app-sidebar-toggle" id="btn-toggle-sidebar" aria-expanded="false" aria-controls="app-sidebar">☰ Menu</button>
 
     <div class="app-content-header">
-      <div>
-        <h1>Painel administrativo</h1>
-        <p>Acompanhe alunos, mensalidades e o conteúdo público da sua academia.</p>
+      <div class="admin-top-brand">
+        <button type="button" class="admin-menu-square" aria-label="Menu">☰</button>
+        <div class="admin-academy-avatar">
+          <img src="../assets/landing/dojopass-logo-final-horizontal.png" alt="">
+        </div>
+        <div>
+          <strong>DojoPass Academy</strong>
+          <span>Jiu-Jitsu · São Paulo, SP</span>
+        </div>
+      </div>
+      <div class="admin-top-actions" aria-label="Ações rápidas">
+        <label class="admin-search" for="admin-busca-global">
+          <span aria-hidden="true">⌕</span>
+          <input id="admin-busca-global" type="search" placeholder="Buscar alunos, turmas, pagamentos...">
+        </label>
+        <div class="admin-date-pill">
+          <span aria-hidden="true">📅</span>
+          <strong id="admin-dia-semana">Hoje</strong>
+          <small id="admin-data-curta">--</small>
+        </div>
+        <button type="button" class="admin-icon-btn" aria-label="Notificações">🔔<span>3</span></button>
+        <div class="admin-profile-chip">
+          <div class="admin-profile-avatar">J</div>
+          <div>
+            <strong>Jairo</strong>
+            <span>Administrador</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -69,6 +103,27 @@
   <div id="conteudo" style="display:none;">
 
     <section id="tela-dashboard" role="region" aria-label="Dashboard" tabindex="-1">
+    <div class="admin-hero-panel" aria-label="Resumo premium da academia">
+      <div>
+        <span class="admin-eyebrow">Painel administrativo</span>
+        <h2 id="admin-saudacao">Boa noite, equipe</h2>
+        <p>Disciplina hoje. Alunos melhores amanhã.</p>
+        <blockquote>“Pequenos progressos diários geram grandes resultados.”</blockquote>
+      </div>
+      <div class="admin-health-card">
+        <div class="admin-health-ring"><strong>87%</strong></div>
+        <div>
+          <strong>Excelente</strong>
+          <span>Academia em ótimo momento</span>
+        </div>
+      </div>
+      <div class="admin-hero-mantra">
+        <span>Mais disciplina</span>
+        <span>Mais pessoas</span>
+        <span>Mais histórias</span>
+      </div>
+    </div>
+
     <div class="card panel" id="card-dashboard" tabindex="-1">
       <div class="card-header-row panel-header">
         <div>
@@ -103,38 +158,125 @@
             <span class="kpi-numero stat-card-value">—</span>
             <span class="kpi-rotulo stat-card-label">Cobranças aguardando confirmação</span>
           </div>
+          <div class="kpi stat-card">
+            <span class="icon stat-card-icon" aria-hidden="true">↗</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Retenção de alunos</span>
+          </div>
+          <div class="kpi stat-card">
+            <span class="icon stat-card-icon" aria-hidden="true">R$</span>
+            <span class="kpi-numero stat-card-value">—</span>
+            <span class="kpi-rotulo stat-card-label">Receita do mês</span>
+          </div>
         </div>
 
-        <div class="dashboard-listas">
-          <div>
-            <h3>Próximos eventos</h3>
-            <ul class="checkin-list" id="dashboard-lista-eventos"></ul>
-          </div>
-          <div>
-            <h3>Aulas de hoje</h3>
-            <ul class="checkin-list" id="dashboard-lista-aulas"></ul>
-          </div>
+        <div class="dashboard-insight-grid">
+          <section class="dashboard-insight-card dashboard-trend-card" aria-label="Check-ins dos últimos 30 dias">
+            <div class="dashboard-insight-head">
+              <h3>Check-ins (últimos 30 dias)</h3>
+              <span>Últimos 30 dias</span>
+            </div>
+            <div class="dashboard-line-chart" aria-hidden="true">
+              <svg viewBox="0 0 560 210" role="img">
+                <defs>
+                  <linearGradient id="admin-line-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#f02632" stop-opacity="0.34"/>
+                    <stop offset="100%" stop-color="#f02632" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path class="dashboard-grid-line" d="M20 35H540M20 88H540M20 141H540M20 194H540"/>
+                <path class="dashboard-area" d="M20 164 C52 116 76 172 106 126 S160 105 192 94 S246 120 276 86 S332 114 362 94 S420 72 454 58 S510 84 540 44 V194 H20 Z"/>
+                <path class="dashboard-line" d="M20 164 C52 116 76 172 106 126 S160 105 192 94 S246 120 276 86 S332 114 362 94 S420 72 454 58 S510 84 540 44"/>
+                <circle cx="540" cy="44" r="5"/>
+              </svg>
+            </div>
+          </section>
+
+          <section class="dashboard-insight-card dashboard-donut-card" aria-label="Mensalidades por status">
+            <div class="dashboard-insight-head">
+              <h3>Mensalidades por status</h3>
+            </div>
+            <div class="dashboard-donut-wrap">
+              <div class="dashboard-donut"><strong>21</strong><span>alunos</span></div>
+              <ul>
+                <li><span class="dot green"></span>Em dia <strong>13</strong></li>
+                <li><span class="dot orange"></span>Pendente <strong>8</strong></li>
+                <li><span class="dot red"></span>Atrasada <strong>3</strong></li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="dashboard-insight-card dashboard-belts-card" aria-label="Faixas e evolução">
+            <div class="dashboard-insight-head">
+              <h3>Faixas e evolução</h3>
+            </div>
+            <div class="dashboard-bars">
+              <span style="--h:78%;--c:#e8e9ed"><b>6</b><i>Branca</i></span>
+              <span style="--h:56%;--c:#b8bec9"><b>4</b><i>Cinza</i></span>
+              <span style="--h:55%;--c:#f5cc38"><b>4</b><i>Amarela</i></span>
+              <span style="--h:42%;--c:#ff7a2d"><b>3</b><i>Laranja</i></span>
+              <span style="--h:34%;--c:#22984b"><b>2</b><i>Verde</i></span>
+              <span style="--h:20%;--c:#2f71d6"><b>1</b><i>Azul</i></span>
+              <span style="--h:20%;--c:#7b35b7"><b>1</b><i>Roxa</i></span>
+            </div>
+          </section>
         </div>
 
-        <div class="dashboard-graficos">
-          <figure class="grafico-figura panel">
-            <figcaption>Mensalidade</figcaption>
-            <div class="grafico-box"><canvas id="grafico-mensalidade" aria-hidden="true"></canvas></div>
-            <p class="grafico-indisponivel" id="grafico-mensalidade-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
-            <ul class="grafico-dados" id="grafico-mensalidade-dados"></ul>
-          </figure>
-          <figure class="grafico-figura panel">
-            <figcaption>Check-ins (últimos 7 dias)</figcaption>
-            <div class="grafico-box"><canvas id="grafico-checkins" aria-hidden="true"></canvas></div>
-            <p class="grafico-indisponivel" id="grafico-checkins-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
-            <ul class="grafico-dados" id="grafico-checkins-dados"></ul>
-          </figure>
-          <figure class="grafico-figura panel">
-            <figcaption>Cobranças por status</figcaption>
-            <div class="grafico-box"><canvas id="grafico-cobrancas" aria-hidden="true"></canvas></div>
-            <p class="grafico-indisponivel" id="grafico-cobrancas-indisponivel" hidden>Gráfico indisponível — os números estão na lista abaixo.</p>
-            <ul class="grafico-dados" id="grafico-cobrancas-dados"></ul>
-          </figure>
+        <div class="dashboard-bottom-grid">
+          <section class="dashboard-insight-card">
+            <div class="dashboard-insight-head">
+              <h3>Próximas aulas</h3>
+              <a href="#card-horarios">Ver todas</a>
+            </div>
+            <ul class="checkin-list dashboard-live-list" id="dashboard-lista-aulas"></ul>
+          </section>
+          <section class="dashboard-insight-card">
+            <div class="dashboard-insight-head">
+              <h3>Aniversariantes</h3>
+              <a href="#card-progresso">Ver todos</a>
+            </div>
+            <ul class="dashboard-avatar-list">
+              <li><span>LO</span><strong>Lucas Oliveira</strong><small>Hoje</small></li>
+              <li><span>MS</span><strong>Mariana Souza</strong><small>Amanhã</small></li>
+              <li><span>RL</span><strong>Rafael Lima</strong><small>Em 3 dias</small></li>
+            </ul>
+          </section>
+          <section class="dashboard-insight-card">
+            <div class="dashboard-insight-head">
+              <h3>Ranking da semana</h3>
+              <span>Check-ins</span>
+            </div>
+            <ol class="dashboard-ranking-list">
+              <li><span>1</span><strong>Bruno Henrique</strong><small>12 check-ins</small></li>
+              <li><span>2</span><strong>Camila Santos</strong><small>11 check-ins</small></li>
+              <li><span>3</span><strong>Diego Almeida</strong><small>10 check-ins</small></li>
+              <li><span>4</span><strong>Lucas Oliveira</strong><small>9 check-ins</small></li>
+            </ol>
+          </section>
+          <section class="dashboard-insight-card">
+            <div class="dashboard-insight-head">
+              <h3>Tarefas e alertas</h3>
+              <a href="#card-crm">Ver todos</a>
+            </div>
+            <ul class="dashboard-alert-list">
+              <li class="danger"><strong>Mensalidades pendentes</strong><small>Entre em contato com os alunos</small></li>
+              <li class="danger"><strong>Alunos sem check-in</strong><small>Verificar engajamento</small></li>
+              <li class="success"><strong>Tudo em dia!</strong><small>Não há tarefas críticas no momento.</small></li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="dashboard-legacy-data" aria-hidden="true">
+          <canvas id="grafico-mensalidade"></canvas>
+          <canvas id="grafico-checkins"></canvas>
+          <canvas id="grafico-cobrancas"></canvas>
+          <p id="grafico-mensalidade-indisponivel" hidden></p>
+          <p id="grafico-checkins-indisponivel" hidden></p>
+          <p id="grafico-cobrancas-indisponivel" hidden></p>
+          <ul id="grafico-mensalidade-dados"></ul>
+          <ul id="grafico-checkins-dados"></ul>
+          <ul id="grafico-cobrancas-dados"></ul>
+          <ul id="dashboard-lista-eventos"></ul>
         </div>
       </div>
     </div>
@@ -158,6 +300,121 @@
             <tr><td colspan="6">Carregando...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="card panel" id="card-crm" role="region" aria-label="CRM de alunos" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <div>
+          <h2>CRM de retenção</h2>
+          <p>Acompanhe alunos que precisam de contato e registre cada interação individual.</p>
+        </div>
+      </div>
+
+      <div class="crm-summary-grid" id="crm-resumo">
+        <div class="crm-summary-item"><strong id="crm-total-sumidos">0</strong><span>Sumidos</span></div>
+        <div class="crm-summary-item"><strong id="crm-total-inadimplentes">0</strong><span>Inadimplentes</span></div>
+        <div class="crm-summary-item"><strong id="crm-total-aniversariantes">0</strong><span>Aniversários</span></div>
+        <div class="crm-summary-item"><strong id="crm-total-graduacao">0</strong><span>Próx. graduação</span></div>
+      </div>
+
+      <div class="config-form-row crm-filters">
+        <div>
+          <label for="crm-filtro">Lista</label>
+          <select id="crm-filtro">
+            <option value="todos">Todos com prioridade</option>
+            <option value="sumidos">Sumidos</option>
+            <option value="inadimplentes">Inadimplentes</option>
+            <option value="aniversariantes">Aniversariantes</option>
+            <option value="graduacao">Próximos da graduação</option>
+          </select>
+        </div>
+        <div>
+          <label for="crm-dias-sumido">Dias sem check-in</label>
+          <input type="number" id="crm-dias-sumido" min="1" max="120" step="1" value="14">
+        </div>
+        <div>
+          <label for="crm-professor">Professor</label>
+          <select id="crm-professor"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="crm-status-filtro">Status comercial</label>
+          <select id="crm-status-filtro">
+            <option value="">Todos</option>
+            <option value="ativo">Ativo</option>
+            <option value="acompanhar">Acompanhar</option>
+            <option value="risco">Risco</option>
+            <option value="recuperacao">Recuperação</option>
+            <option value="pausado">Pausado</option>
+            <option value="convertido">Convertido</option>
+          </select>
+        </div>
+        <div>
+          <label for="crm-tag-filtro">Tag</label>
+          <input type="text" id="crm-tag-filtro" maxlength="24" placeholder="Ex.: competição">
+        </div>
+      </div>
+
+      <div class="crm-layout">
+        <div>
+          <h3>Alunos para contato</h3>
+          <ul class="checkin-list panel-lista crm-list" id="crm-lista">
+            <li>Carregando alunos...</li>
+          </ul>
+        </div>
+
+        <div class="crm-register">
+          <h3>Registrar interação</h3>
+          <div class="config-form-row">
+            <div>
+              <label for="crm-aluno">Aluno</label>
+              <select id="crm-aluno"><option value="">Escolha um aluno</option></select>
+            </div>
+            <div>
+              <label for="crm-canal">Canal</label>
+              <select id="crm-canal">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telefone">Telefone</option>
+                <option value="presencial">Presencial</option>
+                <option value="email">E-mail</option>
+              </select>
+            </div>
+            <div>
+              <label for="crm-interacao-status">Status da interação</label>
+              <select id="crm-interacao-status">
+                <option value="aberto">Aberto</option>
+                <option value="respondido">Respondido</option>
+                <option value="resolvido">Resolvido</option>
+                <option value="sem_resposta">Sem resposta</option>
+              </select>
+            </div>
+            <div>
+              <label for="crm-status-comercial">Status comercial</label>
+              <select id="crm-status-comercial">
+                <option value="ativo">Ativo</option>
+                <option value="acompanhar">Acompanhar</option>
+                <option value="risco">Risco</option>
+                <option value="recuperacao">Recuperação</option>
+                <option value="pausado">Pausado</option>
+                <option value="convertido">Convertido</option>
+              </select>
+            </div>
+          </div>
+          <label for="crm-tags">Tags</label>
+          <input type="text" id="crm-tags" maxlength="220" placeholder="Ex.: sumido, campeonato, manhã">
+          <label for="crm-mensagem">Mensagem ou observação</label>
+          <textarea id="crm-mensagem" class="config-textarea" maxlength="500" rows="4"
+            placeholder="Ex.: Chamado pelo WhatsApp para retomar os treinos nesta semana."></textarea>
+          <div class="card-header-acoes crm-actions">
+            <button type="button" class="btn-secundario" id="crm-whatsapp">Abrir WhatsApp</button>
+            <button type="button" class="btn" id="crm-registrar">Registrar interação</button>
+          </div>
+          <div class="msg" id="crm-msg" role="status" aria-live="polite"></div>
+          <h3>Histórico recente</h3>
+          <ul class="checkin-list panel-lista crm-history" id="crm-historico">
+            <li>Escolha um aluno.</li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -215,20 +472,16 @@
           <button type="button" class="btn-secundario" id="btn-nova-turma">Cadastrar turma</button>
         </div>
       </div>
-      <p class="aviso-publico">Tudo o que for salvo aqui aparece no site público, sem necessidade de login.
-        Desmarcar "Turma ativa" só tira a turma da exibição (site e app): o registro continua
-        no banco e é tecnicamente legível por qualquer pessoa sem login que consulte o banco
-        diretamente. Para remover de verdade, use o botão Apagar.</p>
-      <p>Cada turma vira um card na página da academia. A ordem define a posição na
-        listagem (0 aparece primeiro).</p>
+      <p>Cadastre turmas recorrentes com professores, dias da semana, horário e capacidade.
+        Alunos podem solicitar vaga; a confirmação continua com a equipe para evitar overbooking.</p>
 
       <div style="overflow-x:auto;margin-top:24px;">
         <table class="admin-table panel-table" id="tabela-turmas">
           <thead>
-            <tr><th>Nome</th><th>Nível</th><th>Cor</th><th>Ordem</th><th>Status</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>Modalidade</th><th>Dias</th><th>Horário</th><th>Professores</th><th>Capacidade</th><th>Status</th><th>Ações</th></tr>
           </thead>
           <tbody>
-            <tr><td colspan="6">Carregando...</td></tr>
+            <tr><td colspan="8">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -416,6 +669,25 @@
       <button type="button" class="btn" id="agendamento-salvar" hidden>Salvar agendamento</button>
       <button type="button" class="btn-secundario" id="agendamento-cancelar" hidden>Cancelar</button>
       <div class="msg" id="agendamento-msg" role="status" aria-live="polite"></div>
+      <div class="scheduler-admin-grid" style="margin-top:24px;">
+        <div>
+          <h3>Reservas de aulas recorrentes</h3>
+          <p class="config-dica">Solicitações entram aqui antes de virar vaga confirmada.</p>
+          <div style="overflow-x:auto;">
+            <table class="admin-table panel-table" id="tabela-reservas-aula">
+              <thead><tr><th>Aula</th><th>Aluno</th><th>Ocupação</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>Próximas aulas por turma</h3>
+          <ul class="checkin-list panel-lista scheduler-list" id="lista-ocupacao-turmas">
+            <li>Carregando...</li>
+          </ul>
+        </div>
+      </div>
+
       <div style="overflow-x:auto;margin-top:24px;">
         <table class="admin-table panel-table" id="tabela-agendamentos">
           <thead><tr><th>Título</th><th>Quando</th><th>Tipo</th><th>Reservas</th><th>Status</th><th>Ações</th></tr></thead>
@@ -485,12 +757,215 @@
       <div class="msg" id="progresso-msg" role="status" aria-live="polite"></div>
     </div>
 
+    <div class="card panel" id="card-evolucao" role="region" aria-label="Evolução técnica" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <div>
+          <h2>Evolução técnica</h2>
+          <p>Registre técnicas, revisões e metas individuais dos alunos.</p>
+        </div>
+      </div>
+
+      <div class="config-form-row">
+        <div>
+          <label for="evolucao-aluno">Aluno</label>
+          <select id="evolucao-aluno"><option value="">Carregando alunos...</option></select>
+        </div>
+        <div>
+          <label for="evolucao-status">Status técnico</label>
+          <select id="evolucao-status">
+            <option value="desenvolvimento">Em desenvolvimento</option>
+            <option value="apto">Apto</option>
+            <option value="revisar">Revisar</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="config-form-row">
+        <div>
+          <label for="evolucao-titulo">Técnica ou título</label>
+          <input type="text" id="evolucao-titulo" maxlength="120" placeholder="Ex.: Passagem de guarda em pé">
+        </div>
+        <div>
+          <label for="meta-titulo">Nova meta do aluno</label>
+          <input type="text" id="meta-titulo" maxlength="120" placeholder="Ex.: Revisar raspagem da meia-guarda">
+        </div>
+      </div>
+
+      <label for="evolucao-observacao">Observação técnica</label>
+      <textarea id="evolucao-observacao" class="config-textarea" maxlength="500" rows="3"
+        placeholder="Ex.: Entrou bem na posição, precisa ajustar a pegada da gola."></textarea>
+
+      <div class="card-header-acoes evolution-actions">
+        <button type="button" class="btn" id="evolucao-salvar">Salvar evolução</button>
+      </div>
+
+      <div class="evolution-meta-box">
+        <div class="config-form-row">
+          <div>
+            <label for="meta-tipo">Tipo de meta</label>
+            <select id="meta-tipo">
+              <option value="tecnica">Técnica</option>
+              <option value="frequencia">Frequência</option>
+              <option value="graduacao">Graduação</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label for="meta-status">Status da meta</label>
+            <select id="meta-status">
+              <option value="ativa">Ativa</option>
+              <option value="concluida">Concluída</option>
+              <option value="pausada">Pausada</option>
+            </select>
+          </div>
+          <div>
+            <label for="meta-progresso">Progresso (%)</label>
+            <input type="number" id="meta-progresso" min="0" max="100" step="1" value="0">
+          </div>
+          <div>
+            <label for="meta-prazo">Prazo</label>
+            <input type="date" id="meta-prazo">
+          </div>
+        </div>
+        <label for="meta-alvo">Alvo ou detalhe da meta</label>
+        <input type="text" id="meta-alvo" maxlength="120" placeholder="Ex.: 12 treinos no mês ou dominar 3 entradas">
+        <div class="card-header-acoes evolution-actions">
+          <button type="button" class="btn-secundario" id="meta-salvar">Criar meta</button>
+        </div>
+      </div>
+
+      <div class="msg" id="evolucao-msg" role="status" aria-live="polite"></div>
+
+      <div class="dashboard-listas evolution-lists">
+        <div>
+          <h3>Registros recentes</h3>
+          <ul class="checkin-list panel-lista evolution-list" id="lista-evolucoes-admin"><li>Escolha um aluno.</li></ul>
+        </div>
+        <div>
+          <h3>Metas do aluno</h3>
+          <ul class="checkin-list panel-lista evolution-list" id="lista-metas-admin"><li>Escolha um aluno.</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel" id="card-conquistas" role="region" aria-label="Conquistas e desafios" tabindex="-1" hidden>
+      <div class="card-header-row panel-header">
+        <div>
+          <h2>Conquistas e desafios</h2>
+          <p>Crie medalhas, desafios e desbloqueie conquistas manualmente para os alunos.</p>
+        </div>
+      </div>
+
+      <div class="achievement-admin-grid">
+        <div class="achievement-admin-card">
+          <h3 id="conquista-form-titulo">Nova conquista</h3>
+          <div class="config-form-row">
+            <div>
+              <label for="conquista-titulo">Título</label>
+              <input type="text" id="conquista-titulo" maxlength="80" placeholder="Ex.: 10 treinos no mês">
+            </div>
+            <div>
+              <label for="conquista-tipo">Tipo</label>
+              <select id="conquista-tipo">
+                <option value="frequencia">Frequência</option>
+                <option value="streak">Sequência</option>
+                <option value="graduacao">Graduação</option>
+                <option value="manual">Manual</option>
+                <option value="evento">Evento</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="conquista-descricao">Descrição</label>
+          <textarea id="conquista-descricao" class="config-textarea" maxlength="240" rows="3"
+            placeholder="Ex.: Concedida ao aluno que manteve uma boa frequência no mês."></textarea>
+
+          <div class="config-form-row">
+            <div>
+              <label for="conquista-regra">Regra ou critério</label>
+              <input type="text" id="conquista-regra" maxlength="120" placeholder="Ex.: 10 check-ins no mês">
+            </div>
+            <div>
+              <label for="conquista-pontos">Pontos</label>
+              <input type="number" id="conquista-pontos" min="0" max="10000" step="1" value="10">
+            </div>
+            <label class="config-check achievement-check">
+              <input type="checkbox" id="conquista-ativo" checked>
+              Ativa
+            </label>
+          </div>
+
+          <div class="card-header-acoes achievement-actions">
+            <button type="button" class="btn" id="conquista-salvar">Salvar conquista</button>
+            <button type="button" class="btn-secundario" id="conquista-cancelar" hidden>Cancelar edição</button>
+          </div>
+          <div class="msg" id="conquista-msg" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="achievement-admin-card">
+          <h3>Desbloquear para aluno</h3>
+          <div class="config-form-row">
+            <div>
+              <label for="conquista-aluno">Aluno</label>
+              <select id="conquista-aluno"><option value="">Carregando alunos...</option></select>
+            </div>
+            <div>
+              <label for="conquista-selecionada">Conquista</label>
+              <select id="conquista-selecionada"><option value="">Carregando conquistas...</option></select>
+            </div>
+          </div>
+          <button type="button" class="btn-secundario" id="conquista-desbloquear">Desbloquear conquista</button>
+          <h3>Conquistas do aluno</h3>
+          <ul class="checkin-list panel-lista achievement-list" id="lista-conquistas-aluno-admin">
+            <li>Escolha um aluno.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Catálogo</h3>
+      <div class="panel-scroll">
+        <table class="admin-table panel-table" id="tabela-conquistas">
+          <thead><tr><th>Conquista</th><th>Tipo</th><th>Pontos</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card panel" id="card-relatorios" role="region" aria-label="Relatórios e disparo" tabindex="-1" hidden>
       <div class="card-header-row panel-header">
         <h2>Relatórios e disparo</h2>
         <div class="card-header-acoes">
           <button type="button" class="btn-secundario" id="relatorio-csv-alunos">CSV alunos</button>
           <button type="button" class="btn-secundario" id="relatorio-csv-financeiro">CSV pagamentos</button>
+        </div>
+      </div>
+      <div class="finance-summary-grid" id="financeiro-resumo">
+        <div class="finance-summary-card">
+          <span>Receita prevista</span>
+          <strong id="financeiro-previsto">—</strong>
+        </div>
+        <div class="finance-summary-card">
+          <span>Recebido estimado</span>
+          <strong id="financeiro-recebido">—</strong>
+        </div>
+        <div class="finance-summary-card">
+          <span>Pendente estimado</span>
+          <strong id="financeiro-pendente">—</strong>
+        </div>
+        <div class="finance-summary-card">
+          <span>Valor por check-in</span>
+          <strong id="financeiro-checkin">—</strong>
+        </div>
+      </div>
+      <div class="dashboard-listas finance-dashboard-lists">
+        <div>
+          <h3>Composição</h3>
+          <ul class="checkin-list" id="financeiro-composicao"><li>Carregando...</li></ul>
+        </div>
+        <div>
+          <h3>Pendências prioritárias</h3>
+          <ul class="checkin-list" id="financeiro-pendencias"><li>Carregando...</li></ul>
         </div>
       </div>
       <div class="config-form-row">
@@ -801,6 +1276,19 @@
         </select>
       </div>
       <div>
+        <label for="turma-modalidade">Modalidade</label>
+        <select id="turma-modalidade">
+          <option value="jiu-jitsu">Jiu-jitsu</option>
+          <option value="judo">Judô</option>
+          <option value="muay-thai">Muay Thai</option>
+          <option value="boxe">Boxe</option>
+          <option value="mma">MMA</option>
+          <option value="kids">Kids</option>
+          <option value="funcional">Funcional</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div>
         <label for="turma-cor">Cor de destaque</label>
         <select id="turma-cor">
           <option value="red">Vermelho</option>
@@ -812,6 +1300,38 @@
       <div>
         <label for="turma-ordem">Ordem de exibição (0 a 99)</label>
         <input type="number" id="turma-ordem" min="0" max="99" step="1" value="0">
+      </div>
+      <div>
+        <label for="turma-horario-inicio">Início</label>
+        <input type="time" id="turma-horario-inicio">
+      </div>
+      <div>
+        <label for="turma-horario-fim">Fim</label>
+        <input type="time" id="turma-horario-fim">
+      </div>
+      <div>
+        <label for="turma-capacidade">Capacidade</label>
+        <input type="number" id="turma-capacidade" min="1" max="500" step="1" placeholder="Ex.: 24">
+      </div>
+    </div>
+
+    <div class="config-form-row scheduler-days-row">
+      <fieldset class="config-toggles">
+        <legend>Dias da semana</legend>
+        <div class="scheduler-days">
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="0"> Dom</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="1"> Seg</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="2"> Ter</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="3"> Qua</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="4"> Qui</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="5"> Sex</label>
+          <label class="config-check"><input type="checkbox" name="turma-dia" value="6"> Sáb</label>
+        </div>
+      </fieldset>
+      <div>
+        <label for="turma-professores">Professores</label>
+        <select id="turma-professores" multiple size="4"></select>
+        <p class="config-dica">Use Command/Ctrl para selecionar mais de um professor.</p>
       </div>
     </div>
 
@@ -1063,11 +1583,19 @@
 <script src="firebase-init.js?v=20260909"></script>
 <script src="tenant-context.js?v=20260909"></script>
 <script src="student-metrics.js?v=20260910"></script>
+<script src="student-evolution.js?v=20260911"></script>
+<script src="gamification.js?v=20260911"></script>
+<script src="crm-tools.js?v=20260911"></script>
+<script src="class-scheduler.js?v=20260911"></script>
+<script src="finance-dashboard.js?v=20260911"></script>
 <script src="reports-export.js?v=20260910"></script>
 <script>
 const btnSair = document.getElementById("btn-sair");
 const cardNegado = document.getElementById("card-negado");
 const conteudo = document.getElementById("conteudo");
+const adminSaudacao = document.getElementById("admin-saudacao");
+const adminDiaSemana = document.getElementById("admin-dia-semana");
+const adminDataCurta = document.getElementById("admin-data-curta");
 const tabelaAlunos = document.querySelector("#tabela-alunos tbody");
 const modalBackdrop = document.getElementById("modal-backdrop");
 const modalTitulo = document.getElementById("modal-titulo");
@@ -1075,6 +1603,24 @@ const modalLista = document.getElementById("modal-lista");
 const modalClose = document.getElementById("modal-close");
 const btnRelatorio = document.getElementById("btn-relatorio");
 const relatorioImpressao = document.getElementById("relatorio-impressao");
+
+function atualizarTopoAdmin() {
+  const agora = new Date();
+  const hora = agora.getHours();
+  const saudacao = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
+  if (adminSaudacao) adminSaudacao.textContent = saudacao + ", equipe";
+  if (adminDiaSemana) {
+    adminDiaSemana.textContent = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(agora);
+  }
+  if (adminDataCurta) {
+    adminDataCurta.textContent = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "long"
+    }).format(agora);
+  }
+}
+
+atualizarTopoAdmin();
 const cobrancaBackdrop = document.getElementById("cobranca-backdrop");
 const cobrancaClose = document.getElementById("cobranca-close");
 const cobrancaTitulo = document.getElementById("cobranca-titulo");
@@ -1211,6 +1757,8 @@ const manualPix = document.getElementById("manual-pix");
 const manualConfirmar = document.getElementById("manual-confirmar");
 const manualMsg = document.getElementById("manual-msg");
 const tabelaAgendamentos = document.querySelector("#tabela-agendamentos tbody");
+const tabelaReservasAula = document.querySelector("#tabela-reservas-aula tbody");
+const listaOcupacaoTurmas = document.getElementById("lista-ocupacao-turmas");
 const agendamentoNovo = document.getElementById("agendamento-novo");
 const agendamentoForm = document.getElementById("agendamento-form");
 const agendamentoTitulo = document.getElementById("agendamento-titulo");
@@ -1234,12 +1782,64 @@ const parceiroObservacaoLabel = document.getElementById("parceiro-observacao-lab
 const parceiroSalvar = document.getElementById("parceiro-salvar");
 const parceiroCancelar = document.getElementById("parceiro-cancelar");
 const parceiroMsg = document.getElementById("parceiro-msg");
+const evolucaoAluno = document.getElementById("evolucao-aluno");
+const evolucaoStatus = document.getElementById("evolucao-status");
+const evolucaoTitulo = document.getElementById("evolucao-titulo");
+const evolucaoObservacao = document.getElementById("evolucao-observacao");
+const evolucaoSalvar = document.getElementById("evolucao-salvar");
+const evolucaoMsg = document.getElementById("evolucao-msg");
+const listaEvolucoesAdmin = document.getElementById("lista-evolucoes-admin");
+const metaTitulo = document.getElementById("meta-titulo");
+const metaTipo = document.getElementById("meta-tipo");
+const metaStatus = document.getElementById("meta-status");
+const metaProgresso = document.getElementById("meta-progresso");
+const metaPrazo = document.getElementById("meta-prazo");
+const metaAlvo = document.getElementById("meta-alvo");
+const metaSalvar = document.getElementById("meta-salvar");
+const listaMetasAdmin = document.getElementById("lista-metas-admin");
+const conquistaFormTitulo = document.getElementById("conquista-form-titulo");
+const conquistaTitulo = document.getElementById("conquista-titulo");
+const conquistaDescricao = document.getElementById("conquista-descricao");
+const conquistaTipo = document.getElementById("conquista-tipo");
+const conquistaRegra = document.getElementById("conquista-regra");
+const conquistaPontos = document.getElementById("conquista-pontos");
+const conquistaAtivo = document.getElementById("conquista-ativo");
+const conquistaSalvar = document.getElementById("conquista-salvar");
+const conquistaCancelar = document.getElementById("conquista-cancelar");
+const conquistaMsg = document.getElementById("conquista-msg");
+const tabelaConquistas = document.querySelector("#tabela-conquistas tbody");
+const conquistaAluno = document.getElementById("conquista-aluno");
+const conquistaSelecionada = document.getElementById("conquista-selecionada");
+const conquistaDesbloquear = document.getElementById("conquista-desbloquear");
+const listaConquistasAlunoAdmin = document.getElementById("lista-conquistas-aluno-admin");
+const crmFiltro = document.getElementById("crm-filtro");
+const crmDiasSumido = document.getElementById("crm-dias-sumido");
+const crmProfessor = document.getElementById("crm-professor");
+const crmStatusFiltro = document.getElementById("crm-status-filtro");
+const crmTagFiltro = document.getElementById("crm-tag-filtro");
+const crmLista = document.getElementById("crm-lista");
+const crmAluno = document.getElementById("crm-aluno");
+const crmCanal = document.getElementById("crm-canal");
+const crmInteracaoStatus = document.getElementById("crm-interacao-status");
+const crmStatusComercial = document.getElementById("crm-status-comercial");
+const crmTags = document.getElementById("crm-tags");
+const crmMensagem = document.getElementById("crm-mensagem");
+const crmWhatsapp = document.getElementById("crm-whatsapp");
+const crmRegistrar = document.getElementById("crm-registrar");
+const crmMsg = document.getElementById("crm-msg");
+const crmHistorico = document.getElementById("crm-historico");
 const rankingLista = document.getElementById("ranking-lista");
 const aniversariantesLista = document.getElementById("aniversariantes-lista");
 const rankingRecalcular = document.getElementById("ranking-recalcular");
 const progressoMsg = document.getElementById("progresso-msg");
 const relatorioCsvAlunos = document.getElementById("relatorio-csv-alunos");
 const relatorioCsvFinanceiro = document.getElementById("relatorio-csv-financeiro");
+const financeiroPrevisto = document.getElementById("financeiro-previsto");
+const financeiroRecebido = document.getElementById("financeiro-recebido");
+const financeiroPendente = document.getElementById("financeiro-pendente");
+const financeiroCheckin = document.getElementById("financeiro-checkin");
+const financeiroComposicao = document.getElementById("financeiro-composicao");
+const financeiroPendencias = document.getElementById("financeiro-pendencias");
 const disparoFiltro = document.getElementById("disparo-filtro");
 const disparoProfessor = document.getElementById("disparo-professor");
 const disparoParceiro = document.getElementById("disparo-parceiro");
@@ -1255,9 +1855,10 @@ const disparoLinks = document.getElementById("disparo-links");
 // O vínculo item de menu -> seção é o atributo data-alvo de cada .app-sidebar-link.
 // ---------------------------------------------------------------------------
 const TODAS_SECOES = [
-  "tela-dashboard", "card-alunos", "card-professores", "card-turmas", "card-equipe",
+  "tela-dashboard", "card-alunos", "card-crm", "card-professores", "card-turmas", "card-equipe",
   "card-horarios", "card-perfil-academia", "card-eventos", "card-agendamentos",
-  "card-parceiros", "card-progresso", "card-relatorios", "card-configuracoes"
+  "card-parceiros", "card-progresso", "card-evolucao", "card-conquistas", "card-relatorios",
+  "card-configuracoes"
 ];
 
 const linksNavegacao = Array.from(document.querySelectorAll(".app-sidebar-link[data-alvo]"));
@@ -1763,6 +2364,21 @@ agendamentoCancelar.addEventListener("click", fecharFormularioAgendamento);
 parceiroNovo.addEventListener("click", () => abrirFormularioParceiro());
 parceiroSalvar.addEventListener("click", salvarParceiro);
 parceiroCancelar.addEventListener("click", fecharFormularioParceiro);
+evolucaoAluno.addEventListener("change", carregarEvolucaoAlunoSelecionado);
+evolucaoSalvar.addEventListener("click", salvarEvolucaoTecnica);
+metaSalvar.addEventListener("click", salvarMetaAluno);
+conquistaSalvar.addEventListener("click", salvarConquista);
+conquistaCancelar.addEventListener("click", limparFormularioConquista);
+conquistaAluno.addEventListener("change", carregarConquistasAlunoSelecionado);
+conquistaDesbloquear.addEventListener("click", desbloquearConquistaAluno);
+crmFiltro.addEventListener("change", renderCrm);
+crmDiasSumido.addEventListener("input", renderCrm);
+crmProfessor.addEventListener("change", renderCrm);
+crmStatusFiltro.addEventListener("change", renderCrm);
+crmTagFiltro.addEventListener("input", renderCrm);
+crmAluno.addEventListener("change", () => selecionarAlunoCrm(crmAluno.value, "acompanhamento"));
+crmWhatsapp.addEventListener("click", abrirWhatsappCrm);
+crmRegistrar.addEventListener("click", registrarInteracaoCrm);
 rankingRecalcular.addEventListener("click", recalcularRankingWorker);
 relatorioCsvAlunos.addEventListener("click", exportarCsvAlunos);
 relatorioCsvFinanceiro.addEventListener("click", exportarCsvFinanceiro);
@@ -1811,6 +2427,8 @@ auth.onAuthStateChanged(async (user) => {
   carregarConteudoPublico();
   carregarParceiros();
   carregarAgendamentos();
+  carregarReservasAula();
+  carregarConquistas();
   carregarCheckins7Dias();
   contarCobrancasPorStatus();
 });
@@ -1822,13 +2440,19 @@ async function carregarAlunos() {
   alunosCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
   atualizarSelectPromoverAluno();
   atualizarSelectsDisparo();
+  atualizarSelectEvolucaoAluno();
+  atualizarSelectConquistaAluno();
+  atualizarSelectsCrm();
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno cadastrado.</td></tr>";
     dashboardTotalAlunos = 0;
     dashboardAlunosEmDia = 0;
     dashboardCobrancasAguardando = 0;
+    ultimosCheckinsCache = {};
+    renderFinanceiroResumo();
     renderDashboard();
+    renderCrm();
     return;
   }
 
@@ -1855,6 +2479,22 @@ async function carregarAlunos() {
   contagensCheckinsCache = {};
   snap.docs.forEach((doc, indice) => {
     contagensCheckinsCache[doc.id] = contagens[indice] || 0;
+  });
+
+  const ultimosCheckins = await Promise.all(
+    snap.docs.map((doc) =>
+      tenantCollection("checkins")
+        .where("alunoId", "==", doc.id)
+        .orderBy("timestamp", "desc")
+        .limit(1)
+        .get()
+        .then((ultimoSnap) => ultimoSnap.empty ? null : ultimoSnap.docs[0].data().timestamp)
+        .catch(() => null)
+    )
+  );
+  ultimosCheckinsCache = {};
+  snap.docs.forEach((doc, indice) => {
+    ultimosCheckinsCache[doc.id] = ultimosCheckins[indice];
   });
 
   // Cobranças com comprovante anexado esperando o "ok" do professor. Uma única consulta
@@ -1997,6 +2637,10 @@ async function carregarAlunos() {
 
   renderDashboard();
   renderRankingEAniversarios();
+  renderFinanceiroResumo();
+  renderCrm();
+  renderReservasAula();
+  renderOcupacaoTurmas();
 }
 
 // ---------------------------------------------------------------------------
@@ -2016,10 +2660,18 @@ let professoresCache = [];
 // [{ id, nome }] dos alunos já carregados — alimenta o select de promoção.
 let alunosCache = [];
 let contagensCheckinsCache = {};
+let ultimosCheckinsCache = {};
 let parceirosCache = [];
 let agendamentosCache = [];
+let reservasAulaCache = [];
 let agendamentoEditandoId = null;
 let parceiroEditandoId = null;
+let evolucoesCache = [];
+let metasAlunoCache = [];
+let conquistasCache = [];
+let conquistasAlunoCache = [];
+let conquistaEditandoId = null;
+let crmInteracoesCache = [];
 // true quando a leitura de professores falhou: a tabela precisa dizer "falhou" em vez
 // de "nenhum professor cadastrado" (que seria mentira e levaria a cadastrar duplicado).
 let professoresFalhouLeitura = false;
@@ -2043,6 +2695,9 @@ async function carregarProfessores() {
 
   renderProfessores();
   atualizarSelectsDisparo();
+  atualizarSelectsCrm();
+  atualizarSelectProfessoresTurma();
+  renderCrm();
 }
 
 // Nome do perfil da vitrine pública ligado ao professor. equipeCache pode ainda não
@@ -3301,6 +3956,7 @@ async function salvarConfiguracoes() {
     mensalidadeModo = configGeral.mensalidadeModo;
     preencherFormularioConfig();
     mostrarMsgConfig("Configurações salvas.", "success");
+    renderFinanceiroResumo();
     carregarAlunos();
     return true;
   } catch (err) {
@@ -3600,6 +4256,7 @@ function criarControlesProgressoAluno(alunoId, aluno) {
     evento.stopPropagation();
     await salvarCamposAdministrativosAluno(alunoId, aluno, { bolsa: bolsaInput.checked }, "Bolsa atualizada.");
     aluno.bolsa = bolsaInput.checked;
+    renderFinanceiroResumo();
   });
   bolsa.append(bolsaInput, " Bolsista");
 
@@ -3633,6 +4290,7 @@ function criarControlesFinanceirosAluno(alunoId, aluno) {
     }, "Parceiro do aluno atualizado.");
     aluno.parceiroId = valor || undefined;
     renderParceiros();
+    renderFinanceiroResumo();
   });
 
   const valor = document.createElement("input");
@@ -3657,6 +4315,7 @@ function criarControlesFinanceirosAluno(alunoId, aluno) {
       valorMensalidade: numero === null ? firebase.firestore.FieldValue.delete() : numero
     }, "Valor individual atualizado.");
     aluno.valorMensalidade = numero === null ? undefined : numero;
+    renderFinanceiroResumo();
   });
 
   wrap.append(parceiro, valor);
@@ -3803,6 +4462,129 @@ async function apagarAgendamento(id, titulo) {
   }
 }
 
+async function carregarReservasAula() {
+  let snap;
+  try {
+    snap = await tenantCollection("reservasAula").orderBy("dataAula", "asc").limit(300).get();
+  } catch (err) {
+    reservasAulaCache = [];
+    tabelaReservasAula.innerHTML = "";
+    tabelaReservasAula.appendChild(linhaVazia(5, "Não foi possível carregar as reservas."));
+    listaOcupacaoTurmas.innerHTML = "";
+    listaOcupacaoTurmas.appendChild(criarLiTexto("Não foi possível carregar a ocupação."));
+    return;
+  }
+  reservasAulaCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  renderReservasAula();
+  renderOcupacaoTurmas();
+}
+
+function turmaPorId(turmaId) {
+  return turmasCache.find((turma) => turma.id === turmaId) || null;
+}
+
+function alunoPorId(alunoId) {
+  return alunosCache.find((aluno) => aluno.id === alunoId) || null;
+}
+
+function criarBadgeReserva(status) {
+  const info = window.DojoClassScheduler.statusInfo(status);
+  const badge = document.createElement("span");
+  badge.className = "badge " + info.className;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function resumoAulaReserva(reserva) {
+  const turma = turmaPorId(reserva.turmaId);
+  const nome = turma ? (turma.nome || "Turma") : "Turma removida";
+  const data = window.DojoClassScheduler.formatDate(reserva.dataAula);
+  const horario = turma ? window.DojoClassScheduler.formatTimeRange(turma) : "";
+  return nome + (data ? " · " + data : "") + (horario ? " · " + horario : "");
+}
+
+function renderReservasAula() {
+  if (!tabelaReservasAula) return;
+  tabelaReservasAula.innerHTML = "";
+  if (reservasAulaCache.length === 0) {
+    tabelaReservasAula.appendChild(linhaVazia(5, "Nenhuma reserva de aula ainda."));
+    return;
+  }
+
+  reservasAulaCache.forEach((reserva) => {
+    const turma = turmaPorId(reserva.turmaId);
+    const aluno = alunoPorId(reserva.alunoId);
+    const tr = document.createElement("tr");
+    tr.append(
+      celula(resumoAulaReserva(reserva)),
+      celula(aluno ? (aluno.nome || "Aluno sem nome") : reserva.alunoId || "-"),
+      celula(turma ? window.DojoClassScheduler.occupancyLabel(turma, reservasAulaCache, reserva.dataAula) : "-")
+    );
+    const tdStatus = document.createElement("td");
+    tdStatus.appendChild(criarBadgeReserva(reserva.status));
+    tr.appendChild(tdStatus);
+
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(
+      botaoAcao("Confirmar", "Confirmar reserva de " + (aluno ? aluno.nome : reserva.alunoId), () => atualizarStatusReservaAula(reserva, "confirmada")),
+      " ",
+      botaoAcao("Espera", "Colocar reserva na lista de espera", () => atualizarStatusReservaAula(reserva, "lista_espera")),
+      " ",
+      botaoAcao("Cancelar", "Cancelar reserva", () => atualizarStatusReservaAula(reserva, "cancelada"))
+    );
+    tr.appendChild(tdAcoes);
+    tabelaReservasAula.appendChild(tr);
+  });
+}
+
+function renderOcupacaoTurmas() {
+  if (!listaOcupacaoTurmas) return;
+  listaOcupacaoTurmas.innerHTML = "";
+  const ocorrencias = [];
+  turmasCache
+    .filter((turma) => turma.ativo !== false)
+    .forEach((turma) => {
+      window.DojoClassScheduler.nextOccurrences(turma, { daysAhead: 14, limit: 3 }).forEach((ocorrencia) => {
+        ocorrencias.push(ocorrencia);
+      });
+    });
+
+  ocorrencias.sort((a, b) => a.startsAt - b.startsAt);
+  const proximas = ocorrencias.slice(0, 12);
+  if (proximas.length === 0) {
+    listaOcupacaoTurmas.appendChild(criarLiTexto("Nenhuma turma recorrente ativa com dias e horários definidos."));
+    return;
+  }
+
+  proximas.forEach((ocorrencia) => {
+    const turma = ocorrencia.turma;
+    const li = document.createElement("li");
+    li.className = "scheduler-item";
+    const bloco = document.createElement("span");
+    bloco.appendChild(criarElTexto("strong", turma.nome || "Turma"));
+    bloco.appendChild(criarElTexto("span", window.DojoClassScheduler.formatDate(ocorrencia.startsAt) + " · " + window.DojoClassScheduler.formatTimeRange(turma)));
+    const ocupacao = criarElTexto("span", window.DojoClassScheduler.occupancyLabel(turma, reservasAulaCache, ocorrencia.startsAt));
+    ocupacao.className = "scheduler-occupancy";
+    li.append(bloco, ocupacao);
+    listaOcupacaoTurmas.appendChild(li);
+  });
+}
+
+async function atualizarStatusReservaAula(reserva, status) {
+  try {
+    await tenantCollection("reservasAula").doc(reserva.id).update({
+      status,
+      gerenciadoPor: auth.currentUser.uid,
+      gerenciadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    mostrarMsgEm(agendamentoMsg, "Reserva atualizada.", "success");
+    await carregarReservasAula();
+  } catch (err) {
+    mostrarMsgEm(agendamentoMsg, "Não foi possível atualizar a reserva.", "error");
+  }
+}
+
 function abrirFormularioParceiro(item) {
   parceiroEditandoId = item ? item.id : null;
   parceiroNome.value = item?.nome || "";
@@ -3834,6 +4616,7 @@ async function carregarParceiros() {
     parceirosCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
     renderParceiros();
     atualizarSelectsDisparo();
+    renderFinanceiroResumo();
   } catch (err) {
     tabelaParceiros.innerHTML = "<tr><td colspan='5'>Não foi possível carregar parceiros.</td></tr>";
   }
@@ -3914,6 +4697,271 @@ async function apagarParceiro(id, nome) {
   }
 }
 
+function atualizarSelectsCrm() {
+  if (!crmAluno || !crmProfessor) return;
+
+  const alunoAtual = crmAluno.value;
+  crmAluno.innerHTML = "";
+  const opcaoAluno = document.createElement("option");
+  opcaoAluno.value = "";
+  opcaoAluno.textContent = alunosCache.length === 0 ? "Nenhum aluno cadastrado" : "Escolha um aluno";
+  crmAluno.appendChild(opcaoAluno);
+  alunosCache.forEach((aluno) => {
+    const opcao = document.createElement("option");
+    opcao.value = aluno.id;
+    opcao.textContent = aluno.nome || "Aluno sem nome";
+    crmAluno.appendChild(opcao);
+  });
+  if (alunoAtual && alunosCache.some((aluno) => aluno.id === alunoAtual)) crmAluno.value = alunoAtual;
+
+  const professorAtual = crmProfessor.value;
+  crmProfessor.innerHTML = "";
+  const opcaoTodos = document.createElement("option");
+  opcaoTodos.value = "";
+  opcaoTodos.textContent = "Todos";
+  crmProfessor.appendChild(opcaoTodos);
+  professoresCache.filter((professor) => professor.status !== "inativo").forEach((professor) => {
+    const opcao = document.createElement("option");
+    opcao.value = professor.id;
+    opcao.textContent = professor.nome || "sem nome";
+    crmProfessor.appendChild(opcao);
+  });
+  if (professorAtual && professoresCache.some((professor) => professor.id === professorAtual)) {
+    crmProfessor.value = professorAtual;
+  }
+}
+
+function alunoCrmSelecionado() {
+  const alunoId = crmAluno ? crmAluno.value : "";
+  return alunosCache.find((aluno) => aluno.id === alunoId) || null;
+}
+
+function filtrosCrmAtuais() {
+  return {
+    filtro: crmFiltro ? crmFiltro.value : "todos",
+    limiteSumido: crmDiasSumido ? Number(crmDiasSumido.value || 14) : 14,
+    professorId: crmProfessor ? crmProfessor.value : "",
+    statusComercial: crmStatusFiltro ? crmStatusFiltro.value : "",
+    tag: crmTagFiltro ? crmTagFiltro.value : "",
+    ultimosCheckins: ultimosCheckinsCache,
+    contagens: contagensCheckinsCache
+  };
+}
+
+function motivoPrincipalCrm(info) {
+  if (!info) return "acompanhamento";
+  if (info.sumido) return "sumido";
+  if (info.inadimplente) return "inadimplente";
+  if (info.pertoGraduacao) return "graduacao";
+  if (info.aniversariante) return "aniversariante";
+  return "acompanhamento";
+}
+
+function criarBadgeCrm(status) {
+  const info = window.DojoCrmTools.statusComercialInfo(status || "ativo");
+  const badge = document.createElement("span");
+  badge.className = "badge crm-badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function atualizarResumoCrm() {
+  const base = filtrosCrmAtuais();
+  const todos = alunosCache.map((aluno) => window.DojoCrmTools.classificarAluno(aluno, {
+    limiteSumido: base.limiteSumido,
+    ultimoCheckin: ultimosCheckinsCache[aluno.id],
+    totalCheckins: contagensCheckinsCache[aluno.id] || 0
+  }));
+  const total = (id, valor) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(valor);
+  };
+  total("crm-total-sumidos", todos.filter((item) => item.sumido).length);
+  total("crm-total-inadimplentes", todos.filter((item) => item.inadimplente).length);
+  total("crm-total-aniversariantes", todos.filter((item) => item.aniversariante).length);
+  total("crm-total-graduacao", todos.filter((item) => item.pertoGraduacao).length);
+}
+
+function criarItemCrm(info) {
+  const aluno = info.aluno || {};
+  const motivo = motivoPrincipalCrm(info);
+  const li = document.createElement("li");
+  li.className = "crm-item";
+
+  const topo = document.createElement("div");
+  topo.className = "crm-item-top";
+  topo.append(criarElTexto("strong", aluno.nome || "Aluno sem nome"), criarBadgeCrm(aluno.statusComercial));
+
+  const detalhes = [];
+  const resumo = window.DojoCrmTools.resumoMotivos(info);
+  if (resumo) detalhes.push(resumo);
+  if (info.diasSemCheckin === null) detalhes.push("sem check-in registrado");
+  else detalhes.push(info.diasSemCheckin + " dia(s) sem check-in");
+  if (aluno.ultimaInteracaoEm) detalhes.push("último contato há " + window.DojoCrmTools.daysSince(aluno.ultimaInteracaoEm) + " dia(s)");
+
+  const meta = criarElTexto("span", detalhes.join(" · "));
+  meta.className = "config-dica";
+
+  const tags = window.DojoCrmTools.normalizeTags(aluno.tagsCrm);
+  const tagsWrap = document.createElement("div");
+  tagsWrap.className = "crm-tags";
+  tags.forEach((tag) => {
+    const chip = document.createElement("span");
+    chip.className = "crm-chip";
+    chip.textContent = tag;
+    tagsWrap.appendChild(chip);
+  });
+
+  const acoes = document.createElement("div");
+  acoes.className = "crm-item-actions";
+  acoes.appendChild(botaoAcao("Selecionar", "Selecionar " + (aluno.nome || "aluno") + " no CRM", () => selecionarAlunoCrm(aluno.id, motivo)));
+  const mensagem = window.DojoCrmTools.mensagemWhatsApp(aluno, motivo, { academia: configGeral.academiaNome });
+  const link = montarLinkWhatsapp(aluno.telefone, mensagem);
+  if (link) {
+    const whatsapp = document.createElement("a");
+    whatsapp.className = "mensalidade-btn crm-link";
+    whatsapp.href = link;
+    whatsapp.target = "_blank";
+    whatsapp.rel = "noopener";
+    whatsapp.textContent = "WhatsApp";
+    acoes.appendChild(whatsapp);
+  }
+
+  li.append(topo, meta);
+  if (tags.length > 0) li.appendChild(tagsWrap);
+  li.appendChild(acoes);
+  return li;
+}
+
+function renderCrm() {
+  if (!crmLista) return;
+  atualizarResumoCrm();
+  crmLista.innerHTML = "";
+  const lista = window.DojoCrmTools.filtrarAlunos(alunosCache, filtrosCrmAtuais());
+  if (lista.length === 0) {
+    crmLista.appendChild(criarLiTexto("Nenhum aluno encontrado para este filtro."));
+    return;
+  }
+  lista.forEach((info) => crmLista.appendChild(criarItemCrm(info)));
+}
+
+async function carregarHistoricoCrmAluno() {
+  const aluno = alunoCrmSelecionado();
+  crmInteracoesCache = [];
+  crmHistorico.innerHTML = "";
+  if (!aluno) {
+    crmHistorico.appendChild(criarLiTexto("Escolha um aluno."));
+    return;
+  }
+  try {
+    const snap = await tenantCollection("crmInteracoes")
+      .where("alunoId", "==", aluno.id)
+      .orderBy("criadoEm", "desc")
+      .limit(10)
+      .get();
+    crmInteracoesCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    if (crmInteracoesCache.length === 0) {
+      crmHistorico.appendChild(criarLiTexto("Nenhuma interação registrada."));
+      return;
+    }
+    crmInteracoesCache.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "crm-history-item";
+      const topo = document.createElement("div");
+      topo.className = "crm-item-top";
+      topo.append(
+        criarElTexto("strong", window.DojoCrmTools.canalLabel(item.canal)),
+        criarElTexto("span", window.DojoCrmTools.statusInteracaoLabel(item.status))
+      );
+      const data = formatarDataHora(item.criadoEm);
+      const meta = criarElTexto("span", data || "sem data");
+      meta.className = "config-dica";
+      const mensagem = criarElTexto("p", item.mensagem || "");
+      li.append(topo, meta, mensagem);
+      crmHistorico.appendChild(li);
+    });
+  } catch (err) {
+    crmHistorico.appendChild(criarLiTexto("Não foi possível carregar o histórico de CRM."));
+  }
+}
+
+function selecionarAlunoCrm(alunoId, motivo) {
+  if (!crmAluno) return;
+  crmAluno.value = alunoId || "";
+  const aluno = alunoCrmSelecionado();
+  if (!aluno) return;
+  crmStatusComercial.value = aluno.statusComercial || "acompanhar";
+  crmTags.value = window.DojoCrmTools.tagsToText(aluno.tagsCrm);
+  crmMensagem.value = window.DojoCrmTools.mensagemWhatsApp(aluno, motivo || "acompanhamento", {
+    academia: configGeral.academiaNome
+  });
+  carregarHistoricoCrmAluno();
+}
+
+async function registrarInteracaoCrm() {
+  const aluno = alunoCrmSelecionado();
+  const mensagem = window.DojoCrmTools.normalizeText(crmMensagem.value, 500);
+  if (!aluno) {
+    mostrarMsgEm(crmMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  if (!mensagem) {
+    mostrarMsgEm(crmMsg, "Escreva uma mensagem ou observação.", "error");
+    crmMensagem.focus();
+    return;
+  }
+
+  const tags = window.DojoCrmTools.normalizeTags(crmTags.value);
+  crmRegistrar.disabled = true;
+  try {
+    await tenantCollection("crmInteracoes").add({
+      alunoId: aluno.id,
+      canal: crmCanal.value,
+      status: crmInteracaoStatus.value,
+      mensagem,
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await tenantDocRef("alunos", aluno.id).update({
+      statusComercial: crmStatusComercial.value,
+      tagsCrm: tags,
+      ultimaInteracaoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      crmAtualizadoPor: auth.currentUser.uid,
+      crmAtualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    Object.assign(aluno, {
+      statusComercial: crmStatusComercial.value,
+      tagsCrm: tags,
+      ultimaInteracaoEm: new Date(),
+      crmAtualizadoPor: auth.currentUser.uid
+    });
+    mostrarMsgEm(crmMsg, "Interação registrada.", "success");
+    renderCrm();
+    await carregarHistoricoCrmAluno();
+  } catch (err) {
+    mostrarMsgEm(crmMsg, "Não foi possível registrar a interação.", "error");
+  } finally {
+    crmRegistrar.disabled = false;
+  }
+}
+
+function abrirWhatsappCrm() {
+  const aluno = alunoCrmSelecionado();
+  if (!aluno) {
+    mostrarMsgEm(crmMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  const mensagem = window.DojoCrmTools.normalizeText(crmMensagem.value, 500)
+    || window.DojoCrmTools.mensagemWhatsApp(aluno, "acompanhamento", { academia: configGeral.academiaNome });
+  const link = montarLinkWhatsapp(aluno.telefone, mensagem);
+  if (!link) {
+    mostrarMsgEm(crmMsg, "Este aluno não tem telefone válido para WhatsApp.", "error");
+    return;
+  }
+  window.open(link, "_blank", "noopener");
+}
+
 function renderRankingEAniversarios() {
   if (!rankingLista || !aniversariantesLista) return;
   rankingLista.innerHTML = "";
@@ -3942,6 +4990,471 @@ function renderRankingEAniversarios() {
       li.textContent = (aluno.nome || "Aluno") + " - " + aluno.nascimento.slice(8, 10) + "/" + aluno.nascimento.slice(5, 7);
       aniversariantesLista.appendChild(li);
     });
+  }
+}
+
+function criarElTexto(tag, texto) {
+  const el = document.createElement(tag);
+  el.textContent = texto;
+  return el;
+}
+
+function atualizarSelectEvolucaoAluno() {
+  if (!evolucaoAluno) return;
+  const anterior = evolucaoAluno.value;
+  evolucaoAluno.innerHTML = "";
+
+  const vazio = document.createElement("option");
+  vazio.value = "";
+  vazio.textContent = alunosCache.length === 0 ? "Nenhum aluno cadastrado" : "Escolha um aluno";
+  evolucaoAluno.appendChild(vazio);
+
+  alunosCache.forEach((aluno) => {
+    const opcao = document.createElement("option");
+    opcao.value = aluno.id;
+    opcao.textContent = aluno.nome || "Aluno sem nome";
+    evolucaoAluno.appendChild(opcao);
+  });
+
+  if (anterior && alunosCache.some((aluno) => aluno.id === anterior)) {
+    evolucaoAluno.value = anterior;
+  }
+}
+
+function alunoEvolucaoSelecionado() {
+  const alunoId = evolucaoAluno ? evolucaoAluno.value : "";
+  return alunosCache.find((aluno) => aluno.id === alunoId) || null;
+}
+
+function criarBadgeEvolucao(info) {
+  const badge = document.createElement("span");
+  badge.className = "badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function renderListaEvolucoesAdmin() {
+  listaEvolucoesAdmin.innerHTML = "";
+  if (!evolucaoAluno.value) {
+    listaEvolucoesAdmin.appendChild(criarLiTexto("Escolha um aluno."));
+    return;
+  }
+  if (evolucoesCache.length === 0) {
+    listaEvolucoesAdmin.appendChild(criarLiTexto("Nenhum registro técnico ainda."));
+    return;
+  }
+  window.DojoStudentEvolution.sortRecentFirst(evolucoesCache).forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "evolution-item";
+    const topo = document.createElement("div");
+    topo.className = "evolution-item-top";
+    topo.append(
+      criarElTexto("strong", item.titulo || "Registro técnico"),
+      criarBadgeEvolucao(window.DojoStudentEvolution.statusTecnicoInfo(item.status))
+    );
+    const meta = document.createElement("span");
+    meta.className = "config-dica";
+    meta.textContent = window.DojoStudentEvolution.formatDateTime(item.atualizadoEm || item.criadoEm) || "sem data";
+    li.append(topo, meta);
+    if (item.observacao) {
+      const obs = document.createElement("p");
+      obs.textContent = item.observacao;
+      li.appendChild(obs);
+    }
+    listaEvolucoesAdmin.appendChild(li);
+  });
+}
+
+function renderListaMetasAdmin() {
+  listaMetasAdmin.innerHTML = "";
+  if (!evolucaoAluno.value) {
+    listaMetasAdmin.appendChild(criarLiTexto("Escolha um aluno."));
+    return;
+  }
+  if (metasAlunoCache.length === 0) {
+    listaMetasAdmin.appendChild(criarLiTexto("Nenhuma meta criada."));
+    return;
+  }
+  window.DojoStudentEvolution.sortRecentFirst(metasAlunoCache).forEach((item) => {
+    const progresso = window.DojoStudentEvolution.normalizeProgress(item.progresso);
+    const li = document.createElement("li");
+    li.className = "evolution-item";
+    const topo = document.createElement("div");
+    topo.className = "evolution-item-top";
+    topo.append(
+      criarElTexto("strong", item.titulo || "Meta"),
+      criarBadgeEvolucao(window.DojoStudentEvolution.statusMetaInfo(item.status))
+    );
+    const detalhes = [];
+    detalhes.push(window.DojoStudentEvolution.tipoMetaLabel(item.tipo));
+    if (item.prazo) detalhes.push(window.DojoStudentEvolution.prazoResumo(item.prazo));
+    if (item.alvo) detalhes.push(item.alvo);
+    const meta = document.createElement("span");
+    meta.className = "config-dica";
+    meta.textContent = detalhes.filter(Boolean).join(" · ");
+    const barra = document.createElement("div");
+    barra.className = "progress-bar evolution-progress";
+    const span = document.createElement("span");
+    span.style.width = progresso + "%";
+    barra.appendChild(span);
+    li.append(topo, meta, barra, criarElTexto("span", progresso + "% concluído"));
+    listaMetasAdmin.appendChild(li);
+  });
+}
+
+async function carregarEvolucaoAlunoSelecionado() {
+  const alunoId = evolucaoAluno.value;
+  evolucoesCache = [];
+  metasAlunoCache = [];
+  renderListaEvolucoesAdmin();
+  renderListaMetasAdmin();
+  mostrarMsgEm(evolucaoMsg, "", "");
+  if (!alunoId) return;
+
+  try {
+    const [evolucoesSnap, metasSnap] = await Promise.all([
+      tenantCollection("evolucoes").where("alunoId", "==", alunoId).orderBy("atualizadoEm", "desc").limit(20).get(),
+      tenantCollection("metasAluno").where("alunoId", "==", alunoId).orderBy("status").limit(20).get()
+    ]);
+    evolucoesCache = evolucoesSnap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    metasAlunoCache = metasSnap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    renderListaEvolucoesAdmin();
+    renderListaMetasAdmin();
+  } catch (err) {
+    mostrarMsgEm(evolucaoMsg, "Não foi possível carregar a evolução deste aluno.", "error");
+  }
+}
+
+async function salvarEvolucaoTecnica() {
+  const aluno = alunoEvolucaoSelecionado();
+  const titulo = window.DojoStudentEvolution.normalizeText(evolucaoTitulo.value, 120);
+  const observacao = window.DojoStudentEvolution.normalizeOptionalText(evolucaoObservacao.value, 500);
+  if (!aluno) {
+    mostrarMsgEm(evolucaoMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  if (!titulo) {
+    mostrarMsgEm(evolucaoMsg, "Informe a técnica ou título.", "error");
+    evolucaoTitulo.focus();
+    return;
+  }
+
+  evolucaoSalvar.disabled = true;
+  try {
+    const payload = {
+      alunoId: aluno.id,
+      titulo,
+      status: evolucaoStatus.value,
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (observacao) payload.observacao = observacao;
+    await tenantCollection("evolucoes").add(payload);
+    evolucaoTitulo.value = "";
+    evolucaoObservacao.value = "";
+    mostrarMsgEm(evolucaoMsg, "Evolução técnica salva.", "success");
+    await carregarEvolucaoAlunoSelecionado();
+  } catch (err) {
+    mostrarMsgEm(evolucaoMsg, "Não foi possível salvar a evolução técnica.", "error");
+  } finally {
+    evolucaoSalvar.disabled = false;
+  }
+}
+
+function prazoMetaTimestamp() {
+  if (!metaPrazo.value) return null;
+  const data = new Date(metaPrazo.value + "T12:00:00");
+  if (Number.isNaN(data.getTime())) return null;
+  return firebase.firestore.Timestamp.fromDate(data);
+}
+
+async function salvarMetaAluno() {
+  const aluno = alunoEvolucaoSelecionado();
+  const titulo = window.DojoStudentEvolution.normalizeText(metaTitulo.value, 120);
+  const alvo = window.DojoStudentEvolution.normalizeOptionalText(metaAlvo.value, 120);
+  if (!aluno) {
+    mostrarMsgEm(evolucaoMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  if (!titulo) {
+    mostrarMsgEm(evolucaoMsg, "Informe o título da meta.", "error");
+    metaTitulo.focus();
+    return;
+  }
+
+  metaSalvar.disabled = true;
+  try {
+    const payload = {
+      alunoId: aluno.id,
+      tipo: metaTipo.value,
+      titulo,
+      status: metaStatus.value,
+      progresso: window.DojoStudentEvolution.normalizeProgress(metaProgresso.value),
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const prazo = prazoMetaTimestamp();
+    if (prazo) payload.prazo = prazo;
+    if (alvo) payload.alvo = alvo;
+    await tenantCollection("metasAluno").add(payload);
+    metaTitulo.value = "";
+    metaAlvo.value = "";
+    metaPrazo.value = "";
+    metaProgresso.value = "0";
+    metaStatus.value = "ativa";
+    mostrarMsgEm(evolucaoMsg, "Meta criada.", "success");
+    await carregarEvolucaoAlunoSelecionado();
+  } catch (err) {
+    mostrarMsgEm(evolucaoMsg, "Não foi possível criar a meta.", "error");
+  } finally {
+    metaSalvar.disabled = false;
+  }
+}
+
+function atualizarSelectConquistaAluno() {
+  if (!conquistaAluno) return;
+  const anterior = conquistaAluno.value;
+  conquistaAluno.innerHTML = "";
+
+  const vazio = document.createElement("option");
+  vazio.value = "";
+  vazio.textContent = alunosCache.length === 0 ? "Nenhum aluno cadastrado" : "Escolha um aluno";
+  conquistaAluno.appendChild(vazio);
+
+  alunosCache.forEach((aluno) => {
+    const opcao = document.createElement("option");
+    opcao.value = aluno.id;
+    opcao.textContent = aluno.nome || "Aluno sem nome";
+    conquistaAluno.appendChild(opcao);
+  });
+
+  if (anterior && alunosCache.some((aluno) => aluno.id === anterior)) {
+    conquistaAluno.value = anterior;
+  }
+}
+
+function atualizarSelectConquistas() {
+  conquistaSelecionada.innerHTML = "";
+  const vazio = document.createElement("option");
+  vazio.value = "";
+  vazio.textContent = conquistasCache.length === 0 ? "Nenhuma conquista ativa" : "Escolha uma conquista";
+  conquistaSelecionada.appendChild(vazio);
+
+  window.DojoGamification.activeChallenges(conquistasCache).forEach((item) => {
+    const opcao = document.createElement("option");
+    opcao.value = item.id;
+    opcao.textContent = (item.titulo || "Conquista") + " · " + window.DojoGamification.formatPoints(item.pontos);
+    conquistaSelecionada.appendChild(opcao);
+  });
+}
+
+function alunoConquistaSelecionado() {
+  const alunoId = conquistaAluno ? conquistaAluno.value : "";
+  return alunosCache.find((aluno) => aluno.id === alunoId) || null;
+}
+
+function conquistaCatalogoSelecionada() {
+  const id = conquistaSelecionada ? conquistaSelecionada.value : "";
+  return conquistasCache.find((item) => item.id === id) || null;
+}
+
+function criarBadgeConquista(info) {
+  const badge = document.createElement("span");
+  badge.className = "badge achievement-badge " + info.classe;
+  badge.textContent = info.label;
+  return badge;
+}
+
+function limparFormularioConquista() {
+  conquistaEditandoId = null;
+  conquistaFormTitulo.textContent = "Nova conquista";
+  conquistaTitulo.value = "";
+  conquistaDescricao.value = "";
+  conquistaTipo.value = "frequencia";
+  conquistaRegra.value = "";
+  conquistaPontos.value = "10";
+  conquistaAtivo.checked = true;
+  conquistaCancelar.hidden = true;
+  mostrarMsgEm(conquistaMsg, "", "");
+}
+
+function editarConquista(item) {
+  conquistaEditandoId = item.id;
+  conquistaFormTitulo.textContent = "Editar conquista";
+  conquistaTitulo.value = item.titulo || "";
+  conquistaDescricao.value = item.descricao || "";
+  conquistaTipo.value = item.tipo || "outro";
+  conquistaRegra.value = item.regra || "";
+  conquistaPontos.value = String(window.DojoGamification.normalizePoints(item.pontos));
+  conquistaAtivo.checked = item.ativo !== false;
+  conquistaCancelar.hidden = false;
+  conquistaTitulo.focus();
+}
+
+async function carregarConquistas() {
+  try {
+    const snap = await tenantCollection("conquistas").orderBy("titulo", "asc").get();
+    conquistasCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    renderConquistas();
+    atualizarSelectConquistas();
+    carregarConquistasAlunoSelecionado();
+  } catch (err) {
+    tabelaConquistas.innerHTML = "<tr><td colspan='5'>Não foi possível carregar conquistas.</td></tr>";
+    atualizarSelectConquistas();
+  }
+}
+
+function renderConquistas() {
+  tabelaConquistas.innerHTML = "";
+  if (conquistasCache.length === 0) {
+    tabelaConquistas.appendChild(linhaVazia(5, "Nenhuma conquista cadastrada."));
+    return;
+  }
+
+  window.DojoGamification.sortByTitle(conquistasCache).forEach((item) => {
+    const info = window.DojoGamification.tipoInfo(item.tipo);
+    const tr = document.createElement("tr");
+    tr.append(
+      celulaPessoa(item.titulo || "Conquista", item.descricao || item.regra || ""),
+      celula(info.label),
+      celula(window.DojoGamification.formatPoints(item.pontos)),
+      celula(item.ativo === false ? "Inativa" : "Ativa")
+    );
+    const tdAcoes = document.createElement("td");
+    tdAcoes.append(botaoAcao("Editar", "Editar conquista", () => editarConquista(item)));
+    tr.appendChild(tdAcoes);
+    tabelaConquistas.appendChild(tr);
+  });
+}
+
+async function salvarConquista() {
+  const titulo = window.DojoGamification.normalizeText(conquistaTitulo.value, 80);
+  const descricao = window.DojoGamification.normalizeOptionalText(conquistaDescricao.value, 240);
+  const regra = window.DojoGamification.normalizeOptionalText(conquistaRegra.value, 120);
+  const pontos = window.DojoGamification.normalizePoints(conquistaPontos.value);
+  if (!titulo) {
+    mostrarMsgEm(conquistaMsg, "Informe o título da conquista.", "error");
+    conquistaTitulo.focus();
+    return;
+  }
+
+  conquistaSalvar.disabled = true;
+  try {
+    const payload = {
+      titulo,
+      tipo: conquistaTipo.value,
+      pontos,
+      ativo: conquistaAtivo.checked,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (descricao) payload.descricao = descricao;
+    if (regra) payload.regra = regra;
+
+    const mensagemSucesso = conquistaEditandoId ? "Conquista atualizada." : "Conquista criada.";
+    if (conquistaEditandoId) {
+      await tenantCollection("conquistas").doc(conquistaEditandoId).update(payload);
+    } else {
+      payload.criadoPor = auth.currentUser.uid;
+      payload.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+      await tenantCollection("conquistas").add(payload);
+    }
+
+    limparFormularioConquista();
+    mostrarMsgEm(conquistaMsg, mensagemSucesso, "success");
+    await carregarConquistas();
+  } catch (err) {
+    mostrarMsgEm(conquistaMsg, "Não foi possível salvar a conquista.", "error");
+  } finally {
+    conquistaSalvar.disabled = false;
+  }
+}
+
+function renderConquistaAlunoAdmin(item, catalogoPorId) {
+  const catalogo = catalogoPorId[item.conquistaId] || {};
+  const titulo = catalogo.titulo || item.titulo || "Conquista";
+  const info = window.DojoGamification.tipoInfo(catalogo.tipo || item.tipo);
+  const li = document.createElement("li");
+  li.className = "achievement-item";
+  const topo = document.createElement("div");
+  topo.className = "achievement-item-top";
+  topo.append(
+    criarElTexto("strong", titulo),
+    criarBadgeConquista(info)
+  );
+  const detalhes = [];
+  detalhes.push(window.DojoGamification.formatPoints(item.pontos));
+  const data = window.DojoGamification.formatDateTime(item.desbloqueadoEm);
+  if (data) detalhes.push("desbloqueada em " + data);
+  li.append(topo, criarElTexto("span", detalhes.join(" · ")));
+  return li;
+}
+
+async function carregarConquistasAlunoSelecionado() {
+  const alunoId = conquistaAluno ? conquistaAluno.value : "";
+  conquistasAlunoCache = [];
+  listaConquistasAlunoAdmin.innerHTML = "";
+  if (!alunoId) {
+    listaConquistasAlunoAdmin.appendChild(criarLiTexto("Escolha um aluno."));
+    return;
+  }
+
+  try {
+    const snap = await tenantCollection("conquistasAluno")
+      .where("alunoId", "==", alunoId)
+      .orderBy("desbloqueadoEm", "desc")
+      .limit(50)
+      .get();
+    conquistasAlunoCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    const catalogoPorId = window.DojoGamification.mapById(conquistasCache);
+    if (conquistasAlunoCache.length === 0) {
+      listaConquistasAlunoAdmin.appendChild(criarLiTexto("Nenhuma conquista desbloqueada."));
+      return;
+    }
+    window.DojoGamification.sortUnlockedFirst(conquistasAlunoCache).forEach((item) => {
+      listaConquistasAlunoAdmin.appendChild(renderConquistaAlunoAdmin(item, catalogoPorId));
+    });
+  } catch (err) {
+    listaConquistasAlunoAdmin.appendChild(criarLiTexto("Não foi possível carregar as conquistas deste aluno."));
+  }
+}
+
+async function desbloquearConquistaAluno() {
+  const aluno = alunoConquistaSelecionado();
+  const conquista = conquistaCatalogoSelecionada();
+  if (!aluno) {
+    mostrarMsgEm(conquistaMsg, "Escolha um aluno.", "error");
+    return;
+  }
+  if (!conquista) {
+    mostrarMsgEm(conquistaMsg, "Escolha uma conquista ativa.", "error");
+    return;
+  }
+
+  const docId = aluno.id + "_" + conquista.id;
+  conquistaDesbloquear.disabled = true;
+  try {
+    const ref = tenantCollection("conquistasAluno").doc(docId);
+    const existente = await ref.get();
+    if (existente.exists) {
+      mostrarMsgEm(conquistaMsg, "Este aluno já tem essa conquista.", "error");
+      return;
+    }
+    await ref.set({
+      alunoId: aluno.id,
+      conquistaId: conquista.id,
+      pontos: window.DojoGamification.normalizePoints(conquista.pontos),
+      origem: "manual",
+      desbloqueadoPor: auth.currentUser.uid,
+      desbloqueadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    mostrarMsgEm(conquistaMsg, "Conquista desbloqueada para " + (aluno.nome || "o aluno") + ".", "success");
+    await carregarConquistasAlunoSelecionado();
+  } catch (err) {
+    mostrarMsgEm(conquistaMsg, "Não foi possível desbloquear a conquista.", "error");
+  } finally {
+    conquistaDesbloquear.disabled = false;
   }
 }
 
@@ -3985,6 +5498,48 @@ function mapaParceiros() {
   return mapa;
 }
 
+function parceirosPorId() {
+  const mapa = {};
+  parceirosCache.forEach((parceiro) => { mapa[parceiro.id] = parceiro; });
+  return mapa;
+}
+
+function renderFinanceiroResumo() {
+  if (!window.DojoFinanceDashboard || !financeiroPrevisto || !financeiroComposicao || !financeiroPendencias) return;
+  const resumo = window.DojoFinanceDashboard.summarize(alunosCache, {
+    defaultValue: configGeral.valorMensalidadePadrao,
+    checkinsByStudent: contagensCheckinsCache,
+    partnersById: parceirosPorId()
+  });
+
+  financeiroPrevisto.textContent = window.DojoFinanceDashboard.money(resumo.previsto);
+  financeiroRecebido.textContent = window.DojoFinanceDashboard.money(resumo.recebido);
+  financeiroPendente.textContent = window.DojoFinanceDashboard.money(resumo.pendente);
+  financeiroCheckin.textContent = resumo.checkins
+    ? window.DojoFinanceDashboard.money(resumo.valorPorCheckin)
+    : "—";
+
+  financeiroComposicao.innerHTML = "";
+  [
+    "Alunos ativos no cálculo: " + resumo.alunos,
+    "Bolsistas: " + resumo.bolsistas,
+    "Com parceiro/desconto: " + resumo.comParceiro,
+    "Ticket médio: " + window.DojoFinanceDashboard.money(resumo.ticketMedio)
+  ].forEach((texto) => financeiroComposicao.appendChild(criarLiTexto(texto)));
+
+  financeiroPendencias.innerHTML = "";
+  const pendentes = resumo.alunosPendentes.slice(0, 8);
+  if (pendentes.length === 0) {
+    financeiroPendencias.appendChild(criarLiTexto("Nenhuma pendência estimada."));
+    return;
+  }
+  pendentes.forEach((item) => {
+    financeiroPendencias.appendChild(criarLiTexto(
+      item.nome + " · " + window.DojoFinanceDashboard.money(item.valor) + " · " + item.checkins + " check-ins"
+    ));
+  });
+}
+
 function exportarCsvAlunos() {
   const linhas = window.DojoReports.montarLinhasAlunosRelatorio(alunosCache, {
     contagens: contagensCheckinsCache,
@@ -3995,6 +5550,22 @@ function exportarCsvAlunos() {
 }
 
 async function exportarCsvFinanceiro() {
+  const resumoAlunos = window.DojoFinanceDashboard.buildStudentRows(alunosCache, {
+    defaultValue: configGeral.valorMensalidadePadrao,
+    checkinsByStudent: contagensCheckinsCache,
+    partnersById: parceirosPorId()
+  }).map((item) => ({
+    "Aluno": item.aluno,
+    "Status atual": item.status,
+    "Bolsista": item.bolsista ? "Sim" : "Não",
+    "Parceiro": item.parceiro,
+    "Valor bruto": item.valorBruto.toFixed(2).replace(".", ","),
+    "Desconto parceiro (%)": item.descontoParceiro.toFixed(2).replace(".", ","),
+    "Valor efetivo": item.valorEfetivo.toFixed(2).replace(".", ","),
+    "Check-ins": item.checkins,
+    "Valor por check-in": item.valorPorCheckin === null ? "" : item.valorPorCheckin.toFixed(2).replace(".", ",")
+  }));
+
   let snap;
   try {
     snap = await tenantCollection("cobrancas").orderBy("criadoEm", "desc").limit(500).get();
@@ -4002,10 +5573,18 @@ async function exportarCsvFinanceiro() {
     mostrarMsgEm(disparoMsg, "Não foi possível carregar cobranças para CSV.", "error");
     return;
   }
-  const linhas = snap.docs.map((doc) => {
+  const linhasCobrancas = snap.docs.map((doc) => {
     const item = doc.data();
     return {
       "Aluno": item.alunoNome || item.alunoId || "",
+      "Status atual": "",
+      "Bolsista": "",
+      "Parceiro": "",
+      "Valor bruto": "",
+      "Desconto parceiro (%)": "",
+      "Valor efetivo": "",
+      "Check-ins": "",
+      "Valor por check-in": "",
       "Mês": item.mesReferencia || "",
       "Valor": typeof item.valor === "number" ? item.valor.toFixed(2).replace(".", ",") : "",
       "Status": item.status || "",
@@ -4014,7 +5593,11 @@ async function exportarCsvFinanceiro() {
       "Pago em": window.DojoReports.dataCurtaCsv(item.pagoEm)
     };
   });
-  window.DojoReports.baixarCsv("pagamentos-dojopass.csv", ["Aluno", "Mês", "Valor", "Status", "Origem", "Criado em", "Pago em"], linhas);
+  window.DojoReports.baixarCsv("financeiro-dojopass.csv", [
+    "Aluno", "Status atual", "Bolsista", "Parceiro", "Valor bruto",
+    "Desconto parceiro (%)", "Valor efetivo", "Check-ins", "Valor por check-in",
+    "Mês", "Valor", "Status", "Origem", "Criado em", "Pago em"
+  ], resumoAlunos.concat(linhasCobrancas));
 }
 
 function atualizarSelectsDisparo() {
@@ -4708,8 +6291,14 @@ const HORA_REGEX = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const tabelaTurmas = document.querySelector("#tabela-turmas tbody");
 const turmaNome = document.getElementById("turma-nome");
 const turmaNivel = document.getElementById("turma-nivel");
+const turmaModalidade = document.getElementById("turma-modalidade");
 const turmaCor = document.getElementById("turma-cor");
 const turmaOrdem = document.getElementById("turma-ordem");
+const turmaHorarioInicio = document.getElementById("turma-horario-inicio");
+const turmaHorarioFim = document.getElementById("turma-horario-fim");
+const turmaCapacidade = document.getElementById("turma-capacidade");
+const turmaProfessores = document.getElementById("turma-professores");
+const turmaDiasInputs = Array.from(document.querySelectorAll("input[name='turma-dia']"));
 const turmaDescricao = document.getElementById("turma-descricao");
 const turmaAtivo = document.getElementById("turma-ativo");
 const turmaSalvar = document.getElementById("turma-salvar");
@@ -5052,26 +6641,76 @@ async function carregarTurmas() {
   } catch (err) {
     turmasCache = [];
     tabelaTurmas.innerHTML = "";
-    tabelaTurmas.appendChild(linhaVazia(6, "Não foi possível carregar as turmas."));
+    tabelaTurmas.appendChild(linhaVazia(8, "Não foi possível carregar as turmas."));
     atualizarSelectTurmas();
     return;
   }
 
-  // Ordenação no cliente (e não com orderBy) porque a lista é curta e assim um
-  // documento antigo sem 'ordem' não some da tabela.
   turmasCache = snap.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
-  turmasCache.sort(ordenarPorOrdemENome);
+  turmasCache.sort((a, b) => {
+    const agenda = window.DojoClassScheduler.sortTurmas(a, b);
+    return agenda || ordenarPorOrdemENome(a, b);
+  });
 
   renderTurmas();
   atualizarSelectTurmas();
   renderHorarios();
+  renderOcupacaoTurmas();
+}
+
+function professoresDaTurma(turma) {
+  return window.DojoClassScheduler.normalizeIds(turma && turma.professorIds, 20);
+}
+
+function nomesProfessoresTurma(turma) {
+  const ids = professoresDaTurma(turma);
+  if (ids.length === 0) return "Sem professor";
+  return ids.map((id) => {
+    const professor = professoresCache.find((item) => item.id === id);
+    return professor ? (professor.nome || "sem nome") : id;
+  }).join(", ");
+}
+
+function atualizarSelectProfessoresTurma() {
+  if (!turmaProfessores) return;
+  const selecionados = Array.from(turmaProfessores.selectedOptions).map((opcao) => opcao.value);
+  turmaProfessores.innerHTML = "";
+  professoresCache
+    .filter((professor) => professor.status !== "inativo")
+    .forEach((professor) => {
+      const opcao = document.createElement("option");
+      opcao.value = professor.id;
+      opcao.textContent = professor.nome || "sem nome";
+      opcao.selected = selecionados.indexOf(professor.id) !== -1;
+      turmaProfessores.appendChild(opcao);
+    });
+}
+
+function selecionarProfessoresTurma(ids) {
+  const valores = window.DojoClassScheduler.normalizeIds(ids, 20);
+  Array.from(turmaProfessores.options).forEach((opcao) => {
+    opcao.selected = valores.indexOf(opcao.value) !== -1;
+  });
+}
+
+function diasTurmaSelecionados() {
+  return turmaDiasInputs
+    .filter((input) => input.checked)
+    .map((input) => Number(input.value));
+}
+
+function preencherDiasTurma(dias) {
+  const valores = window.DojoClassScheduler.normalizeDays(dias);
+  turmaDiasInputs.forEach((input) => {
+    input.checked = valores.indexOf(Number(input.value)) !== -1;
+  });
 }
 
 function renderTurmas() {
   tabelaTurmas.innerHTML = "";
 
   if (turmasCache.length === 0) {
-    tabelaTurmas.appendChild(linhaVazia(6, "Nenhuma turma cadastrada."));
+    tabelaTurmas.appendChild(linhaVazia(8, "Nenhuma turma cadastrada."));
     return;
   }
 
@@ -5079,10 +6718,12 @@ function renderTurmas() {
     const nomeTurma = turma.nome || "sem nome";
     const tr = document.createElement("tr");
     tr.append(
-      celula(nomeTurma),
-      celula(NIVEL_ROTULOS[turma.nivel] || turma.nivel || "-"),
-      celula(CORES_TURMA[turma.cor] || turma.cor || "-"),
-      celula(typeof turma.ordem === "number" ? String(turma.ordem) : "-"),
+      celulaPessoa(nomeTurma, NIVEL_ROTULOS[turma.nivel] || turma.nivel || "-"),
+      celula(window.DojoClassScheduler.modalityLabel(turma.modalidade)),
+      celula(window.DojoClassScheduler.dayLabels(turma.diasSemana)),
+      celula(window.DojoClassScheduler.formatTimeRange(turma)),
+      celula(nomesProfessoresTurma(turma)),
+      celula(turma.capacidade ? String(turma.capacidade) + " vagas" : "Sem limite"),
       celula(turma.ativo === false ? "Inativa" : "Ativa")
     );
 
@@ -5103,8 +6744,14 @@ function limparFormularioTurma() {
   turmaNome.value = "";
   turmaDescricao.value = "";
   turmaNivel.value = "Infantil";
+  turmaModalidade.value = "jiu-jitsu";
   turmaCor.value = "red";
   turmaOrdem.value = "0";
+  turmaHorarioInicio.value = "";
+  turmaHorarioFim.value = "";
+  turmaCapacidade.value = "";
+  preencherDiasTurma([]);
+  selecionarProfessoresTurma([]);
   turmaAtivo.checked = true;
   turmaSalvar.textContent = "Cadastrar turma";
   turmaCancelar.style.display = "none";
@@ -5116,8 +6763,14 @@ function editarTurma(turma) {
   turmaNome.value = turma.nome || "";
   turmaDescricao.value = typeof turma.descricao === "string" ? turma.descricao : "";
   turmaNivel.value = NIVEIS_TURMA.indexOf(turma.nivel) === -1 ? "Infantil" : turma.nivel;
+  turmaModalidade.value = window.DojoClassScheduler.normalizeModality(turma.modalidade);
   turmaCor.value = Object.prototype.hasOwnProperty.call(CORES_TURMA, turma.cor) ? turma.cor : "red";
   turmaOrdem.value = typeof turma.ordem === "number" ? String(turma.ordem) : "0";
+  turmaHorarioInicio.value = window.DojoClassScheduler.normalizeTime(turma.horarioInicio);
+  turmaHorarioFim.value = window.DojoClassScheduler.normalizeTime(turma.horarioFim);
+  turmaCapacidade.value = typeof turma.capacidade === "number" ? String(turma.capacidade) : "";
+  preencherDiasTurma(turma.diasSemana);
+  selecionarProfessoresTurma(turma.professorIds);
   turmaAtivo.checked = turma.ativo !== false;
   turmaSalvar.textContent = "Salvar alterações";
   turmaCancelar.style.display = "inline-block";
@@ -5130,7 +6783,16 @@ async function salvarTurma() {
   const nome = turmaNome.value.trim();
   const descricao = turmaDescricao.value.trim();
   const nivel = turmaNivel.value;
+  const modalidade = window.DojoClassScheduler.normalizeModality(turmaModalidade.value);
   const cor = turmaCor.value;
+  const diasSemana = window.DojoClassScheduler.normalizeDays(diasTurmaSelecionados());
+  const horarioInicio = window.DojoClassScheduler.normalizeTime(turmaHorarioInicio.value);
+  const horarioFim = window.DojoClassScheduler.normalizeTime(turmaHorarioFim.value);
+  const capacidade = window.DojoClassScheduler.normalizeCapacity(turmaCapacidade.value);
+  const professorIds = window.DojoClassScheduler.normalizeIds(
+    Array.from(turmaProfessores.selectedOptions).map((opcao) => opcao.value),
+    20
+  );
 
   if (!nome || nome.length > 60) {
     mostrarMsgEm(turmaMsg, "Informe o nome da turma (até 60 caracteres).", "error");
@@ -5145,6 +6807,25 @@ async function salvarTurma() {
   if (NIVEIS_TURMA.indexOf(nivel) === -1) {
     mostrarMsgEm(turmaMsg, "Selecione um nível válido.", "error");
     turmaNivel.focus();
+    return;
+  }
+  if (diasSemana.length === 0) {
+    mostrarMsgEm(turmaMsg, "Escolha ao menos um dia da semana.", "error");
+    return;
+  }
+  if (!window.DojoClassScheduler.isValidTimeRange(horarioInicio, horarioFim)) {
+    mostrarMsgEm(turmaMsg, "Informe horário de início e fim válidos.", "error");
+    turmaHorarioInicio.focus();
+    return;
+  }
+  if (turmaCapacidade.value.trim() && capacidade === null) {
+    mostrarMsgEm(turmaMsg, "Capacidade deve ficar entre 1 e 500.", "error");
+    turmaCapacidade.focus();
+    return;
+  }
+  if (professorIds.length === 0) {
+    mostrarMsgEm(turmaMsg, "Escolha ao menos um professor para a turma.", "error");
+    turmaProfessores.focus();
     return;
   }
   if (!Object.prototype.hasOwnProperty.call(CORES_TURMA, cor)) {
@@ -5172,7 +6853,13 @@ async function salvarTurma() {
         // de 'descricao', mesma lógica do 'link' do mural de eventos.
         descricao: descricao ? descricao : firebase.firestore.FieldValue.delete(),
         nivel: nivel,
+        modalidade: modalidade,
         cor: cor,
+        diasSemana: diasSemana,
+        horarioInicio: horarioInicio,
+        horarioFim: horarioFim,
+        capacidade: capacidade === null ? firebase.firestore.FieldValue.delete() : capacidade,
+        professorIds: professorIds,
         ativo: turmaAtivo.checked,
         ordem: ordem.valor,
         atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
@@ -5183,13 +6870,19 @@ async function salvarTurma() {
       const payload = {
         nome: nome,
         nivel: nivel,
+        modalidade: modalidade,
         cor: cor,
+        diasSemana: diasSemana,
+        horarioInicio: horarioInicio,
+        horarioFim: horarioFim,
+        professorIds: professorIds,
         ativo: turmaAtivo.checked,
         ordem: ordem.valor,
         criadoPor: auth.currentUser.uid,
         criadoEm: firebase.firestore.FieldValue.serverTimestamp()
       };
       if (descricao) payload.descricao = descricao;
+      if (capacidade !== null) payload.capacidade = capacidade;
 
       // ID automático, igual ao mural de eventos: não existe chave natural pra turma.
       await tenantCollection("turmas").add(payload);

@@ -7,40 +7,136 @@
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
 <link rel="stylesheet" href="app.css?v=20260910">
 </head>
-<body>
+<body class="login-premium-page">
 
-<header class="app-header app-header-auth">
-  <div class="logo-wrap">
-    <img src="../assets/logo.svg" alt="Logo">
-    <h1>Área da Academia</h1>
+<main class="login-premium-shell">
+  <div class="login-status">
+    <span></span>
+    <strong>Sistema online</strong>
+    <i></i>
+    <button type="button">PT-BR</button>
   </div>
-</header>
 
-<main class="app-main app-main-auth">
-  <div class="card card-auth">
-    <h2>Entrar</h2>
-    <form id="form-login">
+  <section class="login-hero-panel" aria-label="Apresentação DojoPass">
+    <a class="login-brand" href="../index.html" aria-label="DojoPass">
+      <img class="login-real-logo" src="../assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass">
+      <small>Mais que gestão. Uma comunidade mais forte.</small>
+    </a>
+
+    <div class="login-hero-copy">
+      <span class="login-kicker">Área do aluno DojoPass</span>
+      <h1>Seu tatame <strong>digital</strong></h1>
+      <p>Acompanhe presença, ranking, evolução, graduação e comunicados da sua academia.</p>
+    </div>
+
+    <div class="login-benefits" aria-label="Destaques do sistema">
+      <div>
+        <span>✓</span>
+        <strong>check-in rápido</strong>
+        <small>Presença registrada na hora</small>
+      </div>
+      <div>
+        <span>▥</span>
+        <strong>evolução visível</strong>
+        <small>Faixa, grau e progresso</small>
+      </div>
+      <div>
+        <span>▰</span>
+        <strong>ranking ativo</strong>
+        <small>Mais motivação no treino</small>
+      </div>
+    </div>
+
+    <div class="login-dopamine-grid" aria-label="Resumo da academia">
+      <article class="login-mini-card login-week-card">
+        <div>
+          <strong>Sua semana no tatame</strong>
+          <span>4 de 6 check-ins</span>
+        </div>
+        <div class="login-progress"><span></span></div>
+        <ol>
+          <li class="done">Seg</li>
+          <li class="done">Ter</li>
+          <li class="done">Qua</li>
+          <li class="done">Qui</li>
+          <li class="done">Sex</li>
+          <li>Sáb</li>
+          <li>Dom</li>
+        </ol>
+      </article>
+
+      <article class="login-mini-card login-ranking-card">
+        <div class="login-card-top">
+          <strong>Top 3 da semana</strong>
+          <a href="#form-login">Ver ranking →</a>
+        </div>
+        <ol>
+          <li><span>1</span><b>João Silva</b><small>320 pontos</small></li>
+          <li><span>2</span><b>Maria Ferreira</b><small>280 pontos</small></li>
+          <li><span>3</span><b>Carlos Lima</b><small>250 pontos</small></li>
+        </ol>
+      </article>
+
+      <article class="login-mini-card login-active-card">
+        <span class="login-star">★</span>
+        <strong>Academia ativa</strong>
+        <p>Mais que alunos, uma família.</p>
+        <small>+127 alunos</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="login-card-panel" aria-label="Login DojoPass">
+    <div class="login-card-brand">
+      <img class="login-real-logo" src="../assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass">
+    </div>
+    <h2 id="login-title">Entrar como aluno</h2>
+    <p id="login-subtitle">Acesse sua evolução, seus check-ins e seu ranking dentro da academia.</p>
+
+    <form id="form-login" class="login-premium-form">
+      <label for="email">E-mail</label>
+      <div class="login-field">
+        <span aria-hidden="true">✉</span>
+        <input type="email" id="email" required placeholder="seuemail@academia.com">
+      </div>
+
+      <label for="senha">Senha</label>
+      <div class="login-field">
+        <span aria-hidden="true">▣</span>
+        <input type="password" id="senha" required placeholder="••••••••">
+      </div>
+
       <label for="academia">Nome da academia</label>
-      <div class="slug-input-wrap">
+      <div class="slug-input-wrap login-field login-slug-field">
+        <span aria-hidden="true">⌂</span>
         <input type="text" id="academia" required autocomplete="organization" inputmode="url"
           autocapitalize="none" autocorrect="off" spellcheck="false"
-          aria-describedby="academia-hint">
+          aria-describedby="academia-hint" placeholder="jairo">
         <span class="slug-suffix" aria-hidden="true">.dojopass.com.br</span>
       </div>
       <small id="academia-hint">Ex.: jairo → jairo.dojopass.com.br</small>
 
-      <label for="email">E-mail</label>
-      <input type="email" id="email" required>
+      <button type="submit" class="btn login-submit" id="btn-entrar">Entrar como aluno <span aria-hidden="true">→</span></button>
+      <a class="login-forgot" href="mailto:tatamepass@gmail.com?subject=Recuperar acesso DojoPass">Esqueci minha senha</a>
 
-      <label for="senha">Senha</label>
-      <input type="password" id="senha" required>
+      <div class="login-divider"><span>ou</span></div>
 
-      <button type="submit" class="btn" id="btn-entrar">Entrar</button>
+      <button type="button" class="login-student-link" id="login-mode-toggle">
+        <strong>Sou professor/gerência</strong>
+        <span>Acessar painel da academia.</span>
+      </button>
+
       <div class="msg" id="msg"></div>
     </form>
 
-    <p class="switch-link">Ainda não tem cadastro? <a href="cadastro.html">Criar cadastro</a></p>
-  </div>
+    <p class="switch-link">DojoPass <span>Tecnologia que fortalece o esporte.</span></p>
+  </section>
+
+  <footer class="login-footer">
+    <strong>DojoPass</strong>
+    <span></span>
+    <p>Academias mais fortes. Pessoas mais disciplinadas.</p>
+  </footer>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -55,11 +151,35 @@ const form = document.getElementById("form-login");
 const msg = document.getElementById("msg");
 const btn = document.getElementById("btn-entrar");
 const campoAcademia = document.getElementById("academia");
+const loginTitle = document.getElementById("login-title");
+const loginSubtitle = document.getElementById("login-subtitle");
+const loginModeToggle = document.getElementById("login-mode-toggle");
+let loginMode = "aluno";
 
 function showMsg(text, type) {
   msg.textContent = text;
   msg.className = "msg show " + type;
 }
+
+function aplicarModoLogin() {
+  const modoAluno = loginMode === "aluno";
+  loginTitle.textContent = modoAluno ? "Entrar como aluno" : "Entrar como professor/gerência";
+  loginSubtitle.textContent = modoAluno
+    ? "Acesse sua evolução, seus check-ins e seu ranking dentro da academia."
+    : "Acesse o painel para gerenciar alunos, presenças, pagamentos e relatórios.";
+  btn.innerHTML = (modoAluno ? "Entrar como aluno" : "Entrar no painel") + ' <span aria-hidden="true">→</span>';
+  loginModeToggle.querySelector("strong").textContent = modoAluno ? "Sou professor/gerência" : "Sou aluno";
+  loginModeToggle.querySelector("span").textContent = modoAluno
+    ? "Acessar painel da academia."
+    : "Acessar perfil do aluno.";
+}
+
+loginModeToggle.addEventListener("click", () => {
+  loginMode = loginMode === "aluno" ? "gestao" : "aluno";
+  aplicarModoLogin();
+});
+
+aplicarModoLogin();
 
 const sugerido = typeof slugTenantSugerido === "function" ? slugTenantSugerido() : null;
 if (sugerido) {
@@ -99,7 +219,7 @@ form.addEventListener("submit", async (e) => {
       showMsg("Digite o nome da academia usando só letras minúsculas, números e hífen (ex.: jairo).", "error");
     }
     btn.disabled = false;
-    btn.textContent = "Entrar";
+    aplicarModoLogin();
     return;
   }
 
@@ -116,6 +236,7 @@ form.addEventListener("submit", async (e) => {
     let ehAdmin = false;
     let ehProfessor = false;
     let temMembership = false;
+    let temCadastroAluno = false;
     try {
       const membershipDoc = await db.collection("users").doc(cred.user.uid).collection("memberships").doc(DOJOPASS_TENANT.tenantId).get();
       temMembership = membershipDoc.exists;
@@ -131,21 +252,32 @@ form.addEventListener("submit", async (e) => {
       const adminGlobalDoc = await db.collection("admins").doc(cred.user.uid).get();
       ehAdmin = adminGlobalDoc.exists;
     }
-    if (!ehAdmin) {
-      let temCadastroAluno = false;
-      try {
-        const alunoDoc = await tenantDocRef("alunos", cred.user.uid).get();
-        temCadastroAluno = alunoDoc.exists;
-      } catch (alunoErr) {
-        console.warn("[login] Não foi possível ler o cadastro do aluno no tenant.", alunoErr);
-      }
-      if (!temMembership && !temCadastroAluno) {
-        await auth.signOut();
-        showMsg("Sua conta não pertence a esta academia.", "error");
-        btn.disabled = false;
-        btn.textContent = "Entrar";
-        return;
-      }
+    try {
+      const alunoDoc = await tenantDocRef("alunos", cred.user.uid).get();
+      temCadastroAluno = alunoDoc.exists;
+    } catch (alunoErr) {
+      console.warn("[login] Não foi possível ler o cadastro do aluno no tenant.", alunoErr);
+    }
+    if (!temMembership && !temCadastroAluno && !ehAdmin) {
+      await auth.signOut();
+      showMsg("Sua conta não pertence a esta academia.", "error");
+      btn.disabled = false;
+      aplicarModoLogin();
+      return;
+    }
+    if (loginMode === "aluno" && (ehAdmin || ehProfessor)) {
+      await auth.signOut();
+      showMsg("Esta conta é de professor/gerência. Toque em “Sou professor/gerência” para acessar o painel.", "error");
+      btn.disabled = false;
+      aplicarModoLogin();
+      return;
+    }
+    if (loginMode === "gestao" && !ehAdmin && !ehProfessor) {
+      await auth.signOut();
+      showMsg("Esta conta é de aluno. Use o acesso principal de aluno para entrar.", "error");
+      btn.disabled = false;
+      aplicarModoLogin();
+      return;
     }
     if (ehAdmin) {
       window.location.href = "admin.html";
@@ -160,7 +292,7 @@ form.addEventListener("submit", async (e) => {
     const detalhe = local && err && err.code ? " (" + err.code + ")" : "";
     showMsg("Não foi possível entrar. Confira e-mail e senha." + detalhe, "error");
     btn.disabled = false;
-    btn.textContent = "Entrar";
+    aplicarModoLogin();
   }
 });
 </script>
