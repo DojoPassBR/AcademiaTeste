@@ -94,27 +94,26 @@
     <p id="login-subtitle">Acesse sua evolução, seus check-ins e seu ranking dentro da academia.</p>
 
     <form id="form-login" class="login-premium-form">
-      <label for="email">E-mail</label>
-      <div class="login-field">
-        <span aria-hidden="true">✉</span>
-        <input type="email" id="email" required placeholder="seuemail@academia.com">
-      </div>
-
-      <label for="senha">Senha</label>
-      <div class="login-field">
-        <span aria-hidden="true">▣</span>
-        <input type="password" id="senha" required placeholder="••••••••">
-      </div>
-
       <label for="academia">Nome da academia</label>
       <div class="slug-input-wrap login-field login-slug-field">
         <span aria-hidden="true">⌂</span>
         <input type="text" id="academia" required autocomplete="organization" inputmode="url"
           autocapitalize="none" autocorrect="off" spellcheck="false"
-          aria-describedby="academia-hint" placeholder="jairo">
-        <span class="slug-suffix" aria-hidden="true">.dojopass.com.br</span>
+          aria-describedby="academia-hint" placeholder="jairo ou jairo.dojopass.com.br">
       </div>
-      <small id="academia-hint">Ex.: jairo → jairo.dojopass.com.br</small>
+      <small id="academia-hint">Digite o nome da academia para identificarmos o sistema correto.</small>
+
+      <label for="email">Usuário ou e-mail</label>
+      <div class="login-field">
+        <span aria-hidden="true">✉</span>
+        <input type="email" id="email" required autocomplete="username" placeholder="seuemail@academia.com">
+      </div>
+
+      <label for="senha">Senha</label>
+      <div class="login-field">
+        <span aria-hidden="true">▣</span>
+        <input type="password" id="senha" required autocomplete="current-password" placeholder="••••••••">
+      </div>
 
       <button type="submit" class="btn login-submit" id="btn-entrar">Entrar como aluno <span aria-hidden="true">→</span></button>
       <a class="login-forgot" href="mailto:tatamepass@gmail.com?subject=Recuperar acesso DojoPass">Esqueci minha senha</a>
@@ -199,7 +198,7 @@ form.addEventListener("submit", async (e) => {
   campoAcademia.value = academiaSlug;
 
   if (!academiaSlug || !SLUG_TENANT_REGEX.test(academiaSlug)) {
-    showMsg("Digite o nome da academia usando só letras minúsculas, números e hífen (ex.: jairo).", "error");
+    showMsg("Digite o nome da academia ou o subdomínio dela (ex.: jairo).", "error");
     return;
   }
 
@@ -216,7 +215,7 @@ form.addEventListener("submit", async (e) => {
     } else if (resultado.motivo === "rede") {
       showMsg("Não foi possível verificar a academia agora. Tente de novo em instantes.", "error");
     } else {
-      showMsg("Digite o nome da academia usando só letras minúsculas, números e hífen (ex.: jairo).", "error");
+      showMsg("Digite o nome da academia ou o subdomínio dela (ex.: jairo).", "error");
     }
     btn.disabled = false;
     aplicarModoLogin();

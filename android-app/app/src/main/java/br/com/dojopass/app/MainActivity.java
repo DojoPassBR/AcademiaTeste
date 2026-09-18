@@ -24,7 +24,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
-    private static final String APP_URL = "https://dojopass.com.br/AcademiaTeste/app/login.html";
+    private static final String APP_URL = "https://dojopass.com.br/AcademiaTeste/app/login.html?app=android";
     private static final int RED = Color.rgb(224, 16, 25);
     private static final int BLACK = Color.rgb(8, 9, 13);
 
@@ -66,13 +66,13 @@ public class MainActivity extends Activity {
         layout.setBackgroundColor(BLACK);
 
         ImageView mark = new ImageView(this);
-        mark.setImageResource(getResources().getIdentifier("ic_dojopass_mark", "drawable", getPackageName()));
+        mark.setImageResource(R.drawable.ic_dojopass_mark);
         LinearLayout.LayoutParams markParams = new LinearLayout.LayoutParams(dp(116), dp(116));
         markParams.bottomMargin = dp(22);
         layout.addView(mark, markParams);
 
         TextView title = new TextView(this);
-        title.setText("DojoPass");
+        title.setText(R.string.splash_title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(34);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
         layout.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Gestao para academias de luta");
+        subtitle.setText(R.string.splash_subtitle);
         subtitle.setTextColor(Color.rgb(214, 218, 226));
         subtitle.setTextSize(15);
         subtitle.setLetterSpacing(0.08f);
@@ -99,7 +99,7 @@ public class MainActivity extends Activity {
         layout.addView(progress, progressParams);
 
         loadingText = new TextView(this);
-        loadingText.setText("Abrindo o sistema...");
+        loadingText.setText(R.string.splash_loading);
         loadingText.setTextColor(Color.rgb(176, 182, 194));
         loadingText.setTextSize(14);
         loadingText.setGravity(Gravity.CENTER);

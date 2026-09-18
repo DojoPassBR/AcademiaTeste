@@ -143,15 +143,20 @@
   }
 
   function normalizarSlugTenant(valor) {
-    return String(valor)
+    var texto = String(valor)
       .trim()
       .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\/.*$/, "")
+      .replace(/\.dojopass\.com\.br$/, "")
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
       .replace(/[\s_.]+/g, "-")
       .replace(/[^a-z0-9-]/g, "")
       .replace(/-{2,}/g, "-")
       .replace(/^-+|-+$/g, "");
+    return texto;
   }
 
   function slugTenantSugerido() {
