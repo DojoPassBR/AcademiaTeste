@@ -161,7 +161,9 @@ async function listarPagamentosAssinatura(env, apiKey, subscriptionId) {
       id: String(pagamento.id),
       status: pagamento.status || null,
       dueDate: pagamento.dueDate || null,
-      externalReference: pagamento.externalReference || null
+      externalReference: pagamento.externalReference || null,
+      invoiceUrl: pagamento.invoiceUrl || null,
+      bankSlipUrl: pagamento.bankSlipUrl || null
     }));
 }
 

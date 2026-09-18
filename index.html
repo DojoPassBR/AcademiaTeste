@@ -21,7 +21,7 @@
       <a href="#planos">Planos</a>
       <a href="#contato">Contato</a>
     </nav>
-    <a class="header-login" href="app/login.html">Entrar</a>
+    <a class="header-login" href="#adquirir">Adquirir</a>
   </div>
 </header>
 
@@ -38,7 +38,7 @@
           Controle alunos, planos, pagamentos, presença e rotina administrativa em um só lugar, com uma experiência simples para professores e alunos.
         </p>
         <div class="hero-actions">
-          <a class="btn primary" href="#contato">Começar agora</a>
+          <a class="btn primary" href="#adquirir">Começar agora</a>
           <a class="btn secondary" href="#funcionalidades">Ver recursos</a>
         </div>
         <div class="hero-proof" aria-label="Destaques da plataforma">
@@ -49,56 +49,86 @@
       </div>
 
       <div class="product-preview" aria-label="Prévia do painel DojoPass">
-        <div class="preview-topbar">
-          <div class="preview-brand">
+        <aside class="preview-app-sidebar">
+          <div class="preview-logo-card">
             <img src="assets/landing/dojopass-logo-final-horizontal.png" alt="DojoPass">
           </div>
-          <span>Academia ativa</span>
-        </div>
-        <div class="preview-body">
-          <aside class="preview-sidebar">
-            <span class="active">Início</span>
-            <span>Alunos</span>
-            <span>Presenças</span>
-            <span>Mensalidades</span>
-            <span>Relatórios</span>
-          </aside>
-          <div class="preview-content">
-            <div class="preview-greeting">
-              <span>Hoje no tatame</span>
-              <strong>Visão geral da academia</strong>
+          <nav class="preview-menu" aria-hidden="true">
+            <span class="is-active"><i></i>Dashboard</span>
+            <span><i></i>Alunos</span>
+            <span><i></i>CRM</span>
+            <span><i></i>Professores</span>
+            <span><i></i>Turmas</span>
+            <span><i></i>Agendamentos</span>
+            <span><i></i>Parceiros</span>
+          </nav>
+        </aside>
+
+        <div class="preview-app-content">
+          <div class="preview-app-header">
+            <div>
+              <span>Painel administrativo</span>
+              <strong>Resumo do dia da academia</strong>
             </div>
-            <div class="metric-grid">
-              <article>
-                <span>Alunos ativos</span>
-                <strong>128</strong>
-                <small>+12% no mês</small>
-              </article>
-              <article>
-                <span>Presenças</span>
-                <strong>892</strong>
-                <small>Check-ins validados</small>
-              </article>
-              <article>
-                <span>Mensalidades</span>
-                <strong>R$ 12.450</strong>
-                <small>Recebido no período</small>
-              </article>
-            </div>
-            <div class="chart-card">
-              <div class="chart-head">
-                <strong>Evolução de alunos</strong>
-                <span>Últimos 6 meses</span>
+            <small>Academia ativa</small>
+          </div>
+
+          <div class="preview-kpis">
+            <article>
+              <i></i>
+              <strong>21</strong>
+              <span>Total de alunos</span>
+            </article>
+            <article>
+              <i></i>
+              <strong>13</strong>
+              <span>Mensalidade em dia</span>
+            </article>
+            <article class="warning">
+              <i></i>
+              <strong>8</strong>
+              <span>Mensalidade pendente</span>
+            </article>
+            <article>
+              <i></i>
+              <strong>--</strong>
+              <span>Check-ins de hoje</span>
+            </article>
+          </div>
+
+          <div class="preview-panels">
+            <section>
+              <div class="preview-panel-head">
+                <strong>Próximos eventos</strong>
+                <span></span>
               </div>
-              <div class="chart-bars" aria-hidden="true">
-                <i style="height: 34%"></i>
-                <i style="height: 48%"></i>
-                <i style="height: 44%"></i>
+              <p>Nenhum evento agendado.</p>
+            </section>
+            <section>
+              <div class="preview-panel-head">
+                <strong>Aulas de hoje</strong>
+                <span></span>
+              </div>
+              <p>Nenhuma aula hoje.</p>
+            </section>
+          </div>
+
+          <div class="preview-charts">
+            <section>
+              <strong>Mensalidade</strong>
+              <div class="preview-donut" aria-hidden="true"></div>
+              <div class="preview-legend"><span>Em dia</span><span>Pendente</span></div>
+            </section>
+            <section>
+              <strong>Check-ins</strong>
+              <div class="preview-mini-bars" aria-hidden="true">
+                <i style="height: 24%"></i>
+                <i style="height: 46%"></i>
+                <i style="height: 35%"></i>
                 <i style="height: 62%"></i>
-                <i style="height: 70%"></i>
-                <i style="height: 88%"></i>
+                <i style="height: 78%"></i>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
@@ -222,8 +252,70 @@
           <li>Painel administrativo do professor</li>
           <li>Site público da academia</li>
         </ul>
-        <a class="btn primary full" href="#contato">Quero conhecer</a>
+        <a class="btn primary full" href="#adquirir">Assinar por R$ 99</a>
       </article>
+    </div>
+  </section>
+
+  <section id="adquirir" class="section checkout-section">
+    <div class="container checkout-grid">
+      <div class="checkout-copy">
+        <span class="eyebrow">Adquirir</span>
+        <h2>Assine o DojoPass por R$ 99/mês.</h2>
+        <p>
+          Preencha os dados da academia para gerar a assinatura pelo Asaas. Após o primeiro pagamento, configuramos o subdomínio da sua academia e liberamos o acesso.
+        </p>
+        <div class="checkout-summary" aria-label="Resumo do plano">
+          <strong>R$ 99,00</strong>
+          <span>por mês, com pagamento inicial via Pix</span>
+        </div>
+      </div>
+
+      <form class="checkout-form" id="checkout-form">
+        <div class="form-row">
+          <label for="academy-name">Nome da academia</label>
+          <input id="academy-name" name="academia" autocomplete="organization" required>
+        </div>
+        <div class="form-row">
+          <label for="owner-name">Responsável</label>
+          <input id="owner-name" name="responsavel" autocomplete="name" required>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="owner-email">E-mail</label>
+            <input id="owner-email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="form-row">
+            <label for="owner-phone">Telefone</label>
+            <input id="owner-phone" name="telefone" autocomplete="tel" required>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="owner-document">CPF ou CNPJ</label>
+            <input id="owner-document" name="cpfCnpj" inputmode="numeric" autocomplete="off" required>
+          </div>
+          <div class="form-row">
+            <label for="academy-slug">Subdomínio desejado</label>
+            <div class="slug-field">
+              <input id="academy-slug" name="slugDesejado" pattern="[a-z0-9][a-z0-9-]{1,38}[a-z0-9]" placeholder="minhaacademia" required>
+              <span>.dojopass.com.br</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn primary full" type="submit">Assinar por R$ 99/mês</button>
+        <a class="btn secondary full" href="mailto:tatamepass@gmail.com?subject=Quero contratar o DojoPass">Entrar em contato</a>
+        <div class="checkout-message" id="checkout-message" role="status" aria-live="polite"></div>
+        <div class="pix-result" id="pix-result" hidden>
+          <img id="pix-qr" alt="QR Code Pix da assinatura">
+          <div>
+            <strong>Pix gerado com sucesso</strong>
+            <p>Copie o código Pix ou abra o link de pagamento para concluir a assinatura.</p>
+            <textarea id="pix-code" readonly></textarea>
+            <a class="btn secondary full" id="checkout-link" href="#" target="_blank" rel="noopener" hidden>Abrir pagamento</a>
+          </div>
+        </div>
+      </form>
     </div>
   </section>
 
@@ -235,8 +327,8 @@
         <p>Fale com a DojoPass para organizar alunos, presenças, mensalidades e pagamentos em uma plataforma feita para academias de luta.</p>
       </div>
       <div class="cta-panel">
-        <a class="btn primary full" href="mailto:tatamepass@gmail.com?subject=Quero conhecer o DojoPass">Enviar e-mail</a>
-        <a class="btn secondary full dark" href="app/login.html">Acessar sistema</a>
+        <a class="btn primary full" href="#adquirir">Adquirir plano</a>
+        <a class="btn secondary full dark" href="mailto:tatamepass@gmail.com?subject=Quero falar com a DojoPass">Entrar em contato</a>
         <small>Atendimento em português para academias, dojos e equipes.</small>
       </div>
     </div>

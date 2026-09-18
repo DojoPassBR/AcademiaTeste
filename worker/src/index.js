@@ -2,12 +2,14 @@ import { getDocument, listDocuments, createDocument, patchDocument, tenantPath }
 import {
   criarCustomer,
   criarPagamentoPix,
+  criarAssinatura,
+  listarPagamentosAssinatura,
   obterQrCodePix,
   consultarPagamento
 } from "./asaas.js";
 import { verificarIdToken } from "./auth.js";
 import { validarTokenWebhook } from "./webhook-token.js";
-import { corsHeaders, json, campoString, origensPermitidas, origemDojopassPermitida, fixarCorsOrigin } from "./http.js";
+import { corsHeaders, json, campoString, origensPermitidas, origemPermitida, origemDojopassPermitida, fixarCorsOrigin } from "./http.js";
 import {
   obterConfigAsaas,
   salvarAsaasApiKey,
@@ -283,6 +285,101 @@ function calcularDueDate(env) {
   const offset = Number.isFinite(dias) && dias >= 0 ? Math.floor(dias) : 5;
   const data = new Date(Date.now() + offset * 24 * 60 * 60 * 1000);
   return data.toISOString().slice(0, 10);
+}
+
+function textoCurtoValido(v, min, max) {
+  return typeof v === "string" && v.trim().length >= min && v.trim().length <= max;
+}
+
+function slugDesejadoValido(v) {
+  return typeof v === "string" && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(v);
+}
+
+function hojeIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function handleAssinaturaDojopass(request, env) {
+  const origin = request.headers.get("Origin");
+  if (!origemPermitida(origin, env)) {
+    return json({ erro: "Origem não autorizada." }, 403, request, env);
+  }
+
+  if (!env.ASAAS_API_KEY || !env.ASAAS_BASE_URL) {
+    return json({ erro: "Checkout ainda não configurado." }, 501, request, env);
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ erro: "Corpo da requisição inválido." }, 400, request, env);
+
+  const academia = String(body.academia || "").trim();
+  const responsavel = String(body.responsavel || "").trim();
+  const email = String(body.email || "").trim().toLowerCase();
+  const telefone = String(body.telefone || "").trim();
+  const documento = String(body.cpfCnpj || "").replace(/\D/g, "");
+  const slugDesejado = String(body.slugDesejado || "").trim().toLowerCase();
+
+  if (
+    !textoCurtoValido(academia, 2, 100) ||
+    !textoCurtoValido(responsavel, 2, 100) ||
+    !emailValido(email) ||
+    !telefoneValido(telefone) ||
+    !cpfCnpjValido(documento) ||
+    !slugDesejadoValido(slugDesejado)
+  ) {
+    return json(
+      { erro: "Preencha academia, responsável, e-mail, telefone, CPF/CNPJ e subdomínio desejado." },
+      400,
+      request,
+      env
+    );
+  }
+
+  const referencia = "dojopass:assinatura:" + slugDesejado + ":" + Date.now();
+  const customer = await criarCustomer(env, env.ASAAS_API_KEY, {
+    nome: academia + " - " + responsavel,
+    cpfCnpj: documento,
+    email,
+    externalReference: referencia
+  });
+
+  const assinatura = await criarAssinatura(env, env.ASAAS_API_KEY, {
+    customerId: customer.id,
+    valor: 99,
+    nextDueDate: hojeIso(),
+    descricao: "DojoPass Gestão - assinatura mensal",
+    externalReference: referencia,
+    billingType: "PIX"
+  });
+
+  const pagamentos = await listarPagamentosAssinatura(env, env.ASAAS_API_KEY, assinatura.id);
+  const pagamentoInicial = pagamentos[0] || null;
+  let pix = { payload: null, encodedImage: null, expirationDate: null };
+  if (pagamentoInicial?.id) {
+    try {
+      pix = await obterQrCodePix(env, env.ASAAS_API_KEY, pagamentoInicial.id);
+    } catch (err) {
+      console.error("Falha ao obter QR Code da assinatura DojoPass:", pagamentoInicial.id, err);
+    }
+  }
+
+  return json(
+    {
+      ok: true,
+      valor: 99,
+      assinaturaId: assinatura.id,
+      status: assinatura.status,
+      pagamentoId: pagamentoInicial?.id || null,
+      checkoutUrl: pagamentoInicial?.invoiceUrl || pagamentoInicial?.bankSlipUrl || null,
+      pixCopiaECola: pix.payload,
+      pixQrCodeBase64: pix.encodedImage,
+      pixExpiraEm: pix.expirationDate,
+      mensagem: "Assinatura criada. Conclua o pagamento inicial para ativarmos sua academia."
+    },
+    200,
+    request,
+    env
+  );
 }
 
 async function handleCriarCobranca(request, env) {
@@ -1594,6 +1691,9 @@ export default {
     try {
       if (pathname === "/criar-cobranca" && request.method === "POST") {
         return await handleCriarCobranca(request, env);
+      }
+      if (pathname === "/assinatura-dojopass" && request.method === "POST") {
+        return await handleAssinaturaDojopass(request, env);
       }
       if (pathname === "/webhook-asaas" && request.method === "POST") {
         return await handleWebhookAsaas(request, env);
